@@ -12,6 +12,12 @@ export function sortStack(taskList: Task[]) {
         return b.missedCount - a.missedCount;
       }
 
-      return b.priority - a.priority;
+      return a.stackOrder - b.stackOrder;
     });
+}
+
+export function sortGroupStack(taskList: Task[], groupId: string) {
+  return [...taskList]
+    .filter((task) => task.isActive && task.groupId === groupId)
+    .sort((a, b) => a.stackOrder - b.stackOrder);
 }

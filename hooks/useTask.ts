@@ -1,10 +1,26 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Task } from "@/types/task";
+import { Task, TaskGroup } from "@/types/task";
 
-const STORAGE_KEY = "upnext-tasks";
+const TASKS_STORAGE_KEY = "upnext-tasks";
+const GROUPS_STORAGE_KEY = "upnext-task-groups";
 const COMPLETED_KEY = "upnext-completed-today";
+
+const initialGroups: TaskGroup[] = [
+  {
+    id: "career",
+    name: "Career",
+    description: "Tasks that move your software career forward",
+    isActive: true,
+  },
+  {
+    id: "lsat",
+    name: "LSAT",
+    description: "Study tasks for LSAT prep",
+    isActive: true,
+  },
+];
 
 const initialTasks: Task[] = [
   {
@@ -13,9 +29,9 @@ const initialTasks: Task[] = [
     description: "Daily workout",
     isMandatory: true,
     missedCount: 0,
-    priority: 10,
     status: "Required daily",
     isActive: true,
+    stackOrder: 0,
   },
   {
     id: "2",
@@ -23,19 +39,21 @@ const initialTasks: Task[] = [
     description: "Work on UpNext or another project",
     isMandatory: false,
     missedCount: 1,
-    priority: 8,
-    status: "Moved up because you skipped it yesterday",
+    status: "Career stack",
     isActive: true,
+    groupId: "career",
+    stackOrder: 0,
   },
   {
     id: "3",
-    title: "LSAT Study",
-    description: "Study one section or review problems",
+    title: "LeetCode Question",
+    description: "Solve or review one coding problem",
     isMandatory: false,
     missedCount: 0,
-    priority: 7,
-    status: "Important today",
+    status: "Career stack",
     isActive: true,
+    groupId: "career",
+    stackOrder: 1,
   },
   {
     id: "4",
@@ -43,22 +61,48 @@ const initialTasks: Task[] = [
     description: "Apply to a few relevant roles",
     isMandatory: false,
     missedCount: 0,
-    priority: 5,
-    status: "Optional after stack",
+    status: "Career stack",
     isActive: true,
+    groupId: "career",
+    stackOrder: 2,
+  },
+  {
+    id: "5",
+    title: "Logical Reasoning",
+    description: "Complete one LSAT logical reasoning drill",
+    isMandatory: false,
+    missedCount: 0,
+    status: "LSAT stack",
+    isActive: true,
+    groupId: "lsat",
+    stackOrder: 0,
+  },
+  {
+    id: "6",
+    title: "Reading Comprehension",
+    description: "Complete one LSAT reading comp passage",
+    isMandatory: false,
+    missedCount: 0,
+    status: "LSAT stack",
+    isActive: true,
+    groupId: "lsat",
+    stackOrder: 1,
   },
 ];
 
 export function useTasks() {
   const [tasks, setTasks] = useState<Task[]>([]);
+  const [groups, setGroups] = useState<TaskGroup[]>([]);
   const [completedTasks, setCompletedTasks] = useState<Task[]>([]);
   const [hasLoaded, setHasLoaded] = useState(false);
 
   useEffect(() => {
-    const savedTasks = localStorage.getItem(STORAGE_KEY);
+    const savedTasks = localStorage.getItem(TASKS_STORAGE_KEY);
+    const savedGroups = localStorage.getItem(GROUPS_STORAGE_KEY);
     const savedCompletedTasks = localStorage.getItem(COMPLETED_KEY);
 
     setTasks(savedTasks ? JSON.parse(savedTasks) : initialTasks);
+    setGroups(savedGroups ? JSON.parse(savedGroups) : initialGroups);
     setCompletedTasks(
       savedCompletedTasks ? JSON.parse(savedCompletedTasks) : []
     );
@@ -68,24 +112,75 @@ export function useTasks() {
 
   useEffect(() => {
     if (!hasLoaded) return;
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
+    localStorage.setItem(TASKS_STORAGE_KEY, JSON.stringify(tasks));
   }, [tasks, hasLoaded]);
+
+  useEffect(() => {
+    if (!hasLoaded) return;
+    localStorage.setItem(GROUPS_STORAGE_KEY, JSON.stringify(groups));
+  }, [groups, hasLoaded]);
 
   useEffect(() => {
     if (!hasLoaded) return;
     localStorage.setItem(COMPLETED_KEY, JSON.stringify(completedTasks));
   }, [completedTasks, hasLoaded]);
 
-  function addTask(task: Omit<Task, "id" | "missedCount" | "status" | "isActive">) {
+  function addGroup(group: Omit<TaskGroup, "id" | "isActive">) {
+    const newGroup: TaskGroup = {
+      id: crypto.randomUUID(),
+      name: group.name,
+      description: group.description,
+      isActive: true,
+    };
+
+    setGroups((currentGroups) => [...currentGroups, newGroup]);
+  }
+
+  function updateGroup(groupId: string, updatedGroup: Partial<TaskGroup>) {
+    setGroups((currentGroups) =>
+      currentGroups.map((group) =>
+        group.id === groupId ? { ...group, ...updatedGroup } : group
+      )
+    );
+  }
+
+  function deleteGroup(groupId: string) {
+    setGroups((currentGroups) =>
+      currentGroups.map((group) =>
+        group.id === groupId ? { ...group, isActive: false } : group
+      )
+    );
+
+    setTasks((currentTasks) =>
+      currentTasks.map((task) =>
+        task.groupId === groupId ? { ...task, isActive: false } : task
+      )
+    );
+  }
+
+  function addTask(
+    task: Omit<
+      Task,
+      "id" | "missedCount" | "status" | "isActive" | "stackOrder"
+    >
+  ) {
+    const groupTasks = task.groupId
+      ? tasks.filter(
+          (currentTask) =>
+            currentTask.groupId === task.groupId && currentTask.isActive
+        )
+      : [];
+
     const newTask: Task = {
       id: crypto.randomUUID(),
       title: task.title,
       description: task.description,
       isMandatory: task.isMandatory,
-      priority: task.priority,
+      groupId: task.groupId,
       missedCount: 0,
-      status: task.isMandatory ? "Required daily" : "New priority task",
+      status: task.isMandatory ? "Required daily" : "Group stack",
       isActive: true,
+      stackOrder: groupTasks.length,
     };
 
     setTasks((currentTasks) => [...currentTasks, newTask]);
@@ -121,20 +216,57 @@ export function useTasks() {
       ...currentCompletedTasks,
     ]);
 
-    setTasks((currentTasks) =>
-      currentTasks.filter((task) => task.id !== taskId)
-    );
+    setTasks((currentTasks) => {
+      if (!taskToComplete.groupId) {
+        return currentTasks.filter((task) => task.id !== taskId);
+      }
+
+      const activeGroupTasks = currentTasks
+        .filter(
+          (task) =>
+            task.groupId === taskToComplete.groupId &&
+            task.isActive &&
+            task.id !== taskId
+        )
+        .sort((a, b) => a.stackOrder - b.stackOrder);
+
+      const movedTask: Task = {
+        ...taskToComplete,
+        stackOrder: activeGroupTasks.length,
+      };
+
+      const reorderedGroupTasks = [
+        ...activeGroupTasks.map((task, index) => ({
+          ...task,
+          stackOrder: index,
+        })),
+        movedTask,
+      ];
+
+      return currentTasks.map((task) => {
+        const reorderedTask = reorderedGroupTasks.find(
+          (groupTask) => groupTask.id === task.id
+        );
+
+        return reorderedTask ?? task;
+      });
+    });
   }
 
   function resetDemo() {
     setTasks(initialTasks);
+    setGroups(initialGroups);
     setCompletedTasks([]);
   }
 
   return {
     tasks,
+    groups,
     completedTasks,
     hasLoaded,
+    addGroup,
+    updateGroup,
+    deleteGroup,
     addTask,
     updateTask,
     deleteTask,
