@@ -3,12 +3,27 @@
 import { FormEvent, useState } from "react";
 import AppNav from "@/components/AppNav";
 import { useTasks } from "@/hooks/useTask";
-import { Task } from "@/types/task";
+import { Task, TaskGroup } from "@/types/task";
 
 export default function TasksPage() {
-	const { tasks, groups, hasLoaded, addTask, updateTask, deleteTask } =
-		useTasks();
+	const {
+		tasks,
+		groups,
+		hasLoaded,
+		addTask,
+		updateTask,
+		deleteTask,
+		addGroup,
+		updateGroup,
+		deleteGroup,
+	} = useTasks();
 
+	const [groupName, setGroupName] = useState("");
+	const [groupDescription, setGroupDescription] = useState("");
+
+	const [editingGroupId, setEditingGroupId] = useState<string | null>(null);
+	const [editingGroupName, setEditingGroupName] = useState("");
+	const [editingGroupDescription, setEditingGroupDescription] = useState("");
 	const activeTasks = tasks.filter((task) => task.isActive);
 
 	const [title, setTitle] = useState("");
@@ -27,6 +42,43 @@ export default function TasksPage() {
 				Loading...
 			</main>
 		);
+	}
+
+	function handleAddGroup(event: FormEvent<HTMLFormElement>) {
+		event.preventDefault();
+
+		if (!groupName.trim()) return;
+
+		addGroup({
+			name: groupName,
+			description: groupDescription,
+		});
+
+		setGroupName("");
+		setGroupDescription("");
+	}
+
+	function startEditingGroup(group: TaskGroup) {
+		setEditingGroupId(group.id);
+		setEditingGroupName(group.name);
+		setEditingGroupDescription(group.description ?? "");
+	}
+
+	function cancelEditingGroup() {
+		setEditingGroupId(null);
+		setEditingGroupName("");
+		setEditingGroupDescription("");
+	}
+
+	function saveEditingGroup(groupId: string) {
+		if (!editingGroupName.trim()) return;
+
+		updateGroup(groupId, {
+			name: editingGroupName,
+			description: editingGroupDescription,
+		});
+
+		cancelEditingGroup();
 	}
 
 	function handleAddTask(event: FormEvent<HTMLFormElement>) {
@@ -116,7 +168,7 @@ export default function TasksPage() {
 								<textarea
 									value={description}
 									onChange={(event) => setDescription(event.target.value)}
-									placeholder="Work on the app for at least 30 minutes"
+									placeholder="Work on this for at least 30 minutes"
 									className="mt-2 w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-white outline-none focus:border-sky-500"
 								/>
 							</div>
@@ -157,6 +209,134 @@ export default function TasksPage() {
 							</button>
 						</div>
 					</form>
+
+					<form
+						onSubmit={handleAddGroup}
+						className="mt-8 rounded-2xl border border-slate-800 bg-slate-900 p-6"
+					>
+						<h2 className="text-xl font-bold">Add Task Group</h2>
+
+						<div className="mt-5 space-y-4">
+							<div>
+								<label className="text-sm font-medium text-slate-300">
+									Group name
+								</label>
+
+								<input
+									value={groupName}
+									onChange={(event) => setGroupName(event.target.value)}
+									placeholder="Career"
+									className="mt-2 w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-white outline-none focus:border-sky-500"
+								/>
+							</div>
+
+							<div>
+								<label className="text-sm font-medium text-slate-300">
+									Description
+								</label>
+
+								<textarea
+									value={groupDescription}
+									onChange={(event) => setGroupDescription(event.target.value)}
+									placeholder="Tasks that move this area forward"
+									className="mt-2 w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-white outline-none focus:border-sky-500"
+								/>
+							</div>
+
+							<button className="rounded-xl bg-sky-500 px-5 py-3 font-semibold text-slate-950 hover:bg-sky-400">
+								Add Group
+							</button>
+						</div>
+					</form>
+
+					<div className="mt-10">
+						<h2 className="mb-4 text-xl font-bold">Task Groups</h2>
+
+						<div className="space-y-3">
+							{groups
+								.filter((group) => group.isActive)
+								.map((group) => {
+									const isEditing = editingGroupId === group.id;
+
+									return (
+										<div
+											key={group.id}
+											className="rounded-xl border border-slate-800 bg-slate-900 p-4"
+										>
+											{isEditing ? (
+												<div className="space-y-4">
+													<input
+														value={editingGroupName}
+														onChange={(event) =>
+															setEditingGroupName(event.target.value)
+														}
+														className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-white outline-none focus:border-sky-500"
+													/>
+
+													<textarea
+														value={editingGroupDescription}
+														onChange={(event) =>
+															setEditingGroupDescription(event.target.value)
+														}
+														className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-white outline-none focus:border-sky-500"
+													/>
+
+													<div className="flex gap-3">
+														<button
+															type="button"
+															onClick={() => saveEditingGroup(group.id)}
+															className="rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-sky-400"
+														>
+															Save
+														</button>
+
+														<button
+															type="button"
+															onClick={cancelEditingGroup}
+															className="rounded-lg border border-slate-700 px-4 py-2 text-sm font-medium text-slate-300 hover:border-sky-500 hover:text-sky-400"
+														>
+															Cancel
+														</button>
+													</div>
+												</div>
+											) : (
+												<div className="flex items-start justify-between gap-4">
+													<div>
+														<h3 className="text-lg font-semibold">
+															{group.name}
+														</h3>
+
+														{group.description && (
+															<p className="mt-1 text-sm text-slate-400">
+																{group.description}
+															</p>
+														)}
+													</div>
+
+													<div className="flex gap-2">
+														<button
+															type="button"
+															onClick={() => startEditingGroup(group)}
+															className="rounded-lg border border-slate-700 px-3 py-2 text-sm text-slate-300 hover:border-sky-500 hover:text-sky-400"
+														>
+															Edit
+														</button>
+
+														<button
+															type="button"
+															onClick={() => deleteGroup(group.id)}
+															className="rounded-lg border border-red-500/40 px-3 py-2 text-sm text-red-300 hover:bg-red-500/10"
+														>
+															Delete
+														</button>
+													</div>
+												</div>
+											)}
+										</div>
+									);
+								})}
+						</div>
+					</div>
 
 					<div className="mt-10">
 						<h2 className="mb-4 text-xl font-bold">Active Tasks</h2>

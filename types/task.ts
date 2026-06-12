@@ -13,7 +13,11 @@ export type Task = {
   missedCount: number;
   status: string;
   isActive: boolean;
-
   groupId?: string;
   stackOrder: number;
+};
+
+export type CompletedTask = {
+  taskId: string;
+  completedOn: string;
 };
