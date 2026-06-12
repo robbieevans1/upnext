@@ -1,147 +1,78 @@
-"use client";
-
-import { FormEvent, useState } from "react";
 import AppNav from "@/components/AppNav";
-import { useTasks } from "@/hooks/useTask";
-import { Task, TaskGroup } from "@/types/task";
+import { prisma } from "@/lib/prisma";
+import {
+	createTask,
+	createTaskGroup,
+	deleteTask,
+	deleteTaskGroup,
+	updateTask,
+	updateTaskGroup,
+} from "@/app/actions/tasks";
 
-export default function TasksPage() {
-	const {
-		tasks,
-		groups,
-		hasLoaded,
-		addTask,
-		updateTask,
-		deleteTask,
-		addGroup,
-		updateGroup,
-		deleteGroup,
-	} = useTasks();
+async function getDemoUser() {
+	return prisma.user.upsert({
+		where: {
+			email: "demo@upnext.dev",
+		},
+		update: {},
+		create: {
+			id: "demo-user",
+			email: "demo@upnext.dev",
+			name: "Demo User",
+		},
+	});
+}
 
-	const [groupName, setGroupName] = useState("");
-	const [groupDescription, setGroupDescription] = useState("");
+export default async function TasksPage() {
+	const user = await getDemoUser();
 
-	const [editingGroupId, setEditingGroupId] = useState<string | null>(null);
-	const [editingGroupName, setEditingGroupName] = useState("");
-	const [editingGroupDescription, setEditingGroupDescription] = useState("");
-	const activeTasks = tasks.filter((task) => task.isActive);
+	const groups = await prisma.taskGroup.findMany({
+		where: {
+			userId: user.id,
+			isActive: true,
+		},
+		orderBy: {
+			createdAt: "asc",
+		},
+	});
 
-	const [title, setTitle] = useState("");
-	const [description, setDescription] = useState("");
-	const [isMandatory, setIsMandatory] = useState(false);
-	const [groupId, setGroupId] = useState("");
-
-	const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
-	const [editingTitle, setEditingTitle] = useState("");
-	const [editingDescription, setEditingDescription] = useState("");
-	const [editingIsMandatory, setEditingIsMandatory] = useState(false);
-
-	if (!hasLoaded) {
-		return (
-			<main className="min-h-screen bg-slate-950 p-6 text-white">
-				Loading...
-			</main>
-		);
-	}
-
-	function handleAddGroup(event: FormEvent<HTMLFormElement>) {
-		event.preventDefault();
-
-		if (!groupName.trim()) return;
-
-		addGroup({
-			name: groupName,
-			description: groupDescription,
-		});
-
-		setGroupName("");
-		setGroupDescription("");
-	}
-
-	function startEditingGroup(group: TaskGroup) {
-		setEditingGroupId(group.id);
-		setEditingGroupName(group.name);
-		setEditingGroupDescription(group.description ?? "");
-	}
-
-	function cancelEditingGroup() {
-		setEditingGroupId(null);
-		setEditingGroupName("");
-		setEditingGroupDescription("");
-	}
-
-	function saveEditingGroup(groupId: string) {
-		if (!editingGroupName.trim()) return;
-
-		updateGroup(groupId, {
-			name: editingGroupName,
-			description: editingGroupDescription,
-		});
-
-		cancelEditingGroup();
-	}
-
-	function handleAddTask(event: FormEvent<HTMLFormElement>) {
-		event.preventDefault();
-
-		if (!title.trim()) return;
-
-		addTask({
-			title,
-			description,
-			isMandatory,
-			groupId: groupId || undefined,
-		});
-
-		setTitle("");
-		setDescription("");
-		setIsMandatory(false);
-		setGroupId("");
-	}
-
-	function startEditing(task: Task) {
-		setEditingTaskId(task.id);
-		setEditingTitle(task.title);
-		setEditingDescription(task.description ?? "");
-		setEditingIsMandatory(task.isMandatory);
-	}
-
-	function cancelEditing() {
-		setEditingTaskId(null);
-		setEditingTitle("");
-		setEditingDescription("");
-		setEditingIsMandatory(false);
-	}
-
-	function saveEditing(taskId: string) {
-		if (!editingTitle.trim()) return;
-
-		updateTask(taskId, {
-			title: editingTitle,
-			description: editingDescription,
-			isMandatory: editingIsMandatory,
-			status: editingIsMandatory ? "Required daily" : "Priority task",
-		});
-
-		cancelEditing();
-	}
+	const tasks = await prisma.task.findMany({
+		where: {
+			userId: user.id,
+			isActive: true,
+		},
+		include: {
+			group: true,
+		},
+		orderBy: [
+			{
+				groupId: "asc",
+			},
+			{
+				stackOrder: "asc",
+			},
+			{
+				createdAt: "asc",
+			},
+		],
+	});
 
 	return (
 		<>
 			<AppNav />
 
 			<main className="min-h-screen bg-slate-950 px-6 py-10 text-white">
-				<section className="mx-auto max-w-2xl">
+				<section className="mx-auto max-w-3xl">
 					<p className="mb-2 text-sm font-medium text-sky-400">Manage</p>
 
 					<h1 className="text-4xl font-bold tracking-tight">Tasks</h1>
 
 					<p className="mt-3 text-slate-400">
-						Add, edit, or remove tasks from your daily priority stack.
+						Create task groups, add tasks, and manage your daily UpNext stack.
 					</p>
 
 					<form
-						onSubmit={handleAddTask}
+						action={createTask}
 						className="mt-8 rounded-2xl border border-slate-800 bg-slate-900 p-6"
 					>
 						<h2 className="text-xl font-bold">Add Task</h2>
@@ -153,8 +84,7 @@ export default function TasksPage() {
 								</label>
 
 								<input
-									value={title}
-									onChange={(event) => setTitle(event.target.value)}
+									name="title"
 									placeholder="Portfolio Project"
 									className="mt-2 w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-white outline-none focus:border-sky-500"
 								/>
@@ -166,8 +96,7 @@ export default function TasksPage() {
 								</label>
 
 								<textarea
-									value={description}
-									onChange={(event) => setDescription(event.target.value)}
+									name="description"
 									placeholder="Work on this for at least 30 minutes"
 									className="mt-2 w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-white outline-none focus:border-sky-500"
 								/>
@@ -179,28 +108,22 @@ export default function TasksPage() {
 								</label>
 
 								<select
-									value={groupId}
-									onChange={(event) => setGroupId(event.target.value)}
+									name="groupId"
 									className="mt-2 w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-white outline-none focus:border-sky-500"
+									defaultValue=""
 								>
 									<option value="">No group</option>
 
-									{groups
-										.filter((group) => group.isActive)
-										.map((group) => (
-											<option key={group.id} value={group.id}>
-												{group.name}
-											</option>
-										))}
+									{groups.map((group) => (
+										<option key={group.id} value={group.id}>
+											{group.name}
+										</option>
+									))}
 								</select>
 							</div>
 
 							<label className="flex items-center gap-3 text-sm text-slate-300">
-								<input
-									type="checkbox"
-									checked={isMandatory}
-									onChange={(event) => setIsMandatory(event.target.checked)}
-								/>
+								<input type="checkbox" name="isMandatory" />
 								Mandatory daily task
 							</label>
 
@@ -211,7 +134,7 @@ export default function TasksPage() {
 					</form>
 
 					<form
-						onSubmit={handleAddGroup}
+						action={createTaskGroup}
 						className="mt-8 rounded-2xl border border-slate-800 bg-slate-900 p-6"
 					>
 						<h2 className="text-xl font-bold">Add Task Group</h2>
@@ -223,8 +146,7 @@ export default function TasksPage() {
 								</label>
 
 								<input
-									value={groupName}
-									onChange={(event) => setGroupName(event.target.value)}
+									name="name"
 									placeholder="Career"
 									className="mt-2 w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-white outline-none focus:border-sky-500"
 								/>
@@ -236,8 +158,7 @@ export default function TasksPage() {
 								</label>
 
 								<textarea
-									value={groupDescription}
-									onChange={(event) => setGroupDescription(event.target.value)}
+									name="description"
 									placeholder="Tasks that move this area forward"
 									className="mt-2 w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-white outline-none focus:border-sky-500"
 								/>
@@ -252,209 +173,178 @@ export default function TasksPage() {
 					<div className="mt-10">
 						<h2 className="mb-4 text-xl font-bold">Task Groups</h2>
 
-						<div className="space-y-3">
-							{groups
-								.filter((group) => group.isActive)
-								.map((group) => {
-									const isEditing = editingGroupId === group.id;
+						{groups.length === 0 ? (
+							<div className="rounded-xl border border-slate-800 bg-slate-900 p-4 text-slate-400">
+								No task groups yet.
+							</div>
+						) : (
+							<div className="space-y-4">
+								{groups.map((group) => (
+									<div
+										key={group.id}
+										className="rounded-xl border border-slate-800 bg-slate-900 p-4"
+									>
+										<form action={updateTaskGroup} className="space-y-4">
+											<input type="hidden" name="groupId" value={group.id} />
 
-									return (
-										<div
-											key={group.id}
-											className="rounded-xl border border-slate-800 bg-slate-900 p-4"
+											<div>
+												<label className="text-sm font-medium text-slate-300">
+													Group name
+												</label>
+
+												<input
+													name="name"
+													defaultValue={group.name}
+													className="mt-2 w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-white outline-none focus:border-sky-500"
+												/>
+											</div>
+
+											<div>
+												<label className="text-sm font-medium text-slate-300">
+													Description
+												</label>
+
+												<textarea
+													name="description"
+													defaultValue={group.description ?? ""}
+													className="mt-2 w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-white outline-none focus:border-sky-500"
+												/>
+											</div>
+
+											<div className="flex gap-3">
+												<button className="rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-sky-400">
+													Save Group
+												</button>
+											</div>
+										</form>
+										<form
+											action={deleteTaskGroup.bind(null, group.id)}
+											className="mt-3"
 										>
-											{isEditing ? (
-												<div className="space-y-4">
-													<input
-														value={editingGroupName}
-														onChange={(event) =>
-															setEditingGroupName(event.target.value)
-														}
-														className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-white outline-none focus:border-sky-500"
-													/>
-
-													<textarea
-														value={editingGroupDescription}
-														onChange={(event) =>
-															setEditingGroupDescription(event.target.value)
-														}
-														className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-white outline-none focus:border-sky-500"
-													/>
-
-													<div className="flex gap-3">
-														<button
-															type="button"
-															onClick={() => saveEditingGroup(group.id)}
-															className="rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-sky-400"
-														>
-															Save
-														</button>
-
-														<button
-															type="button"
-															onClick={cancelEditingGroup}
-															className="rounded-lg border border-slate-700 px-4 py-2 text-sm font-medium text-slate-300 hover:border-sky-500 hover:text-sky-400"
-														>
-															Cancel
-														</button>
-													</div>
-												</div>
-											) : (
-												<div className="flex items-start justify-between gap-4">
-													<div>
-														<h3 className="text-lg font-semibold">
-															{group.name}
-														</h3>
-
-														{group.description && (
-															<p className="mt-1 text-sm text-slate-400">
-																{group.description}
-															</p>
-														)}
-													</div>
-
-													<div className="flex gap-2">
-														<button
-															type="button"
-															onClick={() => startEditingGroup(group)}
-															className="rounded-lg border border-slate-700 px-3 py-2 text-sm text-slate-300 hover:border-sky-500 hover:text-sky-400"
-														>
-															Edit
-														</button>
-
-														<button
-															type="button"
-															onClick={() => deleteGroup(group.id)}
-															className="rounded-lg border border-red-500/40 px-3 py-2 text-sm text-red-300 hover:bg-red-500/10"
-														>
-															Delete
-														</button>
-													</div>
-												</div>
-											)}
-										</div>
-									);
-								})}
-						</div>
+											<button className="rounded-lg border border-red-500/40 px-4 py-2 text-sm text-red-300 hover:bg-red-500/10">
+												Delete Group
+											</button>
+										</form>
+									</div>
+								))}
+							</div>
+						)}
 					</div>
 
 					<div className="mt-10">
 						<h2 className="mb-4 text-xl font-bold">Active Tasks</h2>
 
-						<div className="space-y-3">
-							{activeTasks.map((task) => {
-								const isEditing = editingTaskId === task.id;
-								const taskGroup = groups.find(
-									(group) => group.id === task.groupId,
-								);
-
-								return (
+						{tasks.length === 0 ? (
+							<div className="rounded-xl border border-slate-800 bg-slate-900 p-4 text-slate-400">
+								No active tasks yet. Add your first task above.
+							</div>
+						) : (
+							<div className="space-y-4">
+								{tasks.map((task) => (
 									<div
 										key={task.id}
 										className="rounded-xl border border-slate-800 bg-slate-900 p-4"
 									>
-										{isEditing ? (
-											<div className="space-y-4">
-												<input
-													value={editingTitle}
-													onChange={(event) =>
-														setEditingTitle(event.target.value)
-													}
-													className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-white outline-none focus:border-sky-500"
-												/>
+										<form action={updateTask} className="space-y-4">
+											<input type="hidden" name="taskId" value={task.id} />
 
-												<textarea
-													value={editingDescription}
-													onChange={(event) =>
-														setEditingDescription(event.target.value)
-													}
-													className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-white outline-none focus:border-sky-500"
-												/>
-
-												<div></div>
-
-												<label className="flex items-center gap-3 text-sm text-slate-300">
-													<input
-														type="checkbox"
-														checked={editingIsMandatory}
-														onChange={(event) =>
-															setEditingIsMandatory(event.target.checked)
-														}
-													/>
-													Mandatory daily task
+											<div>
+												<label className="text-sm font-medium text-slate-300">
+													Task name
 												</label>
 
-												<div className="flex gap-3">
-													<button
-														onClick={() => saveEditing(task.id)}
-														className="rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-sky-400"
-													>
-														Save
-													</button>
-
-													<button
-														onClick={cancelEditing}
-														className="rounded-lg border border-slate-700 px-4 py-2 text-sm font-medium text-slate-300 hover:border-sky-500 hover:text-sky-400"
-													>
-														Cancel
-													</button>
-												</div>
+												<input
+													name="title"
+													defaultValue={task.title}
+													className="mt-2 w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-white outline-none focus:border-sky-500"
+												/>
 											</div>
-										) : (
-											<div className="flex items-start justify-between gap-4">
-												<div>
-													<h3 className="text-lg font-semibold">
-														{task.title}
-													</h3>
 
-													{task.description && (
-														<p className="mt-1 text-sm text-slate-400">
-															{task.description}
-														</p>
-													)}
+											<div>
+												<label className="text-sm font-medium text-slate-300">
+													Description
+												</label>
 
-													<div className="mt-3 flex flex-wrap gap-2">
-														{taskGroup && (
-															<span className="rounded-full bg-purple-500/10 px-3 py-1 text-xs font-medium text-purple-300">
-																{taskGroup.name}
-															</span>
-														)}
-
-														{task.isMandatory && (
-															<span className="rounded-full bg-sky-500/10 px-3 py-1 text-xs font-medium text-sky-400">
-																Mandatory
-															</span>
-														)}
-
-														{!task.isMandatory && (
-															<span className="rounded-full bg-orange-500/10 px-3 py-1 text-xs font-medium text-orange-400">
-																Rotating
-															</span>
-														)}
-													</div>
-												</div>
-
-												<div className="flex gap-2">
-													<button
-														onClick={() => startEditing(task)}
-														className="rounded-lg border border-slate-700 px-3 py-2 text-sm text-slate-300 hover:border-sky-500 hover:text-sky-400"
-													>
-														Edit
-													</button>
-
-													<button
-														onClick={() => deleteTask(task.id)}
-														className="rounded-lg border border-red-500/40 px-3 py-2 text-sm text-red-300 hover:bg-red-500/10"
-													>
-														Delete
-													</button>
-												</div>
+												<textarea
+													name="description"
+													defaultValue={task.description ?? ""}
+													className="mt-2 w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-white outline-none focus:border-sky-500"
+												/>
 											</div>
-										)}
+
+											<div>
+												<label className="text-sm font-medium text-slate-300">
+													Task group
+												</label>
+
+												<select
+													name="groupId"
+													defaultValue={task.groupId ?? ""}
+													className="mt-2 w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-white outline-none focus:border-sky-500"
+												>
+													<option value="">No group</option>
+
+													{groups.map((group) => (
+														<option key={group.id} value={group.id}>
+															{group.name}
+														</option>
+													))}
+												</select>
+											</div>
+
+											<label className="flex items-center gap-3 text-sm text-slate-300">
+												<input
+													type="checkbox"
+													name="isMandatory"
+													defaultChecked={task.isMandatory}
+												/>
+												Mandatory daily task
+											</label>
+
+											<div className="flex flex-wrap gap-2">
+												{task.group && (
+													<span className="rounded-full bg-purple-500/10 px-3 py-1 text-xs font-medium text-purple-300">
+														{task.group.name}
+													</span>
+												)}
+
+												{task.isMandatory && (
+													<span className="rounded-full bg-sky-500/10 px-3 py-1 text-xs font-medium text-sky-400">
+														Mandatory
+													</span>
+												)}
+
+												{!task.isMandatory && task.groupId && (
+													<span className="rounded-full bg-orange-500/10 px-3 py-1 text-xs font-medium text-orange-400">
+														Rotating
+													</span>
+												)}
+
+												{!task.groupId && !task.isMandatory && (
+													<span className="rounded-full bg-slate-800 px-3 py-1 text-xs text-slate-300">
+														Ungrouped
+													</span>
+												)}
+											</div>
+
+											<div className="flex gap-3">
+												<button className="rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-sky-400">
+													Save Task
+												</button>
+											</div>
+										</form>
+										<form
+											action={deleteTask.bind(null, task.id)}
+											className="mt-3"
+										>
+											<button className="rounded-lg border border-red-500/40 px-4 py-2 text-sm text-red-300 hover:bg-red-500/10">
+												Delete Task
+											</button>
+										</form>
 									</div>
-								);
-							})}
-						</div>
+								))}
+							</div>
+						)}
 					</div>
 				</section>
 			</main>

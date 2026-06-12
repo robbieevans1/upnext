@@ -1,29 +1,83 @@
-"use client";
-
 import AppNav from "@/components/AppNav";
-import {useTasks} from "@/hooks/useTask";
-import { sortStack, sortGroupStack } from "@/lib/stack";
-import { Task } from "@/types/task";
+import { completeTask } from "@/app/actions/tasks";
+import { prisma } from "@/lib/prisma";
+import { Task } from "@prisma/client";
 
-export default function Home() {
-  const {
-    groups,
-    remainingTasks,
-    completedTodayTasks,
-    hasLoaded,
-    completeTask,
-    resetDemo,
-  } = useTasks();
+function getTodayDate() {
+  const now = new Date();
+  return new Date(now.getFullYear(), now.getMonth(), now.getDate());
+}
 
-  if (!hasLoaded) {
-    return (
-      <main className="min-h-screen bg-slate-950 p-6 text-white">
-        Loading...
-      </main>
-    );
-  }
+async function getDemoUser() {
+  return prisma.user.upsert({
+    where: {
+      email: "demo@upnext.dev",
+    },
+    update: {},
+    create: {
+      id: "demo-user",
+      email: "demo@upnext.dev",
+      name: "Demo User",
+    },
+  });
+}
 
-  const activeGroups = groups.filter((group) => group.isActive);
+function sortStack(tasks: Task[]) {
+  return [...tasks].sort((a, b) => {
+    if (a.isMandatory !== b.isMandatory) {
+      return Number(b.isMandatory) - Number(a.isMandatory);
+    }
+
+    if (a.missedCount !== b.missedCount) {
+      return b.missedCount - a.missedCount;
+    }
+
+    return a.stackOrder - b.stackOrder;
+  });
+}
+
+export default async function Home() {
+  const user = await getDemoUser();
+  const today = getTodayDate();
+
+  const groups = await prisma.taskGroup.findMany({
+    where: {
+      userId: user.id,
+      isActive: true,
+    },
+    orderBy: {
+      createdAt: "asc",
+    },
+  });
+
+  const tasks = await prisma.task.findMany({
+    where: {
+      userId: user.id,
+      isActive: true,
+    },
+    orderBy: {
+      stackOrder: "asc",
+    },
+  });
+
+  const completionsToday = await prisma.taskCompletion.findMany({
+    where: {
+      userId: user.id,
+      completedOn: today,
+    },
+  });
+
+  const completedTodayIds = completionsToday.map(
+    (completion) => completion.taskId
+  );
+
+  const completedTodayTasks = tasks.filter((task) =>
+    completedTodayIds.includes(task.id)
+  );
+
+  const remainingTasks = tasks.filter(
+    (task) => !completedTodayIds.includes(task.id)
+  );
 
   const mandatoryTasks = sortStack(
     remainingTasks.filter((task) => task.isMandatory)
@@ -33,13 +87,15 @@ export default function Home() {
     remainingTasks.filter((task) => !task.isMandatory && !task.groupId)
   );
 
-  const groupedTasks = activeGroups
+  const groupedTasks = groups
     .map((group) => {
-      const tasks = sortGroupStack(remainingTasks, group.id);
+      const groupTasks = remainingTasks
+        .filter((task) => task.groupId === group.id && !task.isMandatory)
+        .sort((a, b) => a.stackOrder - b.stackOrder);
 
       return {
         group,
-        tasks,
+        tasks: groupTasks,
       };
     })
     .filter((groupStack) => groupStack.tasks.length > 0);
@@ -74,17 +130,11 @@ export default function Home() {
               </h1>
 
               <p className="mt-3 text-slate-400">
-                Mandatory tasks stay first. Group tasks rotate after completion
-                and return tomorrow at the bottom of their stack.
+                Mandatory tasks stay first. Group tasks disappear after
+                completion today, then return tomorrow at the bottom of their
+                group stack.
               </p>
             </div>
-
-            <button
-              onClick={resetDemo}
-              className="rounded-lg border border-slate-700 px-4 py-2 text-sm font-medium text-slate-300 hover:border-sky-500 hover:text-sky-400"
-            >
-              Reset
-            </button>
           </div>
 
           <div className="mt-6">
@@ -106,7 +156,7 @@ export default function Home() {
           </div>
 
           {currentTask ? (
-            <CurrentTaskCard task={currentTask} onComplete={completeTask} />
+            <CurrentTaskCard task={currentTask} />
           ) : (
             <div className="mt-8 rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-6">
               <p className="text-sm font-semibold uppercase tracking-wide text-emerald-400">
@@ -124,12 +174,7 @@ export default function Home() {
           {mandatoryTasks.length > 0 && (
             <StackSection title="Mandatory">
               {mandatoryTasks.map((task) => (
-                <TaskRow
-                  key={task.id}
-                  task={task}
-                  onComplete={completeTask}
-                  badge="Required"
-                />
+                <TaskRow key={task.id} task={task} badge="Required" />
               ))}
             </StackSection>
           )}
@@ -146,7 +191,6 @@ export default function Home() {
                 <TaskRow
                   key={task.id}
                   task={task}
-                  onComplete={completeTask}
                   badge={index === 0 ? "Up next" : "In stack"}
                 />
               ))}
@@ -156,12 +200,7 @@ export default function Home() {
           {ungroupedTasks.length > 0 && (
             <StackSection title="Ungrouped">
               {ungroupedTasks.map((task) => (
-                <TaskRow
-                  key={task.id}
-                  task={task}
-                  onComplete={completeTask}
-                  badge="Single task"
-                />
+                <TaskRow key={task.id} task={task} badge="Single task" />
               ))}
             </StackSection>
           )}
@@ -174,7 +213,7 @@ export default function Home() {
 
               <div className="space-y-3">
                 {completedTodayTasks.map((task) => {
-                  const group = activeGroups.find(
+                  const group = groups.find(
                     (group) => group.id === task.groupId
                   );
 
@@ -211,13 +250,7 @@ export default function Home() {
   );
 }
 
-function CurrentTaskCard({
-  task,
-  onComplete,
-}: {
-  task: Task;
-  onComplete: (taskId: string) => void;
-}) {
+function CurrentTaskCard({ task }: { task: Task }) {
   return (
     <div className="mt-8 rounded-2xl border border-sky-500/40 bg-slate-900 p-6 shadow-lg">
       <div className="flex items-start justify-between gap-4">
@@ -236,12 +269,11 @@ function CurrentTaskCard({
         </span>
       </div>
 
-      <button
-        onClick={() => onComplete(task.id)}
-        className="mt-6 rounded-xl bg-sky-500 px-5 py-3 font-semibold text-slate-950 hover:bg-sky-400"
-      >
-        Complete
-      </button>
+      <form action={completeTask.bind(null, task.id)}>
+        <button className="mt-6 rounded-xl bg-sky-500 px-5 py-3 font-semibold text-slate-950 hover:bg-sky-400">
+          Complete
+        </button>
+      </form>
     </div>
   );
 }
@@ -262,15 +294,7 @@ function StackSection({
   );
 }
 
-function TaskRow({
-  task,
-  badge,
-  onComplete,
-}: {
-  task: Task;
-  badge: string;
-  onComplete: (taskId: string) => void;
-}) {
+function TaskRow({ task, badge }: { task: Task; badge: string }) {
   return (
     <div className="rounded-xl border border-slate-800 bg-slate-900 p-4">
       <div className="flex items-start justify-between gap-4">
@@ -300,12 +324,11 @@ function TaskRow({
           </div>
         </div>
 
-        <button
-          onClick={() => onComplete(task.id)}
-          className="rounded-lg border border-slate-700 px-4 py-2 text-sm font-medium text-slate-200 hover:border-sky-500 hover:text-sky-400"
-        >
-          Complete
-        </button>
+        <form action={completeTask.bind(null, task.id)}>
+          <button className="rounded-lg border border-slate-700 px-4 py-2 text-sm font-medium text-slate-200 hover:border-sky-500 hover:text-sky-400">
+            Complete
+          </button>
+        </form>
       </div>
     </div>
   );

@@ -14,12 +14,15 @@ model User {
   emailVerified DateTime?
   image         String?
 
-  accounts      Account[]
-  sessions      Session[]
-  tasks         Task[]
+  accounts Account[]
+  sessions Session[]
 
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  taskGroups      TaskGroup[]
+  tasks           Task[]
+  taskCompletions TaskCompletion[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model Account {
@@ -59,32 +62,55 @@ model VerificationToken {
 }
 
 model Task {
-  id          String   @id @default(cuid())
+  id          String  @id @default(cuid())
   title       String
   description String?
 
-  isMandatory Boolean  @default(false)
-  priority    Int      @default(1)
-  missedCount Int      @default(0)
+  isMandatory Boolean @default(false)
+  isActive    Boolean @default(true)
 
-  recurrence  String   @default("daily")
-  isActive    Boolean  @default(true)
+  missedCount Int @default(0)
+  stackOrder  Int @default(0)
 
-  userId      String
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  groupId String?
+  group   TaskGroup? @relation(fields: [groupId], references: [id], onDelete: SetNull)
 
   completions TaskCompletion[]
 
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model TaskCompletion {
-  id          String   @id @default(cuid())
-  taskId      String
-  task        Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  id String @id @default(cuid())
 
-  completedAt DateTime @default(now())
+  taskId String
+  task   Task   @relation(fields: [taskId], references: [id], onDelete: Cascade)
 
-  @@index([taskId, completedAt])
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  completedOn DateTime
+  createdAt   DateTime @default(now())
+
+  @@unique([taskId, completedOn])
+  @@index([userId, completedOn])
+}
+
+model TaskGroup {
+  id          String  @id @default(cuid())
+  name        String
+  description String?
+  isActive    Boolean @default(true)
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  tasks Task[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
