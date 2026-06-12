@@ -1,37 +1,72 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# UpNext
+
+UpNext is a stack-based task management app designed to help users focus on the next most important task instead of managing a long, overwhelming checklist.
+
+Unlike a traditional to-do list, UpNext organizes tasks into a daily stack. Mandatory tasks stay near the top until completed, while recurring tasks inside task groups rotate after completion. When a grouped task is completed, it moves into **Completed Today** and returns the next day at the bottom of its group stack.
+
+## Features
+
+- Create, edit, and delete tasks
+- Create, edit, and delete task groups
+- Mark tasks as complete for the current day
+- Track daily task completions in the database
+- Group related tasks into rotating stacks
+- Keep mandatory tasks prioritized
+- Store completion history for future analytics
+- Soft-delete tasks and groups to preserve historical data
+
+## Example Use Case
+
+A user may have a task group called **Career** with these tasks:
+
+1. Work on portfolio project
+2. Complete a LeetCode question
+3. Apply to jobs
+
+If the user completes **Work on portfolio project**, it moves to **Completed Today** and disappears from the remaining stack for that day. The next day, it returns at the bottom of the Career stack:
+
+1. Complete a LeetCode question
+2. Apply to jobs
+3. Work on portfolio project
+
+This helps users rotate through important recurring work instead of repeatedly choosing the easiest task.
+
+## Tech Stack
+
+- Next.js
+- TypeScript
+- Tailwind CSS
+- Prisma
+- PostgreSQL
+- Neon
+- Vercel
+
+## Core Data Models
+
+- `TaskGroup` — stores groups of related tasks
+- `Task` — stores recurring tasks, mandatory status, group membership, and stack order
+- `TaskCompletion` — stores which tasks were completed on each day
+- `User` — stores user account data
+
+## Why I Built This
+
+Most to-do apps treat all tasks like a flat checklist. UpNext is designed around the idea that productivity is often about knowing what should come next. The app helps reduce avoidance by keeping important recurring tasks visible and rotating grouped tasks over time.
+
+## Future Improvements
+
+- User authentication
+- Weekly and monthly analytics dashboard
+- Streak tracking
+- Most skipped task tracking
+- Task completion charts
+- Drag-and-drop task reordering
+- Skip reasons
+- Mobile-first improvements
+- Notifications and reminders
 
 ## Getting Started
 
-First, run the development server:
+Install dependencies:
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
-
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
-
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
-
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
-# upnext
+npm install
