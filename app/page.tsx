@@ -1,7 +1,13 @@
 import AppNav from "@/components/AppNav";
 import { completeTask } from "@/app/actions/tasks";
 import { prisma } from "@/lib/prisma";
-import { Task } from "@prisma/client";
+import { Prisma } from "@prisma/client";
+
+type TaskWithLastCompletion = Prisma.TaskGetPayload<{
+	include: {
+		completions: true;
+	};
+}>;
 
 function getTodayDate() {
 	const now = new Date();
@@ -22,7 +28,7 @@ async function getDemoUser() {
 	});
 }
 
-function sortStack(tasks: Task[]) {
+function sortStack(tasks: TaskWithLastCompletion[]) {
 	return [...tasks].sort((a, b) => {
 		if (a.isMandatory !== b.isMandatory) {
 			return Number(b.isMandatory) - Number(a.isMandatory);
@@ -58,6 +64,14 @@ export default async function Home() {
 		orderBy: {
 			stackOrder: "asc",
 		},
+		include: {
+			completions: {
+				orderBy: {
+					completedOn: "desc"
+				},
+				take: 1,
+			}
+		}
 	});
 
 	const completionsToday = await prisma.taskCompletion.findMany({
@@ -247,8 +261,11 @@ export default async function Home() {
 	);
 }
 
-function CurrentTaskCard({ task }: { task: Task }) {
+function CurrentTaskCard({ task }: { task: TaskWithLastCompletion }) {
+	const lastCompleted = task.completions[0]?.completedOn;
+	
 	return (
+
 		<div className="mt-8 rounded-2xl border border-sky-500/40 bg-slate-900 p-6 shadow-lg">
 			<div className="flex items-start justify-between gap-4">
 				<div>
@@ -262,12 +279,19 @@ function CurrentTaskCard({ task }: { task: Task }) {
 							: task.groupId
 								? "Group stack"
 								: "Single task"}
-					</p>{" "}
+					</p>
+
+					          <p className="mt-3 text-sm text-slate-500">
+            Last completed:{" "}
+            {lastCompleted ? lastCompleted.toLocaleDateString() : "Never"}
+          </p>
+					
 				</div>
 
 				<span className="rounded-full bg-sky-500/10 px-3 py-1 text-xs font-medium text-sky-400">
 					Recommended
 				</span>
+
 			</div>
 
 			<form action={completeTask.bind(null, task.id)}>
@@ -295,7 +319,8 @@ function StackSection({
 	);
 }
 
-function TaskRow({ task, badge }: { task: Task; badge: string }) {
+function TaskRow({ task, badge }: { task: TaskWithLastCompletion; badge: string }) {
+	const lastCompleted = task.completions[0]?.completedOn;
 	return (
 		<div className="rounded-xl border border-slate-800 bg-slate-900 p-4">
 			<div className="flex items-start justify-between gap-4">
@@ -306,6 +331,11 @@ function TaskRow({ task, badge }: { task: Task; badge: string }) {
 						<p className="mt-1 text-sm text-slate-400">{task.description}</p>
 					)}
 
+					<p className="mt-2 text-sm text-slate-500">
+						Last completed:{" "}
+						{lastCompleted ? lastCompleted.toLocaleDateString() : "Never"}
+					</p>
+
 					<div className="mt-3 flex flex-wrap gap-2">
 						<span className="rounded-full bg-slate-800 px-3 py-1 text-xs text-slate-300">
 							{badge}
@@ -315,6 +345,8 @@ function TaskRow({ task, badge }: { task: Task; badge: string }) {
 							<span className="rounded-full bg-sky-500/10 px-3 py-1 text-xs font-medium text-sky-400">
 								Mandatory
 							</span>
+
+
 						)}
 
 						{!task.isMandatory && task.groupId && (
