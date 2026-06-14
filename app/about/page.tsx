@@ -21,9 +21,9 @@ export default function AboutPage() {
 					</p>
 
 					<p className="mt-5 text-lg leading-8 text-slate-300">
-						There is only so much time in a single day, and sometimes we are
-						not able to finish everything we planned. UpNext is designed for
-						that reality. It helps make sure important tasks do not get ignored,
+						There is only so much time in a single day, and sometimes we are not
+						able to finish everything we planned. UpNext is designed for that
+						reality. It helps make sure important tasks do not get ignored,
 						forgotten, or repeatedly pushed aside.
 					</p>
 
@@ -32,8 +32,8 @@ export default function AboutPage() {
 							<h2 className="text-xl font-bold">Mandatory tasks stay first</h2>
 
 							<p className="mt-3 leading-7 text-slate-400">
-								Some tasks matter every day, like going to the gym, studying,
-								or completing a required habit. UpNext keeps mandatory tasks near
+								Some tasks matter every day, like going to the gym, studying, or
+								completing a required habit. UpNext keeps mandatory tasks near
 								the top of your stack until they are completed.
 							</p>
 						</div>
@@ -56,10 +56,10 @@ export default function AboutPage() {
 							<h2 className="text-xl font-bold">Task groups rotate</h2>
 
 							<p className="mt-3 leading-7 text-slate-400">
-								Related tasks can be placed into groups, such as Career, Hobbies,
-								or Health. When you complete a task inside a group, it moves into
-								Completed Today and returns tomorrow at the bottom of that
-								group&apos;s stack.
+								Related tasks can be placed into groups, such as Career,
+								Hobbies, or Health. When you complete a task inside a group, it
+								moves into Completed Today and returns tomorrow at the bottom of
+								that group&apos;s stack.
 							</p>
 						</div>
 
@@ -98,9 +98,9 @@ export default function AboutPage() {
 						</p>
 
 						<p className="mt-3 leading-7 text-slate-300">
-							The goal is not to pretend every day is perfect. The goal is to
-							help users keep moving forward without losing track of what
-							matters.
+							The goal is not to attempt to have a perfect day every day. The
+							goal is to balance the demands of daily life while making
+							consistent progress across a variety of areas.
 						</p>
 
 						<div className="mt-6 flex flex-wrap gap-3">
