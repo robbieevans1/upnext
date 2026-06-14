@@ -9,10 +9,68 @@ type TaskWithLastCompletion = Prisma.TaskGetPayload<{
 	};
 }>;
 
+type TaskStatus = "normal" | "stale" | "overdue";
+
 function getTodayDate() {
 	const now = new Date();
 	return new Date(now.getFullYear(), now.getMonth(), now.getDate());
 }
+
+function getDaysSinceLastCompleted(
+	lastCompleted: Date | undefined,
+	today: Date,
+) {
+	if (!lastCompleted) {
+		return null;
+	}
+
+	const lastCompletedDate = new Date(
+		lastCompleted.getFullYear(),
+		lastCompleted.getMonth(),
+		lastCompleted.getDate(),
+	);
+
+	const diffInMs = today.getTime() - lastCompletedDate.getTime();
+
+	return Math.floor(diffInMs / (1000 * 60 * 60 * 24));
+}
+
+function getTaskStatus(task: TaskWithLastCompletion, today: Date): TaskStatus {
+	const lastCompleted = task.completions[0]?.completedOn;
+	const daysSinceLastCompleted = getDaysSinceLastCompleted(
+		lastCompleted,
+		today,
+	);
+
+	if (daysSinceLastCompleted === null) {
+		return "overdue";
+	}
+
+	if (daysSinceLastCompleted > 3) {
+		return "overdue";
+	}
+
+	if (daysSinceLastCompleted === 3) {
+		return "stale";
+	}
+
+	return "normal";
+}
+
+const taskRowStyles = {
+	normal: "rounded-xl border border-slate-800 bg-slate-900 p-4",
+	stale: "rounded-xl border border-yellow-500/40 bg-yellow-500/10 p-4",
+	overdue: "rounded-xl border border-red-500/40 bg-red-500/10 p-4",
+};
+
+const currentTaskStyles = {
+	normal:
+		"mt-8 rounded-2xl border border-sky-500/40 bg-slate-900 p-6 shadow-lg",
+	stale:
+		"mt-8 rounded-2xl border border-yellow-500/40 bg-yellow-500/10 p-6 shadow-lg",
+	overdue:
+		"mt-8 rounded-2xl border border-red-500/40 bg-red-500/10 p-6 shadow-lg",
+};
 
 async function getDemoUser() {
 	return prisma.user.upsert({
@@ -67,11 +125,11 @@ export default async function Home() {
 		include: {
 			completions: {
 				orderBy: {
-					completedOn: "desc"
+					completedOn: "desc",
 				},
 				take: 1,
-			}
-		}
+			},
+		},
 	});
 
 	const completionsToday = await prisma.taskCompletion.findMany({
@@ -167,7 +225,7 @@ export default async function Home() {
 					</div>
 
 					{currentTask ? (
-						<CurrentTaskCard task={currentTask} />
+						<CurrentTaskCard task={currentTask} today={today} />
 					) : (
 						<div className="mt-8 rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-6">
 							<p className="text-sm font-semibold uppercase tracking-wide text-emerald-400">
@@ -185,7 +243,12 @@ export default async function Home() {
 					{mandatoryTasks.length > 0 && (
 						<StackSection title="Mandatory">
 							{mandatoryTasks.map((task) => (
-								<TaskRow key={task.id} task={task} badge="Required" />
+								<TaskRow
+									key={task.id}
+									task={task}
+									badge="Required"
+									today={today}
+								/>
 							))}
 						</StackSection>
 					)}
@@ -203,6 +266,7 @@ export default async function Home() {
 									key={task.id}
 									task={task}
 									badge={index === 0 ? "Up next" : "In stack"}
+									today={today}
 								/>
 							))}
 						</StackSection>
@@ -211,7 +275,12 @@ export default async function Home() {
 					{ungroupedTasks.length > 0 && (
 						<StackSection title="Ungrouped">
 							{ungroupedTasks.map((task) => (
-								<TaskRow key={task.id} task={task} badge="Single task" />
+								<TaskRow
+									key={task.id}
+									task={task}
+									badge="Single task"
+									today={today}
+								/>
 							))}
 						</StackSection>
 					)}
@@ -261,18 +330,26 @@ export default async function Home() {
 	);
 }
 
-function CurrentTaskCard({ task }: { task: TaskWithLastCompletion }) {
+function CurrentTaskCard({
+	task,
+	today,
+}: {
+	task: TaskWithLastCompletion;
+	today: Date;
+}) {
 	const lastCompleted = task.completions[0]?.completedOn;
-	
-	return (
+	const status = getTaskStatus(task, today);
 
-		<div className="mt-8 rounded-2xl border border-sky-500/40 bg-slate-900 p-6 shadow-lg">
+	return (
+		<div className={currentTaskStyles[status]}>
 			<div className="flex items-start justify-between gap-4">
 				<div>
 					<p className="text-sm font-semibold uppercase tracking-wide text-sky-400">
 						Current Priority
 					</p>
+
 					<h2 className="mt-3 text-3xl font-bold">{task.title}</h2>
+
 					<p className="mt-2 text-slate-300">
 						{task.isMandatory
 							? "Required daily"
@@ -281,17 +358,15 @@ function CurrentTaskCard({ task }: { task: TaskWithLastCompletion }) {
 								: "Single task"}
 					</p>
 
-					          <p className="mt-3 text-sm text-slate-500">
-            Last completed:{" "}
-            {lastCompleted ? lastCompleted.toLocaleDateString() : "Never"}
-          </p>
-					
+					<p className="mt-3 text-sm text-slate-500">
+						Last completed:{" "}
+						{lastCompleted ? lastCompleted.toLocaleDateString() : "Never"}
+					</p>
 				</div>
 
 				<span className="rounded-full bg-sky-500/10 px-3 py-1 text-xs font-medium text-sky-400">
 					Recommended
 				</span>
-
 			</div>
 
 			<form action={completeTask.bind(null, task.id)}>
@@ -319,10 +394,20 @@ function StackSection({
 	);
 }
 
-function TaskRow({ task, badge }: { task: TaskWithLastCompletion; badge: string }) {
+function TaskRow({
+	task,
+	badge,
+	today,
+}: {
+	task: TaskWithLastCompletion;
+	badge: string;
+	today: Date;
+}) {
 	const lastCompleted = task.completions[0]?.completedOn;
+	const status = getTaskStatus(task, today);
+
 	return (
-		<div className="rounded-xl border border-slate-800 bg-slate-900 p-4">
+		<div className={taskRowStyles[status]}>
 			<div className="flex items-start justify-between gap-4">
 				<div>
 					<h4 className="text-lg font-semibold">{task.title}</h4>
@@ -341,12 +426,22 @@ function TaskRow({ task, badge }: { task: TaskWithLastCompletion; badge: string 
 							{badge}
 						</span>
 
+						{status === "stale" && (
+							<span className="rounded-full bg-yellow-500/10 px-3 py-1 text-xs font-medium text-yellow-300">
+								Stale
+							</span>
+						)}
+
+						{status === "overdue" && (
+							<span className="rounded-full bg-red-500/10 px-3 py-1 text-xs font-medium text-red-300">
+								Overdue
+							</span>
+						)}
+
 						{task.isMandatory && (
 							<span className="rounded-full bg-sky-500/10 px-3 py-1 text-xs font-medium text-sky-400">
 								Mandatory
 							</span>
-
-
 						)}
 
 						{!task.isMandatory && task.groupId && (
