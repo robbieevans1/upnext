@@ -1,7 +1,16 @@
 import Link from "next/link";
 import Image from "next/image";
+import { getServerSession } from "next-auth";
+import { redirect } from "next/navigation";
+import { authOptions } from "@/lib/auth";
 
-export default function LandingPage() {
+export default async function LandingPage() {
+	const session = await getServerSession(authOptions);
+
+	if (session?.user) {
+		redirect("/today");
+	}
+
 	return (
 		<main className="min-h-screen bg-slate-950 text-white">
 			<section className="mx-auto flex min-h-screen max-w-6xl flex-col px-6 py-8">
@@ -27,7 +36,7 @@ export default function LandingPage() {
 						</Link>
 
 						<Link
-							href="/today"
+							href="/signup"
 							className="rounded-lg bg-white px-4 py-2 text-sm font-semibold text-slate-950 transition hover:bg-slate-200"
 						>
 							Sign up
@@ -54,7 +63,7 @@ export default function LandingPage() {
 
 						<div className="mt-8 flex flex-col gap-4 sm:flex-row">
 							<Link
-								href="/today"
+								href="/signup"
 								className="rounded-xl bg-white px-6 py-3 text-center font-semibold text-slate-950 transition hover:bg-slate-200"
 							>
 								Get started

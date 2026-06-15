@@ -2,41 +2,52 @@
 
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
+import { getServerSession } from "next-auth";
+import { redirect } from "next/navigation";
+import { authOptions } from "@/lib/auth";
 
-const DEMO_USER_ID = "demo-user";
+// const DEMO_USER_ID = "demo-user";
 
 function getTodayDate() {
 	const now = new Date();
 	return new Date(now.getFullYear(), now.getMonth(), now.getDate());
 }
+async function getCurrentUserId() {
+	const session = await getServerSession(authOptions);
 
-async function getDemoUser() {
-	return prisma.user.upsert({
-		where: {
-			email: "demo@upnext.dev",
-		},
-		update: {},
-		create: {
-			id: DEMO_USER_ID,
-			email: "demo@upnext.dev",
-			name: "Demo User",
-		},
-	});
+	if (!session?.user?.id) {
+		redirect("/login");
+	}
+
+	return session.user.id;
 }
+// async function getDemoUser() {
+// 	return prisma.user.upsert({
+// 		where: {
+// 			email: "demo@upnext.dev",
+// 		},
+// 		update: {},
+// 		create: {
+// 			id: DEMO_USER_ID,
+// 			email: "demo@upnext.dev",
+// 			name: "Demo User",
+// 		},
+// 	});
+// }
 
 export async function createTaskGroup(formData: FormData) {
-	const user = await getDemoUser();
+	const userId = await getCurrentUserId();
 
-	const name = String(formData.get("name") ?? "");
-	const description = String(formData.get("description") ?? "");
+	const name = String(formData.get("name") ?? "").trim();
+	const description = String(formData.get("description") ?? "").trim();
 
-	if (!name.trim()) return;
+	if (!name) return;
 
 	await prisma.taskGroup.create({
 		data: {
 			name,
 			description,
-			userId: user.id,
+			userId,
 		},
 	});
 
@@ -88,20 +99,20 @@ export async function deleteTaskGroup(groupId: string) {
 }
 
 export async function createTask(formData: FormData) {
-	const user = await getDemoUser();
+	const userId = await getCurrentUserId();
 
-	const title = String(formData.get("title") ?? "");
-	const description = String(formData.get("description") ?? "");
+	const title = String(formData.get("title") ?? "").trim();
+	const description = String(formData.get("description") ?? "").trim();
 	const groupIdValue = String(formData.get("groupId") ?? "");
 	const isMandatory = formData.get("isMandatory") === "on";
 
-	if (!title.trim()) return;
+	if (!title) return;
 
 	const groupId = groupIdValue || null;
 
 	const existingTasksInStack = await prisma.task.count({
 		where: {
-			userId: user.id,
+			userId,
 			isActive: true,
 			groupId,
 		},
@@ -113,7 +124,7 @@ export async function createTask(formData: FormData) {
 			description,
 			isMandatory,
 			groupId,
-			userId: user.id,
+			userId,
 			stackOrder: existingTasksInStack,
 		},
 	});
@@ -162,13 +173,14 @@ export async function deleteTask(taskId: string) {
 }
 
 export async function completeTask(taskId: string) {
-	const user = await getDemoUser();
+	const userId = await getCurrentUserId();
+
 	const today = getTodayDate();
 
 	const task = await prisma.task.findFirst({
 		where: {
 			id: taskId,
-			userId: user.id,
+			userId,
 			isActive: true,
 		},
 	});
@@ -185,7 +197,7 @@ export async function completeTask(taskId: string) {
 		update: {},
 		create: {
 			taskId,
-			userId: user.id,
+			userId,
 			completedOn: today,
 		},
 	});
@@ -193,7 +205,7 @@ export async function completeTask(taskId: string) {
 	if (task.groupId) {
 		const groupTasks = await prisma.task.findMany({
 			where: {
-				userId: user.id,
+				userId,
 				groupId: task.groupId,
 				isActive: true,
 				id: {
@@ -214,7 +226,7 @@ export async function completeTask(taskId: string) {
 					data: {
 						stackOrder: index,
 					},
-				}),
+				})
 			),
 			prisma.task.update({
 				where: {

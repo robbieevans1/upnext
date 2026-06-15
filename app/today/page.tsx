@@ -3,6 +3,10 @@ import { completeTask } from "@/app/actions/tasks";
 import { prisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
 
+import { getServerSession } from "next-auth";
+import { redirect } from "next/navigation";
+import { authOptions } from "@/lib/auth";
+
 type TaskWithLastCompletion = Prisma.TaskGetPayload<{
 	include: {
 		completions: true;
@@ -72,19 +76,19 @@ const currentTaskStyles = {
 		"mt-8 rounded-2xl border border-red-500/40 bg-red-500/10 p-6 shadow-lg",
 };
 
-async function getDemoUser() {
-	return prisma.user.upsert({
-		where: {
-			email: "demo@upnext.dev",
-		},
-		update: {},
-		create: {
-			id: "demo-user",
-			email: "demo@upnext.dev",
-			name: "Demo User",
-		},
-	});
-}
+// async function getDemoUser() {
+// 	return prisma.user.upsert({
+// 		where: {
+// 			email: "demo@upnext.dev",
+// 		},
+// 		update: {},
+// 		create: {
+// 			id: "demo-user",
+// 			email: "demo@upnext.dev",
+// 			name: "Demo User",
+// 		},
+// 	});
+// }
 
 function sortStack(tasks: TaskWithLastCompletion[]) {
 	return [...tasks].sort((a, b) => {
@@ -101,12 +105,17 @@ function sortStack(tasks: TaskWithLastCompletion[]) {
 }
 
 export default async function TodayPage() {
-const user = await getDemoUser();
+	const session = await getServerSession(authOptions);
+
+	if (!session?.user) {
+		redirect("/login");
+	}
+	// const user = await getDemoUser();
 	const today = getTodayDate();
 
 	const groups = await prisma.taskGroup.findMany({
 		where: {
-			userId: user.id,
+			userId: session.user.id,
 			isActive: true,
 		},
 		orderBy: {
@@ -116,7 +125,7 @@ const user = await getDemoUser();
 
 	const tasks = await prisma.task.findMany({
 		where: {
-			userId: user.id,
+			userId: session.user.id,
 			isActive: true,
 		},
 		orderBy: {
@@ -134,7 +143,7 @@ const user = await getDemoUser();
 
 	const completionsToday = await prisma.taskCompletion.findMany({
 		where: {
-			userId: user.id,
+			userId: session.user.id,
 			completedOn: today,
 		},
 	});
