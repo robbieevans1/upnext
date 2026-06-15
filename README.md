@@ -70,3 +70,23 @@ Install dependencies:
 
 ```bash
 npm install
+```
+
+Run the local quality checks:
+
+```bash
+npm run lint
+npm run typecheck
+npm run test:run
+npm run build
+```
+
+For active test development, use watch mode:
+
+```bash
+npm test
+```
+
+## GitHub Actions
+
+This project runs CI from `.github/workflows/ci.yml` on pushes to `main` and on pull requests. The workflow installs dependencies with `npm ci`, then runs linting, TypeScript checks, the Vitest suite, and a production build.
