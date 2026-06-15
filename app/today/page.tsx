@@ -1,11 +1,12 @@
 import AppNav from "@/components/AppNav";
-import { completeTask } from "@/app/actions/tasks";
+import { completeTask, undoTodayCompletion } from "@/app/actions/tasks";
 import { prisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
 
 import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
 import { authOptions } from "@/lib/auth";
+import MidnightRefresh from "@/components/MidnightRefresh";
 
 type TaskWithLastCompletion = Prisma.TaskGetPayload<{
 	include: {
@@ -90,14 +91,33 @@ const currentTaskStyles = {
 // 	});
 // }
 
+function getLastCompletedTime(task: TaskWithLastCompletion) {
+	const lastCompleted = task.completions[0]?.completedOn;
+
+	if (!lastCompleted) {
+		return Number.NEGATIVE_INFINITY;
+	}
+
+	const lastCompletedDate = new Date(
+		lastCompleted.getFullYear(),
+		lastCompleted.getMonth(),
+		lastCompleted.getDate(),
+	);
+
+	return lastCompletedDate.getTime();
+}
+
 function sortStack(tasks: TaskWithLastCompletion[]) {
 	return [...tasks].sort((a, b) => {
 		if (a.isMandatory !== b.isMandatory) {
 			return Number(b.isMandatory) - Number(a.isMandatory);
 		}
 
-		if (a.missedCount !== b.missedCount) {
-			return b.missedCount - a.missedCount;
+		const aLastCompleted = getLastCompletedTime(a);
+		const bLastCompleted = getLastCompletedTime(b);
+
+		if (aLastCompleted !== bLastCompleted) {
+			return aLastCompleted - bLastCompleted;
 		}
 
 		return a.stackOrder - b.stackOrder;
@@ -170,9 +190,11 @@ export default async function TodayPage() {
 
 	const groupedTasks = groups
 		.map((group) => {
-			const groupTasks = remainingTasks
-				.filter((task) => task.groupId === group.id && !task.isMandatory)
-				.sort((a, b) => a.stackOrder - b.stackOrder);
+			const groupTasks = sortStack(
+				remainingTasks.filter(
+					(task) => task.groupId === group.id && !task.isMandatory,
+				),
+			);
 
 			return {
 				group,
@@ -196,6 +218,7 @@ export default async function TodayPage() {
 	return (
 		<>
 			<AppNav />
+			<MidnightRefresh />
 
 			<main className="min-h-screen bg-slate-950 px-6 py-10 text-white">
 				<section className="mx-auto max-w-2xl">
@@ -323,9 +346,17 @@ export default async function TodayPage() {
 													</p>
 												</div>
 
-												<span className="rounded-full bg-emerald-500/10 px-3 py-1 text-xs font-medium text-emerald-300">
-													Done
-												</span>
+												<div className="flex items-center gap-2">
+													<span className="rounded-full bg-emerald-500/10 px-3 py-1 text-xs font-medium text-emerald-300">
+														Done
+													</span>
+
+													<form action={undoTodayCompletion.bind(null, task.id)}>
+														<button className="rounded-lg border border-emerald-400/40 px-3 py-1.5 text-sm font-medium text-emerald-100 hover:bg-emerald-500/10">
+															Undo
+														</button>
+													</form>
+												</div>
 											</div>
 										</div>
 									);

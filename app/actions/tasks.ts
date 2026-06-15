@@ -12,6 +12,13 @@ function getTodayDate() {
 	const now = new Date();
 	return new Date(now.getFullYear(), now.getMonth(), now.getDate());
 }
+
+function revalidateTaskViews() {
+	revalidatePath("/");
+	revalidatePath("/today");
+	revalidatePath("/tasks");
+}
+
 async function getCurrentUserId() {
 	const session = await getServerSession(authOptions);
 
@@ -51,8 +58,7 @@ export async function createTaskGroup(formData: FormData) {
 		},
 	});
 
-	revalidatePath("/");
-	revalidatePath("/tasks");
+	revalidateTaskViews();
 }
 
 export async function updateTaskGroup(formData: FormData) {
@@ -72,8 +78,7 @@ export async function updateTaskGroup(formData: FormData) {
 		},
 	});
 
-	revalidatePath("/");
-	revalidatePath("/tasks");
+	revalidateTaskViews();
 }
 
 export async function deleteTaskGroup(groupId: string) {
@@ -94,8 +99,7 @@ export async function deleteTaskGroup(groupId: string) {
 		},
 	});
 
-	revalidatePath("/");
-	revalidatePath("/tasks");
+	revalidateTaskViews();
 }
 
 export async function createTask(formData: FormData) {
@@ -129,8 +133,7 @@ export async function createTask(formData: FormData) {
 		},
 	});
 
-	revalidatePath("/");
-	revalidatePath("/tasks");
+	revalidateTaskViews();
 }
 
 export async function updateTask(formData: FormData) {
@@ -154,8 +157,7 @@ export async function updateTask(formData: FormData) {
 		},
 	});
 
-	revalidatePath("/");
-	revalidatePath("/tasks");
+	revalidateTaskViews();
 }
 
 export async function deleteTask(taskId: string) {
@@ -168,8 +170,7 @@ export async function deleteTask(taskId: string) {
 		},
 	});
 
-	revalidatePath("/");
-	revalidatePath("/tasks");
+	revalidateTaskViews();
 }
 
 export async function completeTask(taskId: string) {
@@ -239,6 +240,20 @@ export async function completeTask(taskId: string) {
 		]);
 	}
 
-	revalidatePath("/");
-	revalidatePath("/tasks");
+	revalidateTaskViews();
+}
+
+export async function undoTodayCompletion(taskId: string) {
+	const userId = await getCurrentUserId();
+	const today = getTodayDate();
+
+	await prisma.taskCompletion.deleteMany({
+		where: {
+			taskId,
+			userId,
+			completedOn: today,
+		},
+	});
+
+	revalidateTaskViews();
 }

@@ -11,6 +11,7 @@ const prisma = {
 		update: vi.fn((args) => args),
 	},
 	taskCompletion: {
+		deleteMany: vi.fn(),
 		upsert: vi.fn(),
 	},
 	taskGroup: {
@@ -230,6 +231,23 @@ describe("task server actions", () => {
 				},
 			},
 		]);
+	});
+
+	it("undoes only today's completion for the current user", async () => {
+		vi.useFakeTimers();
+		vi.setSystemTime(new Date("2026-06-15T15:30:00.000Z"));
+		const { undoTodayCompletion } = await import("@/app/actions/tasks");
+
+		await undoTodayCompletion("task-1");
+
+		expect(prisma.taskCompletion.deleteMany).toHaveBeenCalledWith({
+			where: {
+				taskId: "task-1",
+				userId: "user-1",
+				completedOn: new Date(2026, 5, 15),
+			},
+		});
+		expect(revalidatePath).toHaveBeenCalledWith("/today");
 	});
 
 	it("redirects unauthenticated users before mutating data", async () => {
