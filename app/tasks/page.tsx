@@ -8,27 +8,35 @@ import {
 	updateTask,
 	updateTaskGroup,
 } from "@/app/actions/tasks";
+import { getServerSession } from "next-auth";
+import { redirect } from "next/navigation";
+import { authOptions } from "@/lib/auth";
 
-async function getDemoUser() {
-	return prisma.user.upsert({
-		where: {
-			email: "demo@upnext.dev",
-		},
-		update: {},
-		create: {
-			id: "demo-user",
-			email: "demo@upnext.dev",
-			name: "Demo User",
-		},
-	});
-}
+// async function getDemoUser() {
+// 	return prisma.user.upsert({
+// 		where: {
+// 			email: "demo@upnext.dev",
+// 		},
+// 		update: {},
+// 		create: {
+// 			id: "demo-user",
+// 			email: "demo@upnext.dev",
+// 			name: "Demo User",
+// 		},
+// 	});
+// }
 
 export default async function TasksPage() {
-	const user = await getDemoUser();
+		const session = await getServerSession(authOptions);
+
+	if (!session?.user) {
+		redirect("/login");
+	}
+		// const user = await getDemoUser();
 
 	const groups = await prisma.taskGroup.findMany({
 		where: {
-			userId: user.id,
+			userId: session.user.id,
 			isActive: true,
 		},
 		orderBy: {
@@ -38,7 +46,7 @@ export default async function TasksPage() {
 
 	const tasks = await prisma.task.findMany({
 		where: {
-			userId: user.id,
+			userId: session.user.id,
 			isActive: true,
 		},
 		include: {
