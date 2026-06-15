@@ -102,6 +102,7 @@ export function useTasks() {
 
 	const todayKey = getTodayKey();
 
+	/* eslint-disable react-hooks/set-state-in-effect */
 	useEffect(() => {
 		const savedTasks = localStorage.getItem(TASKS_STORAGE_KEY);
 		const savedGroups = localStorage.getItem(GROUPS_STORAGE_KEY);
@@ -115,6 +116,7 @@ export function useTasks() {
 
 		setHasLoaded(true);
 	}, []);
+	/* eslint-enable react-hooks/set-state-in-effect */
 
 	useEffect(() => {
 		if (!hasLoaded) return;
@@ -243,21 +245,25 @@ export function useTasks() {
 
 		if (!taskToComplete) return;
 
-		const alreadyCompletedToday = completedTasks.some(
-			(completedTask) =>
-				completedTask.taskId === taskId &&
-				completedTask.completedOn === todayKey,
-		);
+		setCompletedTasks((currentCompletedTasks) => {
+			const alreadyCompletedToday = currentCompletedTasks.some(
+				(completedTask) =>
+					completedTask.taskId === taskId &&
+					completedTask.completedOn === todayKey,
+			);
 
-		if (alreadyCompletedToday) return;
+			if (alreadyCompletedToday) {
+				return currentCompletedTasks;
+			}
 
-		setCompletedTasks((currentCompletedTasks) => [
-			{
-				taskId,
-				completedOn: todayKey,
-			},
-			...currentCompletedTasks,
-		]);
+			return [
+				{
+					taskId,
+					completedOn: todayKey,
+				},
+				...currentCompletedTasks,
+			];
+		});
 
 		if (!taskToComplete.groupId) return;
 
