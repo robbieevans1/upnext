@@ -97,7 +97,7 @@ export function getAppDateKey(date = new Date()) {
 export function getAppTodayDate(date = new Date()) {
 	const parts = getDateParts(date);
 
-	return new Date(Date.UTC(parts.year, parts.month - 1, parts.day));
+	return getUtcInstantForTimeZoneDate(parts);
 }
 
 export function getMsUntilNextAppMidnight(date = new Date()) {

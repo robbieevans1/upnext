@@ -169,14 +169,14 @@ describe("task server actions", () => {
 			where: {
 				taskId_completedOn: {
 					taskId: "task-1",
-					completedOn: new Date(Date.UTC(2026, 5, 15)),
+					completedOn: new Date("2026-06-15T04:00:00.000Z"),
 				},
 			},
 			update: {},
 			create: {
 				taskId: "task-1",
 				userId: "user-1",
-				completedOn: new Date(Date.UTC(2026, 5, 15)),
+				completedOn: new Date("2026-06-15T04:00:00.000Z"),
 			},
 		});
 		expect(prisma.$transaction).not.toHaveBeenCalled();
@@ -198,7 +198,7 @@ describe("task server actions", () => {
 				where: {
 					taskId_completedOn: {
 						taskId: "task-1",
-						completedOn: new Date(Date.UTC(2026, 5, 16)),
+						completedOn: new Date("2026-06-16T04:00:00.000Z"),
 					},
 				},
 			}),
@@ -267,7 +267,7 @@ describe("task server actions", () => {
 			where: {
 				taskId: "task-1",
 				userId: "user-1",
-				completedOn: new Date(Date.UTC(2026, 5, 15)),
+				completedOn: new Date("2026-06-15T04:00:00.000Z"),
 			},
 		});
 		expect(revalidatePath).toHaveBeenCalledWith("/today");

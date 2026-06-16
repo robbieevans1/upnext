@@ -1,12 +1,9 @@
 "use client";
 
 import { useEffect } from "react";
-import { useRouter } from "next/navigation";
 import { getAppDateKey, getMsUntilNextAppMidnight } from "@/lib/app-date";
 
 export default function MidnightRefresh() {
-	const router = useRouter();
-
 	useEffect(() => {
 		let currentDateKey = getAppDateKey();
 		let timeout: ReturnType<typeof setTimeout>;
@@ -19,7 +16,7 @@ export default function MidnightRefresh() {
 			}
 
 			currentDateKey = nextDateKey;
-			router.refresh();
+			window.location.reload();
 		}
 
 		function scheduleRefresh() {
@@ -47,7 +44,7 @@ export default function MidnightRefresh() {
 			window.removeEventListener("focus", refreshIfDateChanged);
 			document.removeEventListener("visibilitychange", handleVisibilityChange);
 		};
-	}, [router]);
+	}, []);
 
 	return null;
 }
