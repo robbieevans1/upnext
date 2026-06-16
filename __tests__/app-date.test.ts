@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { getAppDateKey, getAppTodayDate } from "@/lib/app-date";
+import { formatAppDate, getAppDateKey, getAppTodayDate } from "@/lib/app-date";
 
 describe("app date helpers", () => {
 	it("keeps the previous Eastern day before midnight", () => {
@@ -18,6 +18,13 @@ describe("app date helpers", () => {
 		expect(getAppTodayDate(date)).toEqual(
 			new Date("2026-06-16T04:00:00.000Z"),
 		);
+	});
+
+	it("formats midnight UTC as the previous Eastern day", () => {
+		const date = new Date("2026-06-16T00:00:00.000Z");
+
+		expect(getAppDateKey(date)).toBe("2026-06-15");
+		expect(formatAppDate(date)).toBe("6/15/2026");
 	});
 
 	it("uses the standard-time Eastern midnight offset in winter", () => {

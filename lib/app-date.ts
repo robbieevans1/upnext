@@ -94,6 +94,15 @@ export function getAppDateKey(date = new Date()) {
 	return `${year}-${month}-${day}`;
 }
 
+export function formatAppDate(date: Date) {
+	return new Intl.DateTimeFormat("en-US", {
+		timeZone: APP_TIME_ZONE,
+		year: "numeric",
+		month: "numeric",
+		day: "numeric",
+	}).format(date);
+}
+
 export function getAppTodayDate(date = new Date()) {
 	const parts = getDateParts(date);
 

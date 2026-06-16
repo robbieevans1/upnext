@@ -6,7 +6,7 @@ import { Prisma } from "@prisma/client";
 import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
 import { authOptions } from "@/lib/auth";
-import { getAppTodayDate } from "@/lib/app-date";
+import { formatAppDate, getAppTodayDate } from "@/lib/app-date";
 import { connection } from "next/server";
 
 type TaskWithLastCompletion = Prisma.TaskGetPayload<{
@@ -25,11 +25,7 @@ function getDaysSinceLastCompleted(
 		return null;
 	}
 
-	const lastCompletedDate = new Date(
-		lastCompleted.getFullYear(),
-		lastCompleted.getMonth(),
-		lastCompleted.getDate(),
-	);
+	const lastCompletedDate = getAppTodayDate(lastCompleted);
 
 	const diffInMs = today.getTime() - lastCompletedDate.getTime();
 
@@ -94,11 +90,7 @@ function getLastCompletedTime(task: TaskWithLastCompletion) {
 		return Number.NEGATIVE_INFINITY;
 	}
 
-	const lastCompletedDate = new Date(
-		lastCompleted.getFullYear(),
-		lastCompleted.getMonth(),
-		lastCompleted.getDate(),
-	);
+	const lastCompletedDate = getAppTodayDate(lastCompleted);
 
 	return lastCompletedDate.getTime();
 }
@@ -397,7 +389,7 @@ function CurrentTaskCard({
 
 					<p className="mt-3 text-sm text-slate-500">
 						Last completed:{" "}
-						{lastCompleted ? lastCompleted.toLocaleDateString() : "Never"}
+						{lastCompleted ? formatAppDate(lastCompleted) : "Never"}
 					</p>
 				</div>
 
@@ -455,7 +447,7 @@ function TaskRow({
 
 					<p className="mt-2 text-sm text-slate-500">
 						Last completed:{" "}
-						{lastCompleted ? lastCompleted.toLocaleDateString() : "Never"}
+						{lastCompleted ? formatAppDate(lastCompleted) : "Never"}
 					</p>
 
 					<div className="mt-3 flex flex-wrap gap-2">
