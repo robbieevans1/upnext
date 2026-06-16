@@ -1,4 +1,4 @@
-export const APP_TIME_ZONE = "America/New_York";
+const APP_TIME_ZONE = "America/New_York";
 
 type AppDateParts = {
 	year: number;
