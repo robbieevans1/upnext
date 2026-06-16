@@ -5,13 +5,9 @@ import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
 import { authOptions } from "@/lib/auth";
+import { getAppTodayDate } from "@/lib/app-date";
 
 // const DEMO_USER_ID = "demo-user";
-
-function getTodayDate() {
-	const now = new Date();
-	return new Date(now.getFullYear(), now.getMonth(), now.getDate());
-}
 
 function revalidateTaskViews() {
 	revalidatePath("/");
@@ -176,7 +172,7 @@ export async function deleteTask(taskId: string) {
 export async function completeTask(taskId: string) {
 	const userId = await getCurrentUserId();
 
-	const today = getTodayDate();
+	const today = getAppTodayDate();
 
 	const task = await prisma.task.findFirst({
 		where: {
@@ -245,7 +241,7 @@ export async function completeTask(taskId: string) {
 
 export async function undoTodayCompletion(taskId: string) {
 	const userId = await getCurrentUserId();
-	const today = getTodayDate();
+	const today = getAppTodayDate();
 
 	await prisma.taskCompletion.deleteMany({
 		where: {

@@ -6,7 +6,8 @@ import { Prisma } from "@prisma/client";
 import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
 import { authOptions } from "@/lib/auth";
-import MidnightRefresh from "@/components/MidnightRefresh";
+import { getAppTodayDate } from "@/lib/app-date";
+import { connection } from "next/server";
 
 type TaskWithLastCompletion = Prisma.TaskGetPayload<{
 	include: {
@@ -15,11 +16,6 @@ type TaskWithLastCompletion = Prisma.TaskGetPayload<{
 }>;
 
 type TaskStatus = "normal" | "stale" | "overdue";
-
-function getTodayDate() {
-	const now = new Date();
-	return new Date(now.getFullYear(), now.getMonth(), now.getDate());
-}
 
 function getDaysSinceLastCompleted(
 	lastCompleted: Date | undefined,
@@ -125,13 +121,15 @@ function sortStack(tasks: TaskWithLastCompletion[]) {
 }
 
 export default async function TodayPage() {
+	await connection();
+
 	const session = await getServerSession(authOptions);
 
 	if (!session?.user) {
 		redirect("/login");
 	}
 	// const user = await getDemoUser();
-	const today = getTodayDate();
+	const today = getAppTodayDate();
 
 	const groups = await prisma.taskGroup.findMany({
 		where: {
@@ -218,7 +216,6 @@ export default async function TodayPage() {
 	return (
 		<>
 			<AppNav />
-			<MidnightRefresh />
 
 			<main className="min-h-screen bg-slate-950 px-6 py-10 text-white">
 				<section className="mx-auto max-w-2xl">

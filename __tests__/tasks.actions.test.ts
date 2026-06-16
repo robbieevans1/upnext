@@ -154,7 +154,7 @@ describe("task server actions", () => {
 		});
 	});
 
-	it("completes a task once per local day", async () => {
+	it("completes a task once per app day", async () => {
 		vi.useFakeTimers();
 		vi.setSystemTime(new Date("2026-06-15T15:30:00.000Z"));
 		prisma.task.findFirst.mockResolvedValue({
@@ -169,17 +169,40 @@ describe("task server actions", () => {
 			where: {
 				taskId_completedOn: {
 					taskId: "task-1",
-					completedOn: new Date(2026, 5, 15),
+					completedOn: new Date(Date.UTC(2026, 5, 15)),
 				},
 			},
 			update: {},
 			create: {
 				taskId: "task-1",
 				userId: "user-1",
-				completedOn: new Date(2026, 5, 15),
+				completedOn: new Date(Date.UTC(2026, 5, 15)),
 			},
 		});
 		expect(prisma.$transaction).not.toHaveBeenCalled();
+	});
+
+	it("uses the Eastern calendar day after Eastern midnight", async () => {
+		vi.useFakeTimers();
+		vi.setSystemTime(new Date("2026-06-16T04:01:00.000Z"));
+		prisma.task.findFirst.mockResolvedValue({
+			id: "task-1",
+			groupId: null,
+		});
+		const { completeTask } = await import("@/app/actions/tasks");
+
+		await completeTask("task-1");
+
+		expect(prisma.taskCompletion.upsert).toHaveBeenCalledWith(
+			expect.objectContaining({
+				where: {
+					taskId_completedOn: {
+						taskId: "task-1",
+						completedOn: new Date(Date.UTC(2026, 5, 16)),
+					},
+				},
+			}),
+		);
 	});
 
 	it("moves a completed grouped task to the bottom of its group stack", async () => {
@@ -244,7 +267,7 @@ describe("task server actions", () => {
 			where: {
 				taskId: "task-1",
 				userId: "user-1",
-				completedOn: new Date(2026, 5, 15),
+				completedOn: new Date(Date.UTC(2026, 5, 15)),
 			},
 		});
 		expect(revalidatePath).toHaveBeenCalledWith("/today");

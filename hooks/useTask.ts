@@ -2,14 +2,11 @@
 
 import { useEffect, useState } from "react";
 import { CompletedTask, Task, TaskGroup } from "@/types/task";
+import { getAppDateKey } from "@/lib/app-date";
 
 const TASKS_STORAGE_KEY = "upnext-tasks";
 const GROUPS_STORAGE_KEY = "upnext-task-groups";
 const COMPLETED_KEY = "upnext-completed-today";
-
-function getTodayKey() {
-	return new Date().toISOString().split("T")[0];
-}
 
 const initialGroups: TaskGroup[] = [
 	{
@@ -100,7 +97,7 @@ export function useTasks() {
 	const [completedTasks, setCompletedTasks] = useState<CompletedTask[]>([]);
 	const [hasLoaded, setHasLoaded] = useState(false);
 
-	const todayKey = getTodayKey();
+	const todayKey = getAppDateKey();
 
 	/* eslint-disable react-hooks/set-state-in-effect */
 	useEffect(() => {
