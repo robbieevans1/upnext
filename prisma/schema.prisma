@@ -21,6 +21,7 @@ model User {
   taskGroups      TaskGroup[]
   tasks           Task[]
   taskCompletions TaskCompletion[]
+  downtimeSessions DowntimeSession[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -114,4 +115,22 @@ model TaskGroup {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+model DowntimeSession {
+  id String @id @default(cuid())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  category  String
+  day       DateTime
+  startedAt DateTime
+  stoppedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId, day])
+  @@index([userId, stoppedAt])
 }

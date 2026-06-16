@@ -30,6 +30,10 @@ describe("AppNav", () => {
 			"href",
 			"/tasks",
 		);
+		expect(screen.getByRole("link", { name: "Time" })).toHaveAttribute(
+			"href",
+			"/downtime",
+		);
 		expect(screen.getByRole("link", { name: "About" })).toHaveAttribute(
 			"href",
 			"/about",
