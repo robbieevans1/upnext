@@ -109,9 +109,9 @@ export function getAppTodayDate(date = new Date()) {
 	return getUtcInstantForTimeZoneDate(parts);
 }
 
-export function getMsUntilNextAppMidnight(date = new Date()) {
+export function getNextAppMidnightDate(date = new Date()) {
 	const today = getDateParts(date);
-	const nextMidnight = getUtcInstantForTimeZoneDate(
+	return getUtcInstantForTimeZoneDate(
 		{
 			year: today.year,
 			month: today.month,
@@ -119,8 +119,13 @@ export function getMsUntilNextAppMidnight(date = new Date()) {
 		},
 		0,
 		0,
-		5,
+		0,
 	);
+}
 
-	return Math.max(1000, nextMidnight.getTime() - date.getTime());
+export function getMsUntilNextAppMidnight(date = new Date()) {
+	const nextMidnight = getNextAppMidnightDate(date);
+	const refreshAt = new Date(nextMidnight.getTime() + 5000);
+
+	return Math.max(1000, refreshAt.getTime() - date.getTime());
 }

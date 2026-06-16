@@ -20,6 +20,10 @@ export default function AppNav() {
 						Tasks
 					</Link>
 
+					<Link href="/downtime" className="hover:text-sky-400">
+						Time
+					</Link>
+
 					<Link href="/about" className="hover:text-sky-400">
 						About
 					</Link>
