@@ -163,39 +163,6 @@ The CI workflow runs on pull requests and pushes to `main`. It installs dependen
 - Vitest test suite
 - Production build
 
-## Screenshots To Add
-
-Add screenshots to a `docs/screenshots/` folder and reference them from this README when ready.
-
-Recommended screenshots:
-
-- **Today page with an active stack**: show Current Priority, mandatory tasks, grouped tasks, and progress.
-- **Completed Today section**: show one or more completed tasks and the Undo button.
-- **Task management page**: show adding/editing tasks and groups.
-- **Downtime page idle state**: show the Sleep, Social, Eating, and Other start buttons.
-- **Downtime page running state**: show a visible active timer and Stop Timer button.
-- **Downtime breakdown**: show category totals after at least one stopped session.
-- **Login or sign-up page**: useful if presenting the app as a complete authenticated product.
-
-Suggested filenames:
-
-```text
-docs/screenshots/today-stack.png
-docs/screenshots/completed-today.png
-docs/screenshots/tasks-management.png
-docs/screenshots/downtime-idle.png
-docs/screenshots/downtime-running.png
-docs/screenshots/downtime-breakdown.png
-docs/screenshots/login.png
-```
-
-Once screenshots exist, add them near the top of the README with Markdown image links:
-
-```md
-![Today stack](docs/screenshots/today-stack.png)
-![Downtime timer](docs/screenshots/downtime-running.png)
-```
-
 ## Roadmap
 
 - Analytics dashboard for task completion and downtime trends
@@ -207,3 +174,11 @@ Once screenshots exist, add them near the top of the README with Markdown image 
 - Skip reasons
 - Notifications and reminders
 - Mobile UI polish
+
+## Screenshots
+<img width="2876" height="1284" alt="image" src="https://github.com/user-attachments/assets/dc244633-7ad0-4678-b66d-dd6ce07c2e4e" />
+<img width="2796" height="1456" alt="image" src="https://github.com/user-attachments/assets/b9cecc67-46eb-4305-964e-a5ac592b5969" />
+<img width="2879" height="1433" alt="image" src="https://github.com/user-attachments/assets/2166a7c5-399e-4fca-837d-0be4e83ecd4b" />
+<img width="2880" height="1538" alt="image" src="https://github.com/user-attachments/assets/d199e017-a63a-49e9-8988-b62d9e9323d9" />
+<img width="2880" height="1552" alt="image" src="https://github.com/user-attachments/assets/19bbe223-e05e-44fa-b204-c4ecb6102bbf" />
+
