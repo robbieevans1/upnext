@@ -79,6 +79,7 @@ describe("task server actions", () => {
 			formDataFrom({
 				title: "  Portfolio Project  ",
 				description: "  Ship a feature  ",
+				playbook: "  Keep phone away. Stay focused.  ",
 				groupId: "career",
 				isMandatory: "on",
 			}),
@@ -95,6 +96,7 @@ describe("task server actions", () => {
 			data: {
 				title: "Portfolio Project",
 				description: "Ship a feature",
+				playbook: "Keep phone away. Stay focused.",
 				isMandatory: true,
 				groupId: "career",
 				userId: "user-1",
@@ -129,6 +131,34 @@ describe("task server actions", () => {
 				}),
 			}),
 		);
+	});
+
+	it("updates task description and playbook separately", async () => {
+		const { updateTask } = await import("@/app/actions/tasks");
+
+		await updateTask(
+			formDataFrom({
+				taskId: "task-1",
+				title: "Work function",
+				description: "Attend the event after work.",
+				playbook: "Stand tall.\nSmile.\nAsk questions.",
+				groupId: "",
+				isMandatory: "on",
+			}),
+		);
+
+		expect(prisma.task.update).toHaveBeenCalledWith({
+			where: {
+				id: "task-1",
+			},
+			data: {
+				title: "Work function",
+				description: "Attend the event after work.",
+				playbook: "Stand tall.\nSmile.\nAsk questions.",
+				isMandatory: true,
+				groupId: null,
+			},
+		});
 	});
 
 	it("soft deletes a group and all of its tasks", async () => {

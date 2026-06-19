@@ -1,4 +1,5 @@
 import AppNav from "@/components/AppNav";
+import TaskPlaybookButton from "@/components/TaskPlaybookButton";
 import { prisma } from "@/lib/prisma";
 import {
 	createTask,
@@ -107,6 +108,18 @@ export default async function TasksPage() {
 									name="description"
 									placeholder="Work on this for at least 30 minutes"
 									className="mt-2 w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-white outline-none focus:border-sky-500"
+								/>
+							</div>
+
+							<div>
+								<label className="text-sm font-medium text-slate-300">
+									Playbook
+								</label>
+
+								<textarea
+									name="playbook"
+									placeholder="Add reminders, steps, mindset cues, or mistakes to avoid before doing this task."
+									className="mt-2 min-h-32 w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-white outline-none focus:border-sky-500"
 								/>
 							</div>
 
@@ -282,6 +295,19 @@ export default async function TasksPage() {
 
 											<div>
 												<label className="text-sm font-medium text-slate-300">
+													Playbook
+												</label>
+
+												<textarea
+													name="playbook"
+													defaultValue={task.playbook ?? ""}
+													placeholder="Add reminders, steps, mindset cues, or mistakes to avoid before doing this task."
+													className="mt-2 min-h-32 w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-white outline-none focus:border-sky-500"
+												/>
+											</div>
+
+											<div>
+												<label className="text-sm font-medium text-slate-300">
 													Task group
 												</label>
 
@@ -335,10 +361,15 @@ export default async function TasksPage() {
 												)}
 											</div>
 
-											<div className="flex gap-3">
+											<div className="flex flex-wrap gap-3">
 												<button className="rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-sky-400">
 													Save Task
 												</button>
+
+												<TaskPlaybookButton
+													taskTitle={task.title}
+													playbook={task.playbook}
+												/>
 											</div>
 										</form>
 										<form
