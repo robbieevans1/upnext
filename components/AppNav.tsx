@@ -10,6 +10,10 @@ const navLinks = [
 		label: "Today",
 	},
 	{
+		href: "/dashboard",
+		label: "Dashboard",
+	},
+	{
 		href: "/tasks",
 		label: "Tasks",
 	},
@@ -46,12 +50,12 @@ export default function AppNav() {
 
 	return (
 		<nav className="border-b border-slate-800 bg-slate-950 px-6 py-4 text-white">
-			<div className="mx-auto flex max-w-4xl items-center justify-between gap-3">
+			<div className="mx-auto flex max-w-5xl items-center justify-between gap-3">
 				<Link href="/today" className="text-lg font-bold text-sky-400">
 					UpNext
 				</Link>
 
-				<div className="hidden items-center gap-3 text-sm text-slate-300 md:flex">
+				<div className="hidden items-center gap-2.5 text-sm text-slate-300 lg:flex">
 					{navLinks.map((link) => (
 						<Link key={link.href} href={link.href} className="hover:text-sky-400">
 							{link.label}
@@ -73,7 +77,7 @@ export default function AppNav() {
 					aria-expanded={isMenuOpen}
 					aria-controls="mobile-navigation"
 					onClick={() => setIsMenuOpen(true)}
-					className="flex h-10 w-10 items-center justify-center rounded-lg border border-slate-700 text-slate-200 transition hover:border-sky-500 hover:text-sky-300 md:hidden"
+					className="flex h-10 w-10 items-center justify-center rounded-lg border border-slate-700 text-slate-200 transition hover:border-sky-500 hover:text-sky-300 lg:hidden"
 				>
 					<span className="flex flex-col gap-1.5" aria-hidden="true">
 						<span className="block h-0.5 w-5 rounded-full bg-current" />
@@ -84,7 +88,7 @@ export default function AppNav() {
 			</div>
 
 			{isMenuOpen && (
-				<div className="fixed inset-0 z-50 md:hidden">
+				<div className="fixed inset-0 z-50 lg:hidden">
 					<button
 						type="button"
 						aria-label="Close navigation menu"
