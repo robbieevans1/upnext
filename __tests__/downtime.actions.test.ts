@@ -53,6 +53,8 @@ describe("downtime server actions", () => {
 	});
 
 	it("does not start a second session while one is active", async () => {
+		vi.useFakeTimers();
+		vi.setSystemTime(new Date("2026-06-16T14:30:00.000Z"));
 		prisma.downtimeSession.findFirst
 			.mockResolvedValueOnce({
 				id: "session-1",

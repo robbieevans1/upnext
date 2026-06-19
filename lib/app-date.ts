@@ -94,6 +94,44 @@ export function getAppDateKey(date = new Date()) {
 	return `${year}-${month}-${day}`;
 }
 
+export function getAppDateFromKey(dateKey: string) {
+	const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dateKey);
+
+	if (!match) {
+		return null;
+	}
+
+	const [, year, month, day] = match;
+	const parts = {
+		year: Number(year),
+		month: Number(month),
+		day: Number(day),
+	};
+
+	if (
+		parts.month < 1 ||
+		parts.month > 12 ||
+		parts.day < 1 ||
+		parts.day > 31
+	) {
+		return null;
+	}
+
+	const appDate = getUtcInstantForTimeZoneDate(parts);
+
+	return getAppDateKey(appDate) === dateKey ? appDate : null;
+}
+
+export function addAppDays(date: Date, days: number) {
+	const parts = getDateParts(date);
+
+	return getUtcInstantForTimeZoneDate({
+		year: parts.year,
+		month: parts.month,
+		day: parts.day + days,
+	});
+}
+
 export function formatAppDate(date: Date) {
 	return new Intl.DateTimeFormat("en-US", {
 		timeZone: APP_TIME_ZONE,

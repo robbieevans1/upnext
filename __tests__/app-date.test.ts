@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { formatAppDate, getAppDateKey, getAppTodayDate } from "@/lib/app-date";
+import {
+	addAppDays,
+	formatAppDate,
+	getAppDateFromKey,
+	getAppDateKey,
+	getAppTodayDate,
+} from "@/lib/app-date";
 
 describe("app date helpers", () => {
 	it("keeps the previous Eastern day before midnight", () => {
@@ -33,6 +39,22 @@ describe("app date helpers", () => {
 		expect(getAppDateKey(date)).toBe("2026-01-15");
 		expect(getAppTodayDate(date)).toEqual(
 			new Date("2026-01-15T05:00:00.000Z"),
+		);
+	});
+
+	it("parses app date keys into Eastern midnight instants", () => {
+		expect(getAppDateFromKey("2026-06-16")).toEqual(
+			new Date("2026-06-16T04:00:00.000Z"),
+		);
+		expect(getAppDateFromKey("2026-02-31")).toBeNull();
+		expect(getAppDateFromKey("not-a-date")).toBeNull();
+	});
+
+	it("adds app days across daylight saving changes", () => {
+		const winterDay = new Date("2026-03-08T05:00:00.000Z");
+
+		expect(addAppDays(winterDay, 1)).toEqual(
+			new Date("2026-03-09T04:00:00.000Z"),
 		);
 	});
 });

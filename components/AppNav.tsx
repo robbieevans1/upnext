@@ -6,12 +6,12 @@ import { signOut } from "next-auth/react";
 export default function AppNav() {
 	return (
 		<nav className="border-b border-slate-800 bg-slate-950 px-6 py-4 text-white">
-			<div className="mx-auto flex max-w-2xl items-center justify-between">
+			<div className="mx-auto flex max-w-2xl flex-wrap items-center justify-between gap-3">
 				<Link href="/today" className="text-lg font-bold text-sky-400">
 					UpNext
 				</Link>
 
-				<div className="flex items-center gap-4 text-sm text-slate-300">
+				<div className="flex flex-wrap items-center gap-4 text-sm text-slate-300">
 					<Link href="/today" className="hover:text-sky-400">
 						Today
 					</Link>
@@ -22,6 +22,10 @@ export default function AppNav() {
 
 					<Link href="/downtime" className="hover:text-sky-400">
 						Time
+					</Link>
+
+					<Link href="/history" className="hover:text-sky-400">
+						History
 					</Link>
 
 					<Link href="/about" className="hover:text-sky-400">
