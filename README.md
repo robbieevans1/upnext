@@ -81,20 +81,19 @@ Subtasks can be checked off one by one and move toward the bottom of the task ca
 
 Task descriptions stay short and card-facing. Playbooks are separate notes for how to perform a task well.
 
-For example, a task like `Go to work function` might have a brief description:
+For example, a task like `Interview` might have a brief description:
 
 ```text
-Attend the networking event after work.
+Interview Reminders.
 ```
 
 And a playbook:
 
 ```text
-- Stand up straight
-- Smile before entering conversations
-- Ask people what they are working on
+- Sit up straight
+- Use Star format when answering questions
+- Ask interviewer questions
 - Keep answers concise and positive
-- Do not check your phone
 ```
 
 Playbooks can be added or edited from the Tasks page. Task cards show a Playbook button that opens the notes in a modal without navigating away from the current page.
