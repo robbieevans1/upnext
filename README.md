@@ -17,10 +17,12 @@ The app organizes recurring work into a daily stack. Mandatory tasks stay visibl
 - Playbook modal available from task cards and task management
 - One-off action items for async errands or tasks outside the recurring stack
 - Scheduled commitments for events, appointments, errands, and time-based obligations
-- Dashboard with completion trends, task-time totals, downtime charts, scheduled load, action item status, and playbook coverage
+- Daily Review checks for next-day self-audits like calorie limits, sleep, spending, and nutrition goals
+- Dashboard with completion trends, task-time totals, downtime charts, scheduled load, daily review results, action item status, and playbook coverage
 - Completed Today section with same-day undo
 - Continue button for completed tasks that need additional focused time
 - History page for browsing completed tasks by day
+- Daily review results stored against the day being reviewed, not the day the answer was entered
 - Recent completed-day shortcuts with app-day aggregation
 - Eastern-time app day handling for daily rollover
 - Task completion history stored for analytics
@@ -108,8 +110,27 @@ The History page lets users review completed tasks by day. It includes:
 - Recent completed-day shortcuts
 - Sorted completed task cards for the selected day
 - App-day aggregation for older completion timestamps
+- Daily Review results for the selected day
 
 History uses the same Eastern-time app-day logic as Today, so task completions are grouped by the day the app considers active rather than by the server's raw UTC date.
+
+## Daily Review Checks
+
+Daily Review checks are for outcomes that can only be answered honestly after the day is over. They are different from tasks because the user does not start or complete them during the day.
+
+Examples:
+
+```text
+Was below calorie limit?
+Hit protein target?
+No late-night snacking?
+No unnecessary spending?
+Got 7+ hours of sleep?
+```
+
+On the next app day, UpNext can prompt the user to review yesterday with Yes, No, Skip, or Not sure. Results are stored against the reviewed day, so answering on June 20 records the result for June 19.
+
+Daily checks can be created, edited, or removed from the Tasks page. The review prompt appears on Today, results appear in History, and aggregate success rates appear on the Dashboard.
 
 ## Action Items and Commitments
 
@@ -160,6 +181,7 @@ The Dashboard page summarizes recent app activity across the last 14 app days. I
 - Downtime logged by day and category
 - Scheduled commitment load
 - Action item open, overdue, completed, and canceled counts
+- Daily Review success rate and per-check outcome totals
 - Playbook coverage across tasks, action items, and commitments
 - Most completed tasks
 
@@ -190,6 +212,9 @@ The dashboard uses existing database records rather than separate analytics tabl
 - `DowntimeSession` stores timed sleep, social, eating, and other sessions.
 - `ActionItem` stores one-off async tasks with optional due dates, completion status, cancellation status, and playbook notes.
 - `Commitment` stores date-based or time-based obligations with optional location, start/end times, completion status, cancellation status, and playbook notes.
+- `DailyCheck` stores active next-day outcome prompts for a user.
+- `DailyCheckResult` stores Yes, No, Skip, or Not sure answers against the reviewed app day.
+- `DailyReviewDismissal` stores when a user dismisses a day's review prompt.
 
 ## Getting Started
 
@@ -298,7 +323,6 @@ The CI workflow runs on pull requests and pushes to `main`. It installs dependen
 - Streak tracking
 - Most skipped or neglected task insights
 - More detailed available-time estimates
-- Daily outcome checks for next-day review items like calorie-limit success
 - Drag-and-drop task ordering
 - Skip reasons
 - Notifications and reminders

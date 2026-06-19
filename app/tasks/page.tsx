@@ -2,6 +2,11 @@ import AppNav from "@/components/AppNav";
 import TaskPlaybookButton from "@/components/TaskPlaybookButton";
 import { prisma } from "@/lib/prisma";
 import {
+	createDailyCheck,
+	deleteDailyCheck,
+	updateDailyCheck,
+} from "@/app/actions/daily-review";
+import {
 	addTaskSubtask,
 	createTask,
 	createTaskGroup,
@@ -75,6 +80,16 @@ export default async function TasksPage() {
 				createdAt: "asc",
 			},
 		],
+	});
+
+	const dailyChecks = await prisma.dailyCheck.findMany({
+		where: {
+			userId: session.user.id,
+			isActive: true,
+		},
+		orderBy: {
+			sortOrder: "asc",
+		},
 	});
 
 	return (
@@ -214,6 +229,48 @@ export default async function TasksPage() {
 						</div>
 					</form>
 
+					<form
+						action={createDailyCheck}
+						className="mt-8 rounded-2xl border border-slate-800 bg-slate-900 p-6"
+					>
+						<h2 className="text-xl font-bold">Add Daily Check</h2>
+
+						<p className="mt-2 text-sm text-slate-400">
+							Daily checks are outcome questions answered the next day, like
+							whether you stayed under a calorie limit or avoided late snacking.
+						</p>
+
+						<div className="mt-5 space-y-4">
+							<div>
+								<label className="text-sm font-medium text-slate-300">
+									Check question
+								</label>
+
+								<input
+									name="title"
+									placeholder="Was below calorie limit?"
+									className="mt-2 w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-white outline-none focus:border-sky-500"
+								/>
+							</div>
+
+							<div>
+								<label className="text-sm font-medium text-slate-300">
+									Description
+								</label>
+
+								<textarea
+									name="description"
+									placeholder="Answer this during tomorrow's review."
+									className="mt-2 w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-white outline-none focus:border-sky-500"
+								/>
+							</div>
+
+							<button className="rounded-xl bg-sky-500 px-5 py-3 font-semibold text-slate-950 hover:bg-sky-400">
+								Add Daily Check
+							</button>
+						</div>
+					</form>
+
 					<div className="mt-10">
 						<h2 className="mb-4 text-xl font-bold">Task Groups</h2>
 
@@ -267,6 +324,70 @@ export default async function TasksPage() {
 										>
 											<button className="rounded-lg border border-red-500/40 px-4 py-2 text-sm text-red-300 hover:bg-red-500/10">
 												Delete Group
+											</button>
+										</form>
+									</div>
+								))}
+							</div>
+						)}
+					</div>
+
+					<div className="mt-10">
+						<h2 className="mb-4 text-xl font-bold">Daily Checks</h2>
+
+						{dailyChecks.length === 0 ? (
+							<div className="rounded-xl border border-slate-800 bg-slate-900 p-4 text-slate-400">
+								No daily checks yet. Add one above to start reviewing yesterday.
+							</div>
+						) : (
+							<div className="space-y-4">
+								{dailyChecks.map((check) => (
+									<div
+										key={check.id}
+										className="rounded-xl border border-slate-800 bg-slate-900 p-4"
+									>
+										<form action={updateDailyCheck} className="space-y-4">
+											<input
+												type="hidden"
+												name="dailyCheckId"
+												value={check.id}
+											/>
+
+											<div>
+												<label className="text-sm font-medium text-slate-300">
+													Check question
+												</label>
+
+												<input
+													name="title"
+													defaultValue={check.title}
+													className="mt-2 w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-white outline-none focus:border-sky-500"
+												/>
+											</div>
+
+											<div>
+												<label className="text-sm font-medium text-slate-300">
+													Description
+												</label>
+
+												<textarea
+													name="description"
+													defaultValue={check.description ?? ""}
+													className="mt-2 w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-white outline-none focus:border-sky-500"
+												/>
+											</div>
+
+											<button className="rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-sky-400">
+												Save Daily Check
+											</button>
+										</form>
+
+										<form
+											action={deleteDailyCheck.bind(null, check.id)}
+											className="mt-3"
+										>
+											<button className="rounded-lg border border-red-500/40 px-4 py-2 text-sm text-red-300 hover:bg-red-500/10">
+												Delete Daily Check
 											</button>
 										</form>
 									</div>

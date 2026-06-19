@@ -43,6 +43,14 @@ type DashboardActionItem = {
 	playbook: string | null;
 };
 
+type DashboardDailyCheckResult = {
+	status: "YES" | "NO" | "SKIP" | "UNSURE";
+	targetDay: Date;
+	dailyCheck: {
+		title: string;
+	};
+};
+
 export type DashboardCommitment = {
 	day: Date;
 	startsAt: Date | null;
@@ -58,6 +66,7 @@ export type DashboardAnalyticsInput = {
 	downtimeSessions: DashboardDowntimeSession[];
 	actionItems: DashboardActionItem[];
 	commitments: DashboardCommitment[];
+	dailyCheckResults?: DashboardDailyCheckResult[];
 	today: Date;
 	now?: Date;
 	days?: number;
@@ -101,6 +110,7 @@ export function buildDashboardAnalytics({
 	downtimeSessions,
 	actionItems,
 	commitments,
+	dailyCheckResults = [],
 	today,
 	now = new Date(),
 	days = 14,
@@ -266,6 +276,47 @@ export function buildDashboardAnalytics({
 		...commitments.map((commitment) => commitment.playbook),
 	];
 	const playbookCount = playbookEligibleItems.filter(hasPlaybook).length;
+	const dailyReviewSummary = {
+		total: dailyCheckResults.length,
+		yes: dailyCheckResults.filter((result) => result.status === "YES").length,
+		no: dailyCheckResults.filter((result) => result.status === "NO").length,
+		skip: dailyCheckResults.filter((result) => result.status === "SKIP").length,
+		unsure: dailyCheckResults.filter((result) => result.status === "UNSURE")
+			.length,
+	};
+	const dailyReviewAnswered =
+		dailyReviewSummary.yes + dailyReviewSummary.no;
+	const dailyReviewSuccessRate =
+		dailyReviewAnswered === 0
+			? 0
+			: Math.round((dailyReviewSummary.yes / dailyReviewAnswered) * 100);
+	const dailyCheckTotals = new Map<
+		string,
+		{
+			title: string;
+			yes: number;
+			no: number;
+			skip: number;
+			unsure: number;
+		}
+	>();
+
+	for (const result of dailyCheckResults) {
+		const total = dailyCheckTotals.get(result.dailyCheck.title) ?? {
+			title: result.dailyCheck.title,
+			yes: 0,
+			no: 0,
+			skip: 0,
+			unsure: 0,
+		};
+
+		if (result.status === "YES") total.yes += 1;
+		if (result.status === "NO") total.no += 1;
+		if (result.status === "SKIP") total.skip += 1;
+		if (result.status === "UNSURE") total.unsure += 1;
+
+		dailyCheckTotals.set(result.dailyCheck.title, total);
+	}
 	const completionRate =
 		totalPossibleTaskCompletions === 0
 			? 0
@@ -308,6 +359,13 @@ export function buildDashboardAnalytics({
 			completed: completedCommitments,
 			canceled: canceledCommitments,
 		},
+		dailyReviewSummary: {
+			...dailyReviewSummary,
+			successRate: dailyReviewSuccessRate,
+		},
+		dailyCheckTotals: Array.from(dailyCheckTotals.values()).sort(
+			(a, b) => b.yes - a.yes || a.title.localeCompare(b.title),
+		),
 		playbookSummary: {
 			total: playbookEligibleItems.length,
 			withPlaybook: playbookCount,

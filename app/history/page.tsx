@@ -16,6 +16,15 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { connection } from "next/server";
 
+type DailyCheckResultForHistory = {
+	id: string;
+	status: string;
+	dailyCheck: {
+		title: string;
+		description: string | null;
+	};
+};
+
 type HistoryPageProps = {
 	searchParams: Promise<{
 		day?: string | string[];
@@ -80,6 +89,34 @@ async function getRecentCompletionDays(
 	return aggregateRecentCompletionDays(completions);
 }
 
+async function getDailyCheckResultsForDay(
+	userId: string,
+	day: Date,
+): Promise<DailyCheckResultForHistory[]> {
+	const dayRange = getHistoryDayRange(day);
+
+	return prisma.dailyCheckResult.findMany({
+		where: {
+			userId,
+			targetDay: {
+				gte: dayRange.start,
+				lt: dayRange.end,
+			},
+		},
+		include: {
+			dailyCheck: {
+				select: {
+					title: true,
+					description: true,
+				},
+			},
+		},
+		orderBy: {
+			createdAt: "asc",
+		},
+	});
+}
+
 export default async function HistoryPage({ searchParams }: HistoryPageProps) {
 	await connection();
 
@@ -96,9 +133,10 @@ export default async function HistoryPage({ searchParams }: HistoryPageProps) {
 	const nextDay = addAppDays(selectedDay, 1);
 	const canGoNext = nextDay.getTime() <= today.getTime();
 
-	const [completions, recentDays] = await Promise.all([
+	const [completions, recentDays, dailyCheckResults] = await Promise.all([
 		getCompletionsForDay(session.user.id, selectedDay),
 		getRecentCompletionDays(session.user.id),
+		getDailyCheckResultsForDay(session.user.id, selectedDay),
 	]);
 
 	const sortedCompletions = sortCompletions(completions);
@@ -200,6 +238,50 @@ export default async function HistoryPage({ searchParams }: HistoryPageProps) {
 
 					<section className="mt-8">
 						<h2 className="mb-3 text-lg font-semibold text-slate-200">
+							Daily Review
+						</h2>
+
+						{dailyCheckResults.length > 0 ? (
+							<div className="mb-8 space-y-3">
+								{dailyCheckResults.map((result) => (
+									<div
+										key={result.id}
+										className="rounded-xl border border-slate-800 bg-slate-900 p-4"
+									>
+										<div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+											<div>
+												<h3 className="text-lg font-semibold text-slate-100">
+													{result.dailyCheck.title}
+												</h3>
+
+												{result.dailyCheck.description && (
+													<p className="mt-1 text-sm text-slate-400">
+														{result.dailyCheck.description}
+													</p>
+												)}
+											</div>
+
+											<span className="rounded-full bg-sky-500/10 px-3 py-1 text-xs font-medium text-sky-300">
+												{formatDailyCheckStatus(result.status)}
+											</span>
+										</div>
+									</div>
+								))}
+							</div>
+						) : (
+							<div className="mb-8 rounded-2xl border border-slate-800 bg-slate-900 p-6">
+								<p className="font-semibold text-slate-200">
+									No daily review answers for this day.
+								</p>
+
+								<p className="mt-2 text-sm text-slate-400">
+									Answer yesterday&apos;s review from Today to start tracking
+									outcome checks here.
+								</p>
+							</div>
+						)}
+
+						<h2 className="mb-3 text-lg font-semibold text-slate-200">
 							Tasks Completed
 						</h2>
 
@@ -259,4 +341,13 @@ export default async function HistoryPage({ searchParams }: HistoryPageProps) {
 			</main>
 		</>
 	);
+}
+
+function formatDailyCheckStatus(status: string) {
+	if (status === "YES") return "Yes";
+	if (status === "NO") return "No";
+	if (status === "SKIP") return "Skipped";
+	if (status === "UNSURE") return "Not sure";
+
+	return status;
 }

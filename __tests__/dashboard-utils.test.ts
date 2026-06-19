@@ -116,6 +116,36 @@ describe("dashboard analytics", () => {
 					playbook: null,
 				},
 			],
+			dailyCheckResults: [
+				{
+					status: "YES",
+					targetDay: new Date("2026-06-14T04:00:00.000Z"),
+					dailyCheck: {
+						title: "Was below calorie limit?",
+					},
+				},
+				{
+					status: "NO",
+					targetDay: new Date("2026-06-15T04:00:00.000Z"),
+					dailyCheck: {
+						title: "Was below calorie limit?",
+					},
+				},
+				{
+					status: "SKIP",
+					targetDay: new Date("2026-06-16T04:00:00.000Z"),
+					dailyCheck: {
+						title: "Got 7+ hours of sleep?",
+					},
+				},
+				{
+					status: "UNSURE",
+					targetDay: new Date("2026-06-16T04:00:00.000Z"),
+					dailyCheck: {
+						title: "Avoided late-night snacking?",
+					},
+				},
+			],
 		});
 
 		expect(analytics.totalCompletions).toBe(3);
@@ -162,6 +192,37 @@ describe("dashboard analytics", () => {
 			withPlaybook: 3,
 			coverage: 50,
 		});
+		expect(analytics.dailyReviewSummary).toEqual({
+			total: 4,
+			yes: 1,
+			no: 1,
+			skip: 1,
+			unsure: 1,
+			successRate: 50,
+		});
+		expect(analytics.dailyCheckTotals).toEqual([
+			{
+				title: "Was below calorie limit?",
+				yes: 1,
+				no: 1,
+				skip: 0,
+				unsure: 0,
+			},
+			{
+				title: "Avoided late-night snacking?",
+				yes: 0,
+				no: 0,
+				skip: 0,
+				unsure: 1,
+			},
+			{
+				title: "Got 7+ hours of sleep?",
+				yes: 0,
+				no: 0,
+				skip: 1,
+				unsure: 0,
+			},
+		]);
 	});
 
 	it("formats dashboard hours compactly", () => {
