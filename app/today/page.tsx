@@ -1,4 +1,5 @@
 import AppNav from "@/components/AppNav";
+import TaskPlaybookButton from "@/components/TaskPlaybookButton";
 import { completeTask, undoTodayCompletion } from "@/app/actions/tasks";
 import { prisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
@@ -340,6 +341,11 @@ export default async function TodayPage() {
 														Done
 													</span>
 
+													<TaskPlaybookButton
+														taskTitle={task.title}
+														playbook={task.playbook}
+													/>
+
 													<form action={undoTodayCompletion.bind(null, task.id)}>
 														<button className="rounded-lg border border-emerald-400/40 px-3 py-1.5 text-sm font-medium text-emerald-100 hover:bg-emerald-500/10">
 															Undo
@@ -398,11 +404,18 @@ function CurrentTaskCard({
 				</span>
 			</div>
 
-			<form action={completeTask.bind(null, task.id)}>
-				<button className="mt-6 rounded-xl bg-sky-500 px-5 py-3 font-semibold text-slate-950 hover:bg-sky-400">
-					Complete
-				</button>
-			</form>
+			<div className="mt-6 flex flex-wrap gap-3">
+				<form action={completeTask.bind(null, task.id)}>
+					<button className="rounded-xl bg-sky-500 px-5 py-3 font-semibold text-slate-950 hover:bg-sky-400">
+						Complete
+					</button>
+				</form>
+
+				<TaskPlaybookButton
+					taskTitle={task.title}
+					playbook={task.playbook}
+				/>
+			</div>
 		</div>
 	);
 }
@@ -481,11 +494,18 @@ function TaskRow({
 					</div>
 				</div>
 
-				<form action={completeTask.bind(null, task.id)}>
-					<button className="rounded-lg border border-slate-700 px-4 py-2 text-sm font-medium text-slate-200 hover:border-sky-500 hover:text-sky-400">
-						Complete
-					</button>
-				</form>
+				<div className="flex shrink-0 flex-wrap gap-2">
+					<TaskPlaybookButton
+						taskTitle={task.title}
+						playbook={task.playbook}
+					/>
+
+					<form action={completeTask.bind(null, task.id)}>
+						<button className="rounded-lg border border-slate-700 px-4 py-2 text-sm font-medium text-slate-200 hover:border-sky-500 hover:text-sky-400">
+							Complete
+						</button>
+					</form>
+				</div>
 			</div>
 		</div>
 	);

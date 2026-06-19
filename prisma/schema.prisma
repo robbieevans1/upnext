@@ -67,6 +67,7 @@ model Task {
   id          String  @id @default(cuid())
   title       String
   description String?
+  playbook    String?
 
   isMandatory Boolean @default(false)
   isActive    Boolean @default(true)

@@ -103,6 +103,7 @@ export async function createTask(formData: FormData) {
 
 	const title = String(formData.get("title") ?? "").trim();
 	const description = String(formData.get("description") ?? "").trim();
+	const playbook = String(formData.get("playbook") ?? "").trim();
 	const groupIdValue = String(formData.get("groupId") ?? "");
 	const isMandatory = formData.get("isMandatory") === "on";
 
@@ -122,6 +123,7 @@ export async function createTask(formData: FormData) {
 		data: {
 			title,
 			description,
+			playbook,
 			isMandatory,
 			groupId,
 			userId,
@@ -136,6 +138,7 @@ export async function updateTask(formData: FormData) {
 	const taskId = String(formData.get("taskId") ?? "");
 	const title = String(formData.get("title") ?? "");
 	const description = String(formData.get("description") ?? "");
+	const playbook = String(formData.get("playbook") ?? "");
 	const groupIdValue = String(formData.get("groupId") ?? "");
 	const isMandatory = formData.get("isMandatory") === "on";
 
@@ -148,6 +151,7 @@ export async function updateTask(formData: FormData) {
 		data: {
 			title,
 			description,
+			playbook,
 			isMandatory,
 			groupId: groupIdValue || null,
 		},
