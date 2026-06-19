@@ -1,4 +1,5 @@
 import AppNav from "@/components/AppNav";
+import DeleteConfirmationForm from "@/components/DeleteConfirmationForm";
 import TaskPlaybookButton from "@/components/TaskPlaybookButton";
 import { prisma } from "@/lib/prisma";
 import {
@@ -318,14 +319,14 @@ export default async function TasksPage() {
 												</button>
 											</div>
 										</form>
-										<form
-											action={deleteTaskGroup.bind(null, group.id)}
-											className="mt-3"
-										>
-											<button className="rounded-lg border border-red-500/40 px-4 py-2 text-sm text-red-300 hover:bg-red-500/10">
-												Delete Group
-											</button>
-										</form>
+										<div className="mt-3">
+											<DeleteConfirmationForm
+												confirmAction={deleteTaskGroup.bind(null, group.id)}
+												triggerLabel="Delete Group"
+												itemLabel={`the group "${group.name}"`}
+												confirmLabel="Delete Group"
+											/>
+										</div>
 									</div>
 								))}
 							</div>
@@ -382,14 +383,14 @@ export default async function TasksPage() {
 											</button>
 										</form>
 
-										<form
-											action={deleteDailyCheck.bind(null, check.id)}
-											className="mt-3"
-										>
-											<button className="rounded-lg border border-red-500/40 px-4 py-2 text-sm text-red-300 hover:bg-red-500/10">
-												Delete Daily Check
-											</button>
-										</form>
+										<div className="mt-3">
+											<DeleteConfirmationForm
+												confirmAction={deleteDailyCheck.bind(null, check.id)}
+												triggerLabel="Delete Daily Check"
+												itemLabel={`the daily check "${check.title}"`}
+												confirmLabel="Delete Daily Check"
+											/>
+										</div>
 									</div>
 								))}
 							</div>
@@ -554,13 +555,15 @@ export default async function TasksPage() {
 																</button>
 															</form>
 
-															<form
-																action={deleteTaskSubtask.bind(null, subtask.id)}
-															>
-																<button className="rounded-lg border border-red-500/40 px-3 py-2 text-sm text-red-300 hover:bg-red-500/10">
-																	Delete
-																</button>
-															</form>
+															<DeleteConfirmationForm
+																confirmAction={deleteTaskSubtask.bind(
+																	null,
+																	subtask.id,
+																)}
+																triggerLabel="Delete"
+																itemLabel={`the subtask "${subtask.title}"`}
+																confirmLabel="Delete Subtask"
+															/>
 														</div>
 													))}
 												</div>
@@ -584,14 +587,14 @@ export default async function TasksPage() {
 											</form>
 										</div>
 
-										<form
-											action={deleteTask.bind(null, task.id)}
-											className="mt-3"
-										>
-											<button className="rounded-lg border border-red-500/40 px-4 py-2 text-sm text-red-300 hover:bg-red-500/10">
-												Delete Task
-											</button>
-										</form>
+										<div className="mt-3">
+											<DeleteConfirmationForm
+												confirmAction={deleteTask.bind(null, task.id)}
+												triggerLabel="Delete Task"
+												itemLabel={`the task "${task.title}"`}
+												confirmLabel="Delete Task"
+											/>
+										</div>
 									</div>
 								))}
 							</div>
