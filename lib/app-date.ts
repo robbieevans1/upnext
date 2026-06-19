@@ -122,6 +122,46 @@ export function getAppDateFromKey(dateKey: string) {
 	return getAppDateKey(appDate) === dateKey ? appDate : null;
 }
 
+export function getAppDateTimeFromKeys(dateKey: string, timeKey: string) {
+	const dateMatch = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dateKey);
+	const timeMatch = /^(\d{2}):(\d{2})$/.exec(timeKey);
+
+	if (!dateMatch || !timeMatch) {
+		return null;
+	}
+
+	const [, year, month, day] = dateMatch;
+	const [, hour, minute] = timeMatch;
+	const parts = {
+		year: Number(year),
+		month: Number(month),
+		day: Number(day),
+	};
+	const hourNumber = Number(hour);
+	const minuteNumber = Number(minute);
+
+	if (
+		parts.month < 1 ||
+		parts.month > 12 ||
+		parts.day < 1 ||
+		parts.day > 31 ||
+		hourNumber < 0 ||
+		hourNumber > 23 ||
+		minuteNumber < 0 ||
+		minuteNumber > 59
+	) {
+		return null;
+	}
+
+	const appDateTime = getUtcInstantForTimeZoneDate(
+		parts,
+		hourNumber,
+		minuteNumber,
+	);
+
+	return getAppDateKey(appDateTime) === dateKey ? appDateTime : null;
+}
+
 export function addAppDays(date: Date, days: number) {
 	const parts = getDateParts(date);
 
@@ -139,6 +179,22 @@ export function formatAppDate(date: Date) {
 		month: "numeric",
 		day: "numeric",
 	}).format(date);
+}
+
+export function formatAppTime(date: Date) {
+	return new Intl.DateTimeFormat("en-US", {
+		timeZone: APP_TIME_ZONE,
+		hour: "numeric",
+		minute: "2-digit",
+	}).format(date);
+}
+
+export function getAppTimeKey(date: Date) {
+	const parts = getDateTimeParts(date);
+	const hour = String(parts.hour).padStart(2, "0");
+	const minute = String(parts.minute).padStart(2, "0");
+
+	return `${hour}:${minute}`;
 }
 
 export function getAppTodayDate(date = new Date()) {

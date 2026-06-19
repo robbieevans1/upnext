@@ -14,6 +14,14 @@ const navLinks = [
 		label: "Tasks",
 	},
 	{
+		href: "/action-items",
+		label: "Actions",
+	},
+	{
+		href: "/commitments",
+		label: "Schedule",
+	},
+	{
 		href: "/downtime",
 		label: "Time",
 	},
@@ -38,12 +46,12 @@ export default function AppNav() {
 
 	return (
 		<nav className="border-b border-slate-800 bg-slate-950 px-6 py-4 text-white">
-			<div className="mx-auto flex max-w-2xl items-center justify-between gap-3">
+			<div className="mx-auto flex max-w-4xl items-center justify-between gap-3">
 				<Link href="/today" className="text-lg font-bold text-sky-400">
 					UpNext
 				</Link>
 
-				<div className="hidden items-center gap-4 text-sm text-slate-300 md:flex">
+				<div className="hidden items-center gap-3 text-sm text-slate-300 md:flex">
 					{navLinks.map((link) => (
 						<Link key={link.href} href={link.href} className="hover:text-sky-400">
 							{link.label}

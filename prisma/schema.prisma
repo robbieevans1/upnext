@@ -22,6 +22,8 @@ model User {
   tasks           Task[]
   taskCompletions TaskCompletion[]
   downtimeSessions DowntimeSession[]
+  actionItems      ActionItem[]
+  commitments      Commitment[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -134,4 +136,50 @@ model DowntimeSession {
 
   @@index([userId, day])
   @@index([userId, stoppedAt])
+}
+
+model ActionItem {
+  id          String    @id @default(cuid())
+  title       String
+  description String?
+  playbook    String?
+
+  dueOn       DateTime?
+  completedAt DateTime?
+  canceledAt  DateTime?
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId, dueOn])
+  @@index([userId, completedAt])
+  @@index([userId, canceledAt])
+}
+
+model Commitment {
+  id          String  @id @default(cuid())
+  title       String
+  description String?
+  playbook    String?
+  location    String?
+
+  day         DateTime
+  startsAt    DateTime?
+  endsAt      DateTime?
+  completedAt DateTime?
+  canceledAt  DateTime?
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId, day])
+  @@index([userId, startsAt])
+  @@index([userId, completedAt])
+  @@index([userId, canceledAt])
 }
