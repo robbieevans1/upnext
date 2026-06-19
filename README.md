@@ -2,7 +2,7 @@
 
 UpNext is a stack-based productivity app for deciding what to do next, not just storing a long checklist.
 
-The app organizes recurring work into a daily stack. Mandatory tasks stay visible until completed, grouped tasks rotate after completion, and task playbooks keep execution notes close at hand. UpNext also tracks one-off action items, scheduled commitments, task history, and downtime for sleep, social plans, eating, and other non-task life needs. The dashboard brings those signals together so the app can show both progress and the real amount of flexible time available in a day.
+The app organizes recurring work into a daily stack. Mandatory tasks stay visible until completed, grouped tasks rotate after completion, subtasks break larger work into smaller steps, and task playbooks keep execution notes close at hand. UpNext also tracks one-off action items, scheduled commitments, task history, task timer sessions, and time away for sleep, social plans, eating, and other non-task life needs. The dashboard brings those signals together so the app can show both progress and the real amount of flexible time available in a day.
 
 ## Features
 
@@ -10,12 +10,16 @@ The app organizes recurring work into a daily stack. Mandatory tasks stay visibl
 - Daily task stack for the signed-in user
 - Mandatory tasks that stay prioritized until completed
 - Task groups for rotating recurring work
+- Task timers that start focused work sessions from task cards
+- Continue tracking time on a completed task without undoing completion
+- Subtasks that can be completed independently and move down the task card
 - Task playbooks for tips, steps, mindset cues, and mistakes to avoid
 - Playbook modal available from task cards and task management
 - One-off action items for async errands or tasks outside the recurring stack
 - Scheduled commitments for events, appointments, errands, and time-based obligations
-- Dashboard with completion trends, downtime charts, scheduled load, action item status, and playbook coverage
+- Dashboard with completion trends, task-time totals, downtime charts, scheduled load, action item status, and playbook coverage
 - Completed Today section with same-day undo
+- Continue button for completed tasks that need additional focused time
 - History page for browsing completed tasks by day
 - Recent completed-day shortcuts with app-day aggregation
 - Eastern-time app day handling for daily rollover
@@ -23,6 +27,8 @@ The app organizes recurring work into a daily stack. Mandatory tasks stay visibl
 - Downtime timer for sleep, social, eating, and other time
 - Downtime sessions continue running after leaving the page
 - Active downtime sessions split cleanly at Eastern midnight
+- Demo seed script for local screenshots and realistic QA data
+- Public About page and public landing links
 - Responsive mobile navigation with a side menu
 - Soft deletes for tasks and groups
 - CI checks for linting, types, tests, unused code, and production build
@@ -52,6 +58,24 @@ Career stack
 ```
 
 This makes repeated work harder to avoid and helps rotate attention across important areas.
+
+## Task Timers and Subtasks
+
+Tasks can be timed directly from the Today page. Pressing Start begins a focused task session and pauses the default Other time-away timer. Pressing Complete stops the task session, records the task as completed for the current app day, and returns time tracking to Other.
+
+Completed tasks can still be continued. If a task like `Read` is completed after 30 minutes, the user can press Continue later, read for another 30 minutes, and then press Stop. The task remains completed, but the dashboard records one hour of task time because both sessions belong to the same task.
+
+Tasks can also have subtasks. Subtasks are useful for breaking the task into smaller steps, such as:
+
+```text
+Portfolio project
+- Pick issue
+- Implement slice
+- Run tests
+- Write notes
+```
+
+Subtasks can be checked off one by one and move toward the bottom of the task card. Completing every subtask is not required before completing the parent task, which keeps the workflow flexible for real days.
 
 ## Task Playbooks
 
@@ -114,14 +138,14 @@ They can include a date, optional start and end time, location, description, and
 
 ## Downtime Tracking
 
-The downtime page tracks time spent away from improvement activities. A user can start a timer for:
+The Time page tracks time spent away from improvement activities. A user can switch the active time-away timer between:
 
 - Sleep
 - Social
 - Eating
 - Other
 
-The timer keeps running if the user navigates away. When stopped, the session is saved to the database. If an active timer crosses the app-day boundary, UpNext closes the previous day's session at Eastern midnight and starts a new session for the new day.
+The timer keeps running if the user navigates away. When a task timer starts, active downtime stops. When task time stops, Other time starts again by default. If an active timer crosses the app-day boundary, UpNext closes the previous day's session at Eastern midnight and starts a new session for the new day.
 
 This data is intended for future analytics around available free time, routines, and opportunities to adjust how time is spent.
 
@@ -131,6 +155,7 @@ The Dashboard page summarizes recent app activity across the last 14 app days. I
 
 - Task completion rate
 - Daily completion trend
+- Focused task time by task
 - Completion breakdown by task area or group
 - Downtime logged by day and category
 - Scheduled commitment load
@@ -159,6 +184,9 @@ The dashboard uses existing database records rather than separate analytics tabl
 - `TaskGroup` stores related task groups.
 - `Task` stores recurring tasks, mandatory status, group membership, stack order, and optional playbook notes.
 - `TaskCompletion` stores per-day task completion history.
+- `TaskSession` stores focused task timer sessions for task-time analytics.
+- `TaskSubtask` stores active subtasks for recurring tasks.
+- `SubtaskCompletion` stores per-day subtask completion history.
 - `DowntimeSession` stores timed sleep, social, eating, and other sessions.
 - `ActionItem` stores one-off async tasks with optional due dates, completion status, cancellation status, and playbook notes.
 - `Commitment` stores date-based or time-based obligations with optional location, start/end times, completion status, cancellation status, and playbook notes.
@@ -202,6 +230,23 @@ Open:
 ```text
 http://localhost:3000
 ```
+
+## Demo Data
+
+For local screenshots, demos, and manual QA, seed a demo account:
+
+```bash
+npm run seed:demo
+```
+
+Then log in with:
+
+```text
+Email: demo@upnext.dev
+Password: demo-password
+```
+
+The demo seed deletes and recreates only `demo@upnext.dev`. It does not touch other users. The script refuses to run with `NODE_ENV=production` unless `ALLOW_DEMO_SEED_PRODUCTION=true` is explicitly set.
 
 ## Quality Checks
 
@@ -253,6 +298,7 @@ The CI workflow runs on pull requests and pushes to `main`. It installs dependen
 - Streak tracking
 - Most skipped or neglected task insights
 - More detailed available-time estimates
+- Daily outcome checks for next-day review items like calorie-limit success
 - Drag-and-drop task ordering
 - Skip reasons
 - Notifications and reminders
@@ -271,3 +317,11 @@ The CI workflow runs on pull requests and pushes to `main`. It installs dependen
 ### Task Management
 
 ![Task Management](public/readme/tasks.png)
+
+### Time Away Tracking
+
+![Time Away Tracking](public/readme/time.png)
+
+### Completion History
+
+![Completion History](public/readme/history.png)
