@@ -19,6 +19,13 @@ function revalidateTaskViews() {
 	revalidatePath("/tasks");
 }
 
+function getSubtaskTitles(formData: FormData) {
+	return String(formData.get("subtasks") ?? "")
+		.split(/\r?\n/)
+		.map((title) => title.trim())
+		.filter(Boolean);
+}
+
 async function getCurrentUserId() {
 	const session = await getServerSession(authOptions);
 
@@ -114,6 +121,7 @@ export async function createTask(formData: FormData) {
 	if (!title) return;
 
 	const groupId = groupIdValue || null;
+	const subtaskTitles = getSubtaskTitles(formData);
 
 	const existingTasksInStack = await prisma.task.count({
 		where: {
@@ -132,6 +140,17 @@ export async function createTask(formData: FormData) {
 			groupId,
 			userId,
 			stackOrder: existingTasksInStack,
+			...(subtaskTitles.length > 0
+				? {
+						subtasks: {
+							create: subtaskTitles.map((subtaskTitle, index) => ({
+								title: subtaskTitle,
+								userId,
+								stackOrder: index,
+							})),
+						},
+					}
+				: {}),
 		},
 	});
 
@@ -173,6 +192,157 @@ export async function deleteTask(taskId: string) {
 			isActive: false,
 		},
 	});
+
+	revalidateTaskViews();
+}
+
+export async function addTaskSubtask(formData: FormData) {
+	const userId = await getCurrentUserId();
+
+	const taskId = String(formData.get("taskId") ?? "");
+	const title = String(formData.get("title") ?? "").trim();
+
+	if (!taskId || !title) return;
+
+	const task = await prisma.task.findFirst({
+		where: {
+			id: taskId,
+			userId,
+			isActive: true,
+		},
+		select: {
+			id: true,
+		},
+	});
+
+	if (!task) return;
+
+	const existingSubtasks = await prisma.taskSubtask.count({
+		where: {
+			taskId,
+			userId,
+			isActive: true,
+		},
+	});
+
+	await prisma.taskSubtask.create({
+		data: {
+			title,
+			taskId,
+			userId,
+			stackOrder: existingSubtasks,
+		},
+	});
+
+	revalidateTaskViews();
+}
+
+export async function updateTaskSubtask(formData: FormData) {
+	const userId = await getCurrentUserId();
+
+	const subtaskId = String(formData.get("subtaskId") ?? "");
+	const title = String(formData.get("title") ?? "").trim();
+
+	if (!subtaskId || !title) return;
+
+	await prisma.taskSubtask.updateMany({
+		where: {
+			id: subtaskId,
+			userId,
+			isActive: true,
+		},
+		data: {
+			title,
+		},
+	});
+
+	revalidateTaskViews();
+}
+
+export async function deleteTaskSubtask(subtaskId: string) {
+	const userId = await getCurrentUserId();
+
+	await prisma.taskSubtask.updateMany({
+		where: {
+			id: subtaskId,
+			userId,
+			isActive: true,
+		},
+		data: {
+			isActive: false,
+		},
+	});
+
+	revalidateTaskViews();
+}
+
+export async function completeSubtask(subtaskId: string) {
+	const userId = await getCurrentUserId();
+	const today = getAppTodayDate();
+
+	const subtask = await prisma.taskSubtask.findFirst({
+		where: {
+			id: subtaskId,
+			userId,
+			isActive: true,
+			task: {
+				isActive: true,
+			},
+		},
+	});
+
+	if (!subtask) return;
+
+	await prisma.subtaskCompletion.upsert({
+		where: {
+			subtaskId_completedOn: {
+				subtaskId,
+				completedOn: today,
+			},
+		},
+		update: {},
+		create: {
+			subtaskId,
+			taskId: subtask.taskId,
+			userId,
+			completedOn: today,
+		},
+	});
+
+	const remainingSubtasks = await prisma.taskSubtask.findMany({
+		where: {
+			taskId: subtask.taskId,
+			userId,
+			isActive: true,
+			id: {
+				not: subtask.id,
+			},
+		},
+		orderBy: {
+			stackOrder: "asc",
+		},
+	});
+
+	await prisma.$transaction([
+		...remainingSubtasks.map((remainingSubtask, index) =>
+			prisma.taskSubtask.update({
+				where: {
+					id: remainingSubtask.id,
+				},
+				data: {
+					stackOrder: index,
+				},
+			}),
+		),
+		prisma.taskSubtask.update({
+			where: {
+				id: subtask.id,
+			},
+			data: {
+				stackOrder: remainingSubtasks.length,
+			},
+		}),
+	]);
 
 	revalidateTaskViews();
 }

@@ -14,6 +14,17 @@ const prisma = {
 		deleteMany: vi.fn(),
 		upsert: vi.fn(),
 	},
+	taskSubtask: {
+		count: vi.fn(),
+		create: vi.fn(),
+		findFirst: vi.fn(),
+		findMany: vi.fn(),
+		update: vi.fn((args) => args),
+		updateMany: vi.fn(),
+	},
+	subtaskCompletion: {
+		upsert: vi.fn(),
+	},
 	taskGroup: {
 		create: vi.fn(),
 		update: vi.fn(),
@@ -111,6 +122,38 @@ describe("task server actions", () => {
 		});
 	});
 
+	it("does not attach an empty subtask create when no subtasks are provided", async () => {
+		prisma.task.count.mockResolvedValue(0);
+		const { createTask } = await import("@/app/actions/tasks");
+
+		await createTask(
+			formDataFrom({
+				title: "Read",
+				subtasks: " \n \r\n ",
+			}),
+		);
+
+		expect(prisma.task.create).toHaveBeenCalledWith({
+			data: expect.not.objectContaining({
+				subtasks: expect.anything(),
+			}),
+		});
+	});
+
+	it("does not create a task or subtasks without a task title", async () => {
+		const { createTask } = await import("@/app/actions/tasks");
+
+		await createTask(
+			formDataFrom({
+				title: "   ",
+				subtasks: "This should not be created",
+			}),
+		);
+
+		expect(prisma.task.create).not.toHaveBeenCalled();
+		expect(prisma.taskSubtask.create).not.toHaveBeenCalled();
+	});
+
 	it("stores ungrouped tasks with a null group id", async () => {
 		prisma.task.count.mockResolvedValue(1);
 		const { createTask } = await import("@/app/actions/tasks");
@@ -137,6 +180,50 @@ describe("task server actions", () => {
 				}),
 			}),
 		);
+	});
+
+	it("creates initial subtasks without replacing task data", async () => {
+		prisma.task.count.mockResolvedValue(2);
+		const { createTask } = await import("@/app/actions/tasks");
+
+		await createTask(
+			formDataFrom({
+				title: "Launch prep",
+				description: "Prepare the launch.",
+				subtasks: " Draft notes \n\n Review checklist \r\n Send update ",
+			}),
+		);
+
+		expect(prisma.task.create).toHaveBeenCalledWith({
+			data: {
+				title: "Launch prep",
+				description: "Prepare the launch.",
+				playbook: "",
+				isMandatory: false,
+				groupId: null,
+				userId: "user-1",
+				stackOrder: 2,
+				subtasks: {
+					create: [
+						{
+							title: "Draft notes",
+							userId: "user-1",
+							stackOrder: 0,
+						},
+						{
+							title: "Review checklist",
+							userId: "user-1",
+							stackOrder: 1,
+						},
+						{
+							title: "Send update",
+							userId: "user-1",
+							stackOrder: 2,
+						},
+					],
+				},
+			},
+		});
 	});
 
 	it("updates task description and playbook separately", async () => {
@@ -190,6 +277,114 @@ describe("task server actions", () => {
 		});
 	});
 
+	it("adds subtasks only to active tasks owned by the current user", async () => {
+		prisma.task.findFirst.mockResolvedValue({ id: "task-1" });
+		prisma.taskSubtask.count.mockResolvedValue(4);
+		const { addTaskSubtask } = await import("@/app/actions/tasks");
+
+		await addTaskSubtask(
+			formDataFrom({
+				taskId: "task-1",
+				title: "  Pack laptop  ",
+			}),
+		);
+
+		expect(prisma.task.findFirst).toHaveBeenCalledWith({
+			where: {
+				id: "task-1",
+				userId: "user-1",
+				isActive: true,
+			},
+			select: {
+				id: true,
+			},
+		});
+		expect(prisma.taskSubtask.create).toHaveBeenCalledWith({
+			data: {
+				title: "Pack laptop",
+				taskId: "task-1",
+				userId: "user-1",
+				stackOrder: 4,
+			},
+		});
+	});
+
+	it("does not add a subtask when the parent task is not owned by the user", async () => {
+		prisma.task.findFirst.mockResolvedValue(null);
+		const { addTaskSubtask } = await import("@/app/actions/tasks");
+
+		await addTaskSubtask(
+			formDataFrom({
+				taskId: "other-user-task",
+				title: "Nope",
+			}),
+		);
+
+		expect(prisma.taskSubtask.create).not.toHaveBeenCalled();
+	});
+
+	it("does not add a blank subtask", async () => {
+		const { addTaskSubtask } = await import("@/app/actions/tasks");
+
+		await addTaskSubtask(
+			formDataFrom({
+				taskId: "task-1",
+				title: "   ",
+			}),
+		);
+
+		expect(prisma.task.findFirst).not.toHaveBeenCalled();
+		expect(prisma.taskSubtask.create).not.toHaveBeenCalled();
+	});
+
+	it("updates and soft deletes subtasks through current-user scoped writes", async () => {
+		const { deleteTaskSubtask, updateTaskSubtask } = await import(
+			"@/app/actions/tasks"
+		);
+
+		await updateTaskSubtask(
+			formDataFrom({
+				subtaskId: "subtask-1",
+				title: "  Print directions  ",
+			}),
+		);
+		await deleteTaskSubtask("subtask-2");
+
+		expect(prisma.taskSubtask.updateMany).toHaveBeenCalledWith({
+			where: {
+				id: "subtask-1",
+				userId: "user-1",
+				isActive: true,
+			},
+			data: {
+				title: "Print directions",
+			},
+		});
+		expect(prisma.taskSubtask.updateMany).toHaveBeenCalledWith({
+			where: {
+				id: "subtask-2",
+				userId: "user-1",
+				isActive: true,
+			},
+			data: {
+				isActive: false,
+			},
+		});
+	});
+
+	it("does not update a subtask to a blank title", async () => {
+		const { updateTaskSubtask } = await import("@/app/actions/tasks");
+
+		await updateTaskSubtask(
+			formDataFrom({
+				subtaskId: "subtask-1",
+				title: "   ",
+			}),
+		);
+
+		expect(prisma.taskSubtask.updateMany).not.toHaveBeenCalled();
+	});
+
 	it("starts a task timer for the current user", async () => {
 		const { startTaskTimer } = await import("@/app/actions/tasks");
 
@@ -229,7 +424,111 @@ describe("task server actions", () => {
 				completedOn: new Date("2026-06-15T04:00:00.000Z"),
 			},
 		});
+		expect(prisma.subtaskCompletion.upsert).not.toHaveBeenCalled();
 		expect(prisma.$transaction).not.toHaveBeenCalled();
+	});
+
+	it("completes a subtask once per app day and moves it to the bottom", async () => {
+		vi.useFakeTimers();
+		vi.setSystemTime(new Date("2026-06-15T15:30:00.000Z"));
+		prisma.taskSubtask.findFirst.mockResolvedValue({
+			id: "subtask-2",
+			taskId: "task-1",
+		});
+		prisma.taskSubtask.findMany.mockResolvedValue([
+			{ id: "subtask-1" },
+			{ id: "subtask-3" },
+		]);
+		const { completeSubtask } = await import("@/app/actions/tasks");
+
+		await completeSubtask("subtask-2");
+
+		expect(prisma.taskSubtask.findFirst).toHaveBeenCalledWith({
+			where: {
+				id: "subtask-2",
+				userId: "user-1",
+				isActive: true,
+				task: {
+					isActive: true,
+				},
+			},
+		});
+		expect(prisma.subtaskCompletion.upsert).toHaveBeenCalledWith({
+			where: {
+				subtaskId_completedOn: {
+					subtaskId: "subtask-2",
+					completedOn: new Date("2026-06-15T04:00:00.000Z"),
+				},
+			},
+			update: {},
+			create: {
+				subtaskId: "subtask-2",
+				taskId: "task-1",
+				userId: "user-1",
+				completedOn: new Date("2026-06-15T04:00:00.000Z"),
+			},
+		});
+		expect(prisma.$transaction).toHaveBeenCalledWith([
+			{
+				where: {
+					id: "subtask-1",
+				},
+				data: {
+					stackOrder: 0,
+				},
+			},
+			{
+				where: {
+					id: "subtask-3",
+				},
+				data: {
+					stackOrder: 1,
+				},
+			},
+			{
+				where: {
+					id: "subtask-2",
+				},
+				data: {
+					stackOrder: 2,
+				},
+			},
+		]);
+	});
+
+	it("does not complete a missing or unauthorized subtask", async () => {
+		prisma.taskSubtask.findFirst.mockResolvedValue(null);
+		const { completeSubtask } = await import("@/app/actions/tasks");
+
+		await completeSubtask("subtask-404");
+
+		expect(prisma.subtaskCompletion.upsert).not.toHaveBeenCalled();
+		expect(prisma.taskSubtask.findMany).not.toHaveBeenCalled();
+		expect(prisma.$transaction).not.toHaveBeenCalled();
+	});
+
+	it("uses the Eastern calendar day for subtask completion after Eastern midnight", async () => {
+		vi.useFakeTimers();
+		vi.setSystemTime(new Date("2026-06-16T04:01:00.000Z"));
+		prisma.taskSubtask.findFirst.mockResolvedValue({
+			id: "subtask-1",
+			taskId: "task-1",
+		});
+		prisma.taskSubtask.findMany.mockResolvedValue([]);
+		const { completeSubtask } = await import("@/app/actions/tasks");
+
+		await completeSubtask("subtask-1");
+
+		expect(prisma.subtaskCompletion.upsert).toHaveBeenCalledWith(
+			expect.objectContaining({
+				where: {
+					subtaskId_completedOn: {
+						subtaskId: "subtask-1",
+						completedOn: new Date("2026-06-16T04:00:00.000Z"),
+					},
+				},
+			}),
+		);
 	});
 
 	it("uses the Eastern calendar day after Eastern midnight", async () => {
