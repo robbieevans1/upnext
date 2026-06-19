@@ -2,7 +2,7 @@
 
 UpNext is a stack-based productivity app for deciding what to do next, not just storing a long checklist.
 
-The app organizes recurring work into a daily stack. Mandatory tasks stay visible until completed, grouped tasks rotate after completion, and task playbooks keep execution notes close at hand. UpNext also includes task history and a downtime tracker for sleep, social plans, eating, and other non-task life needs. Together, the app is meant to show both progress and the real amount of flexible time available in a day.
+The app organizes recurring work into a daily stack. Mandatory tasks stay visible until completed, grouped tasks rotate after completion, and task playbooks keep execution notes close at hand. UpNext also tracks one-off action items, scheduled commitments, task history, and downtime for sleep, social plans, eating, and other non-task life needs. The dashboard brings those signals together so the app can show both progress and the real amount of flexible time available in a day.
 
 ## Features
 
@@ -12,6 +12,9 @@ The app organizes recurring work into a daily stack. Mandatory tasks stay visibl
 - Task groups for rotating recurring work
 - Task playbooks for tips, steps, mindset cues, and mistakes to avoid
 - Playbook modal available from task cards and task management
+- One-off action items for async errands or tasks outside the recurring stack
+- Scheduled commitments for events, appointments, errands, and time-based obligations
+- Dashboard with completion trends, downtime charts, scheduled load, action item status, and playbook coverage
 - Completed Today section with same-day undo
 - History page for browsing completed tasks by day
 - Recent completed-day shortcuts with app-day aggregation
@@ -84,6 +87,31 @@ The History page lets users review completed tasks by day. It includes:
 
 History uses the same Eastern-time app-day logic as Today, so task completions are grouped by the day the app considers active rather than by the server's raw UTC date.
 
+## Action Items and Commitments
+
+Recurring improvement work belongs in the daily task stack. One-off async work belongs in Action Items. Time-based obligations belong in Commitments.
+
+Action Items are for tasks that need to happen once but do not require a specific time, such as:
+
+```text
+Return package
+Call pharmacy
+Submit reimbursement form
+```
+
+They can include an optional due date, description, and playbook. Open action items appear on Today when they are unscheduled, due today, or overdue.
+
+Commitments are for scheduled or date-based obligations, such as:
+
+```text
+Dentist appointment
+Work function
+Interview
+Grocery pickup
+```
+
+They can include a date, optional start and end time, location, description, and playbook. Commitments for the current app day appear in Today under Scheduled Today.
+
 ## Downtime Tracking
 
 The downtime page tracks time spent away from improvement activities. A user can start a timer for:
@@ -96,6 +124,21 @@ The downtime page tracks time spent away from improvement activities. A user can
 The timer keeps running if the user navigates away. When stopped, the session is saved to the database. If an active timer crosses the app-day boundary, UpNext closes the previous day's session at Eastern midnight and starts a new session for the new day.
 
 This data is intended for future analytics around available free time, routines, and opportunities to adjust how time is spent.
+
+## Analytics Dashboard
+
+The Dashboard page summarizes recent app activity across the last 14 app days. It includes:
+
+- Task completion rate
+- Daily completion trend
+- Completion breakdown by task area or group
+- Downtime logged by day and category
+- Scheduled commitment load
+- Action item open, overdue, completed, and canceled counts
+- Playbook coverage across tasks, action items, and commitments
+- Most completed tasks
+
+The dashboard uses existing database records rather than separate analytics tables, so it updates as tasks are completed, downtime sessions are logged, action items are resolved, and commitments are created or completed.
 
 ## Tech Stack
 
@@ -117,6 +160,8 @@ This data is intended for future analytics around available free time, routines,
 - `Task` stores recurring tasks, mandatory status, group membership, stack order, and optional playbook notes.
 - `TaskCompletion` stores per-day task completion history.
 - `DowntimeSession` stores timed sleep, social, eating, and other sessions.
+- `ActionItem` stores one-off async tasks with optional due dates, completion status, cancellation status, and playbook notes.
+- `Commitment` stores date-based or time-based obligations with optional location, start/end times, completion status, cancellation status, and playbook notes.
 
 ## Getting Started
 
@@ -204,19 +249,25 @@ The CI workflow runs on pull requests and pushes to `main`. It installs dependen
 
 ## Roadmap
 
-- Analytics dashboard for task completion, playbook usage, and downtime trends
 - Weekly and monthly summaries
 - Streak tracking
 - Most skipped or neglected task insights
-- Charts for completed tasks and available time
+- More detailed available-time estimates
 - Drag-and-drop task ordering
 - Skip reasons
 - Notifications and reminders
 - Richer playbook formatting or reusable playbook templates
 
 ## Screenshots
-<img width="2876" height="1284" alt="image" src="https://github.com/user-attachments/assets/dc244633-7ad0-4678-b66d-dd6ce07c2e4e" />
-<img width="2796" height="1456" alt="image" src="https://github.com/user-attachments/assets/b9cecc67-46eb-4305-964e-a5ac592b5969" />
-<img width="2879" height="1433" alt="image" src="https://github.com/user-attachments/assets/2166a7c5-399e-4fca-837d-0be4e83ecd4b" />
-<img width="2880" height="1538" alt="image" src="https://github.com/user-attachments/assets/d199e017-a63a-49e9-8988-b62d9e9323d9" />
-<img width="2880" height="1552" alt="image" src="https://github.com/user-attachments/assets/19bbe223-e05e-44fa-b204-c4ecb6102bbf" />
+
+### Today's Stack
+
+![Today's Stack](public/readme/today.png)
+
+### Analytics Dashboard
+
+![Analytics Dashboard](public/readme/dashboard.png)
+
+### Task Management
+
+![Task Management](public/readme/tasks.png)
