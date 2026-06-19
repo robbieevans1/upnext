@@ -4,7 +4,6 @@ import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
 	startDowntimeSession,
-	stopDowntimeSession,
 	syncDowntimeDay,
 } from "@/app/actions/downtime";
 import { DOWNTIME_CATEGORIES } from "@/lib/downtime";
@@ -19,8 +18,14 @@ type ActiveSession = {
 	startedAt: string;
 } | null;
 
+type ActiveTaskSession = {
+	taskTitle: string;
+	startedAt: string;
+} | null;
+
 type DowntimeTimerProps = {
 	activeSession: ActiveSession;
+	activeTaskSession: ActiveTaskSession;
 	categoryTotals: CategoryTotal[];
 	totalSecondsToday: number;
 };
@@ -39,6 +44,7 @@ function formatDuration(totalSeconds: number) {
 
 export default function DowntimeTimer({
 	activeSession,
+	activeTaskSession,
 	categoryTotals,
 	totalSecondsToday,
 }: DowntimeTimerProps) {
@@ -58,6 +64,24 @@ export default function DowntimeTimer({
 		let isMounted = true;
 
 		syncDowntimeDay().then((didRollover) => {
+			if (isMounted && (didRollover || (!activeSession && !activeTaskSession))) {
+				router.refresh();
+			}
+		});
+
+		return () => {
+			isMounted = false;
+		};
+	}, [activeSession, activeTaskSession, router]);
+
+	useEffect(() => {
+		if (!activeTaskSession) {
+			return;
+		}
+
+		let isMounted = true;
+
+		syncDowntimeDay().then((didRollover) => {
 			if (isMounted && didRollover) {
 				router.refresh();
 			}
@@ -66,11 +90,16 @@ export default function DowntimeTimer({
 		return () => {
 			isMounted = false;
 		};
-	}, [router]);
+	}, [activeTaskSession, router]);
 
 	const activeElapsedSeconds = activeSession
 		? Math.floor(
 				(now - new Date(activeSession.startedAt).getTime()) / 1000,
+			)
+		: 0;
+	const activeTaskElapsedSeconds = activeTaskSession
+		? Math.floor(
+				(now - new Date(activeTaskSession.startedAt).getTime()) / 1000,
 			)
 		: 0;
 
@@ -95,57 +124,51 @@ export default function DowntimeTimer({
 		});
 	}
 
-	function handleStop() {
-		startTransition(async () => {
-			await stopDowntimeSession();
-			router.refresh();
-		});
-	}
-
 	return (
 		<div className="mt-8 space-y-6">
 			<section className="rounded-2xl border border-slate-800 bg-slate-900 p-6">
 				<div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
 					<div>
 						<p className="text-sm font-semibold uppercase tracking-wide text-sky-400">
-							Today&apos;s Time Away
+							{activeTaskSession ? "Task Time Running" : "Today's Time Away"}
 						</p>
 
 						<p className="mt-3 font-mono text-5xl font-bold tabular-nums text-white">
-							{formatDuration(liveTotalSeconds)}
+							{formatDuration(
+								activeTaskSession ? activeTaskElapsedSeconds : liveTotalSeconds,
+							)}
 						</p>
 
 						<p className="mt-2 text-sm text-slate-400">
-							{activeSession
-								? `${activeSession.category} timer running`
-								: "No timer running"}
+							{activeTaskSession
+								? `${activeTaskSession.taskTitle} timer running`
+								: activeSession
+									? `${activeSession.category} timer running`
+									: "Other timer will start automatically"}
 						</p>
 					</div>
 
-					{activeSession ? (
-						<button
-							type="button"
-							onClick={handleStop}
-							disabled={isPending}
-							className="rounded-xl bg-red-400 px-5 py-3 font-semibold text-slate-950 transition hover:bg-red-300 disabled:cursor-not-allowed disabled:opacity-60"
-						>
-							Stop Timer
-						</button>
-					) : (
-						<div className="grid grid-cols-2 gap-2 sm:min-w-72">
-							{DOWNTIME_CATEGORIES.map((category) => (
+					<div className="grid grid-cols-2 gap-2 sm:min-w-72">
+						{DOWNTIME_CATEGORIES.map((category) => {
+							const isActiveCategory = activeSession?.category === category;
+
+							return (
 								<button
 									key={category}
 									type="button"
 									onClick={() => handleStart(category)}
-									disabled={isPending}
-									className="rounded-xl border border-slate-700 px-4 py-3 text-sm font-semibold text-slate-100 transition hover:border-sky-400 hover:text-sky-300 disabled:cursor-not-allowed disabled:opacity-60"
+									disabled={isPending || Boolean(activeTaskSession)}
+									className={
+										isActiveCategory
+											? "rounded-xl bg-sky-500 px-4 py-3 text-sm font-semibold text-slate-950 transition hover:bg-sky-400 disabled:cursor-not-allowed disabled:opacity-60"
+											: "rounded-xl border border-slate-700 px-4 py-3 text-sm font-semibold text-slate-100 transition hover:border-sky-400 hover:text-sky-300 disabled:cursor-not-allowed disabled:opacity-60"
+									}
 								>
 									{category}
 								</button>
-							))}
-						</div>
-					)}
+							);
+						})}
+					</div>
 				</div>
 			</section>
 

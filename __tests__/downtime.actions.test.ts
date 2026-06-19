@@ -14,11 +14,21 @@ const redirect = vi.fn((path: string) => {
 	throw new Error(`redirect:${path}`);
 });
 const revalidatePath = vi.fn();
+const ensureDefaultDowntimeSession = vi.fn();
+const rolloverActiveDowntimeSession = vi.fn();
+const rolloverActiveTaskSession = vi.fn();
+const switchDowntimeSession = vi.fn();
 
 vi.mock("@/lib/prisma", () => ({ prisma }));
 vi.mock("next-auth", () => ({ getServerSession }));
 vi.mock("next/navigation", () => ({ redirect }));
 vi.mock("next/cache", () => ({ revalidatePath }));
+vi.mock("@/lib/time-tracking", () => ({
+	ensureDefaultDowntimeSession,
+	rolloverActiveDowntimeSession,
+	rolloverActiveTaskSession,
+	switchDowntimeSession,
+}));
 
 describe("downtime server actions", () => {
 	beforeEach(() => {
@@ -31,110 +41,35 @@ describe("downtime server actions", () => {
 		});
 	});
 
-	it("starts a downtime session for the current app day", async () => {
-		vi.useFakeTimers();
-		vi.setSystemTime(new Date("2026-06-16T14:30:00.000Z"));
-		prisma.downtimeSession.findFirst
-			.mockResolvedValueOnce(null)
-			.mockResolvedValueOnce(null);
+	it("switches downtime categories for the current user", async () => {
 		const { startDowntimeSession } = await import("@/app/actions/downtime");
 
 		await startDowntimeSession("Eating");
 
-		expect(prisma.downtimeSession.create).toHaveBeenCalledWith({
-			data: {
-				userId: "user-1",
-				category: "Eating",
-				day: new Date("2026-06-16T04:00:00.000Z"),
-				startedAt: new Date("2026-06-16T14:30:00.000Z"),
-			},
-		});
+		expect(switchDowntimeSession).toHaveBeenCalledWith("user-1", "Eating");
 		expect(revalidatePath).toHaveBeenCalledWith("/downtime");
+		expect(revalidatePath).toHaveBeenCalledWith("/today");
 	});
 
-	it("does not start a second session while one is active", async () => {
-		vi.useFakeTimers();
-		vi.setSystemTime(new Date("2026-06-16T14:30:00.000Z"));
-		prisma.downtimeSession.findFirst
-			.mockResolvedValueOnce({
-				id: "session-1",
-				userId: "user-1",
-				category: "Social",
-				day: new Date("2026-06-16T04:00:00.000Z"),
-				startedAt: new Date("2026-06-16T14:00:00.000Z"),
-				stoppedAt: null,
-			})
-			.mockResolvedValueOnce({
-				id: "session-1",
-			});
+	it("ignores invalid downtime categories", async () => {
 		const { startDowntimeSession } = await import("@/app/actions/downtime");
 
-		await startDowntimeSession("Eating");
+		await startDowntimeSession("Invalid");
 
-		expect(prisma.downtimeSession.create).not.toHaveBeenCalled();
+		expect(switchDowntimeSession).not.toHaveBeenCalled();
 	});
 
-	it("stops the active downtime session", async () => {
-		vi.useFakeTimers();
-		vi.setSystemTime(new Date("2026-06-16T15:00:00.000Z"));
-		prisma.downtimeSession.findFirst
-			.mockResolvedValueOnce(null)
-			.mockResolvedValueOnce({
-				id: "session-1",
-				userId: "user-1",
-				category: "Social",
-				day: new Date("2026-06-16T04:00:00.000Z"),
-				startedAt: new Date("2026-06-16T14:00:00.000Z"),
-				stoppedAt: null,
-			});
-		const { stopDowntimeSession } = await import("@/app/actions/downtime");
-
-		await stopDowntimeSession();
-
-		expect(prisma.downtimeSession.update).toHaveBeenCalledWith({
-			where: {
-				id: "session-1",
-			},
-			data: {
-				stoppedAt: new Date("2026-06-16T15:00:00.000Z"),
-			},
-		});
-		expect(revalidatePath).toHaveBeenCalledWith("/downtime");
-	});
-
-	it("rolls an active session into a new app day", async () => {
-		vi.useFakeTimers();
-		vi.setSystemTime(new Date("2026-06-16T04:01:00.000Z"));
-		prisma.downtimeSession.findFirst.mockResolvedValue({
-			id: "session-1",
-			userId: "user-1",
-			category: "Social",
-			day: new Date("2026-06-15T04:00:00.000Z"),
-			startedAt: new Date("2026-06-15T23:00:00.000Z"),
-			stoppedAt: null,
-		});
+	it("syncs task and downtime sessions across app days", async () => {
+		rolloverActiveDowntimeSession.mockResolvedValueOnce(false);
+		rolloverActiveTaskSession.mockResolvedValueOnce(true);
 		const { syncDowntimeDay } = await import("@/app/actions/downtime");
 
-		await syncDowntimeDay();
+		const didRollover = await syncDowntimeDay();
 
-		expect(prisma.$transaction).toHaveBeenCalledWith([
-			{
-				where: {
-					id: "session-1",
-				},
-				data: {
-					stoppedAt: new Date("2026-06-16T04:00:00.000Z"),
-				},
-			},
-			{
-				data: {
-					userId: "user-1",
-					category: "Social",
-					day: new Date("2026-06-16T04:00:00.000Z"),
-					startedAt: new Date("2026-06-16T04:00:00.000Z"),
-				},
-			},
-		]);
+		expect(didRollover).toBe(true);
+		expect(rolloverActiveDowntimeSession).toHaveBeenCalledWith("user-1");
+		expect(rolloverActiveTaskSession).toHaveBeenCalledWith("user-1");
+		expect(ensureDefaultDowntimeSession).toHaveBeenCalledWith("user-1");
 		expect(revalidatePath).toHaveBeenCalledWith("/downtime");
 	});
 
@@ -147,6 +82,6 @@ describe("downtime server actions", () => {
 		);
 
 		expect(redirect).toHaveBeenCalledWith("/login");
-		expect(prisma.downtimeSession.create).not.toHaveBeenCalled();
+		expect(switchDowntimeSession).not.toHaveBeenCalled();
 	});
 });

@@ -44,6 +44,24 @@ describe("dashboard analytics", () => {
 					],
 				},
 			],
+			taskSessions: [
+				{
+					taskId: "task-1",
+					task: {
+						title: "Portfolio",
+					},
+					startedAt: new Date("2026-06-16T13:00:00.000Z"),
+					stoppedAt: new Date("2026-06-16T14:00:00.000Z"),
+				},
+				{
+					taskId: "task-2",
+					task: {
+						title: "Gym",
+					},
+					startedAt: new Date("2026-06-16T14:30:00.000Z"),
+					stoppedAt: null,
+				},
+			],
 			downtimeSessions: [
 				{
 					category: "Sleep",
@@ -96,6 +114,17 @@ describe("dashboard analytics", () => {
 		expect(analytics.completionRate).toBe(50);
 		expect(analytics.dayBuckets.map((bucket) => bucket.completions)).toEqual([
 			1, 1, 1,
+		]);
+		expect(analytics.totalTaskSeconds).toBe(5400);
+		expect(analytics.taskTimeTotals).toEqual([
+			{
+				title: "Portfolio",
+				totalSeconds: 3600,
+			},
+			{
+				title: "Gym",
+				totalSeconds: 1800,
+			},
 		]);
 		expect(analytics.totalDowntimeSeconds).toBe(9000);
 		expect(analytics.totalCommitmentSeconds).toBe(5400);

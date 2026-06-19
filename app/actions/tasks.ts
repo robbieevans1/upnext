@@ -6,6 +6,10 @@ import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
 import { authOptions } from "@/lib/auth";
 import { getAppTodayDate } from "@/lib/app-date";
+import {
+	startTaskSession,
+	stopActiveTaskSessionAndStartOther,
+} from "@/lib/time-tracking";
 
 // const DEMO_USER_ID = "demo-user";
 
@@ -173,6 +177,15 @@ export async function deleteTask(taskId: string) {
 	revalidateTaskViews();
 }
 
+export async function startTaskTimer(taskId: string) {
+	const userId = await getCurrentUserId();
+
+	await startTaskSession(userId, taskId);
+
+	revalidatePath("/downtime");
+	revalidateTaskViews();
+}
+
 export async function completeTask(taskId: string) {
 	const userId = await getCurrentUserId();
 
@@ -187,6 +200,8 @@ export async function completeTask(taskId: string) {
 	});
 
 	if (!task) return;
+
+	await stopActiveTaskSessionAndStartOther(userId, taskId);
 
 	await prisma.taskCompletion.upsert({
 		where: {
@@ -241,6 +256,7 @@ export async function completeTask(taskId: string) {
 	}
 
 	revalidateTaskViews();
+	revalidatePath("/downtime");
 }
 
 export async function undoTodayCompletion(taskId: string) {

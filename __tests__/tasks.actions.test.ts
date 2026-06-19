@@ -25,11 +25,17 @@ const redirect = vi.fn((path: string) => {
 	throw new Error(`redirect:${path}`);
 });
 const revalidatePath = vi.fn();
+const startTaskSession = vi.fn();
+const stopActiveTaskSessionAndStartOther = vi.fn();
 
 vi.mock("@/lib/prisma", () => ({ prisma }));
 vi.mock("next-auth", () => ({ getServerSession }));
 vi.mock("next/navigation", () => ({ redirect }));
 vi.mock("next/cache", () => ({ revalidatePath }));
+vi.mock("@/lib/time-tracking", () => ({
+	startTaskSession,
+	stopActiveTaskSessionAndStartOther,
+}));
 
 describe("task server actions", () => {
 	beforeEach(() => {
@@ -184,6 +190,16 @@ describe("task server actions", () => {
 		});
 	});
 
+	it("starts a task timer for the current user", async () => {
+		const { startTaskTimer } = await import("@/app/actions/tasks");
+
+		await startTaskTimer("task-1");
+
+		expect(startTaskSession).toHaveBeenCalledWith("user-1", "task-1");
+		expect(revalidatePath).toHaveBeenCalledWith("/downtime");
+		expect(revalidatePath).toHaveBeenCalledWith("/today");
+	});
+
 	it("completes a task once per app day", async () => {
 		vi.useFakeTimers();
 		vi.setSystemTime(new Date("2026-06-15T15:30:00.000Z"));
@@ -195,6 +211,10 @@ describe("task server actions", () => {
 
 		await completeTask("task-1");
 
+		expect(stopActiveTaskSessionAndStartOther).toHaveBeenCalledWith(
+			"user-1",
+			"task-1",
+		);
 		expect(prisma.taskCompletion.upsert).toHaveBeenCalledWith({
 			where: {
 				taskId_completedOn: {

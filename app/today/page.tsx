@@ -1,8 +1,9 @@
 import AppNav from "@/components/AppNav";
 import TaskPlaybookButton from "@/components/TaskPlaybookButton";
+import TaskTimerControls from "@/components/TaskTimerControls";
 import { completeActionItem } from "@/app/actions/action-items";
 import { completeCommitment } from "@/app/actions/commitments";
-import { completeTask, undoTodayCompletion } from "@/app/actions/tasks";
+import { undoTodayCompletion } from "@/app/actions/tasks";
 import { prisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
 
@@ -207,6 +208,27 @@ export default async function TodayPage() {
 		],
 	});
 
+	const activeTaskSession = await prisma.taskSession.findFirst({
+		where: {
+			userId: session.user.id,
+			stoppedAt: null,
+		},
+		select: {
+			taskId: true,
+			startedAt: true,
+		},
+		orderBy: {
+			startedAt: "desc",
+		},
+	});
+
+	const activeTaskTimer = activeTaskSession
+		? {
+				taskId: activeTaskSession.taskId,
+				startedAt: activeTaskSession.startedAt.toISOString(),
+			}
+		: null;
+
 	const completedTodayIds = completionsToday.map(
 		(completion) => completion.taskId,
 	);
@@ -295,7 +317,11 @@ export default async function TodayPage() {
 					</div>
 
 					{currentTask ? (
-						<CurrentTaskCard task={currentTask} today={today} />
+						<CurrentTaskCard
+							task={currentTask}
+							today={today}
+							activeTaskSession={activeTaskTimer}
+						/>
 					) : (
 						<div className="mt-8 rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-6">
 							<p className="text-sm font-semibold uppercase tracking-wide text-emerald-400">
@@ -334,6 +360,7 @@ export default async function TodayPage() {
 									task={task}
 									badge="Required"
 									today={today}
+									activeTaskSession={activeTaskTimer}
 								/>
 							))}
 						</StackSection>
@@ -353,6 +380,7 @@ export default async function TodayPage() {
 									task={task}
 									badge={index === 0 ? "Up next" : "In stack"}
 									today={today}
+									activeTaskSession={activeTaskTimer}
 								/>
 							))}
 						</StackSection>
@@ -366,6 +394,7 @@ export default async function TodayPage() {
 									task={task}
 									badge="Single task"
 									today={today}
+									activeTaskSession={activeTaskTimer}
 								/>
 							))}
 						</StackSection>
@@ -526,9 +555,14 @@ function formatCommitmentWindow(commitment: Commitment) {
 function CurrentTaskCard({
 	task,
 	today,
+	activeTaskSession,
 }: {
 	task: TaskWithLastCompletion;
 	today: Date;
+	activeTaskSession: {
+		taskId: string;
+		startedAt: string;
+	} | null;
 }) {
 	const lastCompleted = task.completions[0]?.completedOn;
 	const status = getTaskStatus(task, today);
@@ -563,15 +597,13 @@ function CurrentTaskCard({
 			</div>
 
 			<div className="mt-6 flex flex-wrap gap-3">
-				<form action={completeTask.bind(null, task.id)}>
-					<button className="rounded-xl bg-sky-500 px-5 py-3 font-semibold text-slate-950 hover:bg-sky-400">
-						Complete
-					</button>
-				</form>
-
-				<TaskPlaybookButton
+				<TaskTimerControls
+					taskId={task.id}
 					taskTitle={task.title}
 					playbook={task.playbook}
+					activeTaskSession={activeTaskSession}
+					completeButtonClassName="rounded-xl bg-sky-500 px-5 py-3 font-semibold text-slate-950 hover:bg-sky-400 disabled:cursor-not-allowed disabled:opacity-60"
+					startButtonClassName="rounded-xl bg-sky-500 px-5 py-3 font-semibold text-slate-950 hover:bg-sky-400 disabled:cursor-not-allowed disabled:opacity-60"
 				/>
 			</div>
 		</div>
@@ -598,10 +630,15 @@ function TaskRow({
 	task,
 	badge,
 	today,
+	activeTaskSession,
 }: {
 	task: TaskWithLastCompletion;
 	badge: string;
 	today: Date;
+	activeTaskSession: {
+		taskId: string;
+		startedAt: string;
+	} | null;
 }) {
 	const lastCompleted = task.completions[0]?.completedOn;
 	const status = getTaskStatus(task, today);
@@ -652,18 +689,14 @@ function TaskRow({
 					</div>
 				</div>
 
-				<div className="flex shrink-0 flex-wrap gap-2">
-					<TaskPlaybookButton
-						taskTitle={task.title}
-						playbook={task.playbook}
-					/>
-
-					<form action={completeTask.bind(null, task.id)}>
-						<button className="rounded-lg border border-slate-700 px-4 py-2 text-sm font-medium text-slate-200 hover:border-sky-500 hover:text-sky-400">
-							Complete
-						</button>
-					</form>
-				</div>
+				<TaskTimerControls
+					taskId={task.id}
+					taskTitle={task.title}
+					playbook={task.playbook}
+					activeTaskSession={activeTaskSession}
+					completeButtonClassName="rounded-lg border border-slate-700 px-4 py-2 text-sm font-medium text-slate-200 hover:border-sky-500 hover:text-sky-400 disabled:cursor-not-allowed disabled:opacity-60"
+					startButtonClassName="rounded-lg border border-slate-700 px-4 py-2 text-sm font-medium text-slate-200 hover:border-sky-500 hover:text-sky-400 disabled:cursor-not-allowed disabled:opacity-60"
+				/>
 			</div>
 		</div>
 	);
