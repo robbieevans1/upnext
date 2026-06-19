@@ -29,6 +29,13 @@ export default async function LandingPage() {
 
 					<div className="flex items-center gap-3">
 						<Link
+							href="/about"
+							className="rounded-lg px-4 py-2 text-sm font-medium text-slate-300 transition hover:text-white"
+						>
+							About
+						</Link>
+
+						<Link
 							href="/login"
 							className="rounded-lg px-4 py-2 text-sm font-medium text-slate-300 transition hover:text-white"
 						>
@@ -74,6 +81,13 @@ export default async function LandingPage() {
 								className="rounded-xl border border-slate-700 px-6 py-3 text-center font-semibold text-white transition hover:bg-slate-900"
 							>
 								Log in
+							</Link>
+
+							<Link
+								href="/about"
+								className="rounded-xl border border-slate-700 px-6 py-3 text-center font-semibold text-white transition hover:bg-slate-900"
+							>
+								Learn more
 							</Link>
 						</div>
 					</div>
