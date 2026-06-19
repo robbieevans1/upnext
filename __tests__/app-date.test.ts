@@ -3,7 +3,9 @@ import {
 	addAppDays,
 	formatAppDate,
 	getAppDateFromKey,
+	getAppDateTimeFromKeys,
 	getAppDateKey,
+	getAppTimeKey,
 	getAppTodayDate,
 } from "@/lib/app-date";
 
@@ -56,5 +58,14 @@ describe("app date helpers", () => {
 		expect(addAppDays(winterDay, 1)).toEqual(
 			new Date("2026-03-09T04:00:00.000Z"),
 		);
+	});
+
+	it("parses app date and time keys into Eastern instants", () => {
+		const dateTime = getAppDateTimeFromKeys("2026-06-16", "09:30");
+
+		expect(dateTime).toEqual(new Date("2026-06-16T13:30:00.000Z"));
+		expect(getAppTimeKey(dateTime!)).toBe("09:30");
+		expect(getAppDateTimeFromKeys("2026-06-16", "24:00")).toBeNull();
+		expect(getAppDateTimeFromKeys("not-a-date", "09:30")).toBeNull();
 	});
 });

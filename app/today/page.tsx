@@ -1,5 +1,7 @@
 import AppNav from "@/components/AppNav";
 import TaskPlaybookButton from "@/components/TaskPlaybookButton";
+import { completeActionItem } from "@/app/actions/action-items";
+import { completeCommitment } from "@/app/actions/commitments";
 import { completeTask, undoTodayCompletion } from "@/app/actions/tasks";
 import { prisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
@@ -7,7 +9,7 @@ import { Prisma } from "@prisma/client";
 import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
 import { authOptions } from "@/lib/auth";
-import { formatAppDate, getAppTodayDate } from "@/lib/app-date";
+import { formatAppDate, formatAppTime, getAppTodayDate } from "@/lib/app-date";
 import { connection } from "next/server";
 
 type TaskWithLastCompletion = Prisma.TaskGetPayload<{
@@ -17,6 +19,9 @@ type TaskWithLastCompletion = Prisma.TaskGetPayload<{
 }>;
 
 type TaskStatus = "normal" | "stale" | "overdue";
+
+type ActionItem = Prisma.ActionItemGetPayload<object>;
+type Commitment = Prisma.CommitmentGetPayload<object>;
 
 function getDaysSinceLastCompleted(
 	lastCompleted: Date | undefined,
@@ -159,6 +164,49 @@ export default async function TodayPage() {
 		},
 	});
 
+	const commitmentsToday = await prisma.commitment.findMany({
+		where: {
+			userId: session.user.id,
+			day: today,
+			completedAt: null,
+			canceledAt: null,
+		},
+		orderBy: [
+			{
+				startsAt: "asc",
+			},
+			{
+				createdAt: "asc",
+			},
+		],
+	});
+
+	const actionItems = await prisma.actionItem.findMany({
+		where: {
+			userId: session.user.id,
+			completedAt: null,
+			canceledAt: null,
+			OR: [
+				{
+					dueOn: null,
+				},
+				{
+					dueOn: {
+						lte: today,
+					},
+				},
+			],
+		},
+		orderBy: [
+			{
+				dueOn: "asc",
+			},
+			{
+				createdAt: "asc",
+			},
+		],
+	});
+
 	const completedTodayIds = completionsToday.map(
 		(completion) => completion.taskId,
 	);
@@ -262,6 +310,22 @@ export default async function TodayPage() {
 						</div>
 					)}
 
+					{commitmentsToday.length > 0 && (
+						<StackSection title="Scheduled Today">
+							{commitmentsToday.map((commitment) => (
+								<CommitmentRow key={commitment.id} commitment={commitment} />
+							))}
+						</StackSection>
+					)}
+
+					{actionItems.length > 0 && (
+						<StackSection title="Action Items">
+							{actionItems.map((item) => (
+								<ActionItemRow key={item.id} item={item} today={today} />
+							))}
+						</StackSection>
+					)}
+
 					{mandatoryTasks.length > 0 && (
 						<StackSection title="Mandatory">
 							{mandatoryTasks.map((task) => (
@@ -363,6 +427,100 @@ export default async function TodayPage() {
 			</main>
 		</>
 	);
+}
+
+function CommitmentRow({ commitment }: { commitment: Commitment }) {
+	return (
+		<div className="rounded-xl border border-indigo-500/30 bg-indigo-500/10 p-4">
+			<div className="flex items-start justify-between gap-4">
+				<div>
+					<h4 className="text-lg font-semibold">{commitment.title}</h4>
+
+					{commitment.description && (
+						<p className="mt-1 text-sm text-slate-300">
+							{commitment.description}
+						</p>
+					)}
+
+					<p className="mt-2 text-sm text-indigo-100/80">
+						{formatCommitmentWindow(commitment)}
+						{commitment.location ? ` · ${commitment.location}` : ""}
+					</p>
+				</div>
+
+				<div className="flex shrink-0 flex-wrap gap-2">
+					<TaskPlaybookButton
+						taskTitle={commitment.title}
+						playbook={commitment.playbook}
+					/>
+
+					<form action={completeCommitment.bind(null, commitment.id)}>
+						<button className="rounded-lg border border-indigo-300/40 px-4 py-2 text-sm font-medium text-indigo-100 hover:bg-indigo-500/10">
+							Complete
+						</button>
+					</form>
+				</div>
+			</div>
+		</div>
+	);
+}
+
+function ActionItemRow({ item, today }: { item: ActionItem; today: Date }) {
+	const isOverdue = item.dueOn ? item.dueOn.getTime() < today.getTime() : false;
+
+	return (
+		<div className="rounded-xl border border-slate-800 bg-slate-900 p-4">
+			<div className="flex items-start justify-between gap-4">
+				<div>
+					<h4 className="text-lg font-semibold">{item.title}</h4>
+
+					{item.description && (
+						<p className="mt-1 text-sm text-slate-400">{item.description}</p>
+					)}
+
+					<div className="mt-3 flex flex-wrap gap-2">
+						<span className="rounded-full bg-slate-800 px-3 py-1 text-xs text-slate-300">
+							One-off
+						</span>
+
+						{item.dueOn && (
+							<span
+								className={`rounded-full px-3 py-1 text-xs font-medium ${
+									isOverdue
+										? "bg-red-500/10 text-red-300"
+										: "bg-sky-500/10 text-sky-400"
+								}`}
+							>
+								Due {formatAppDate(item.dueOn)}
+							</span>
+						)}
+					</div>
+				</div>
+
+				<div className="flex shrink-0 flex-wrap gap-2">
+					<TaskPlaybookButton taskTitle={item.title} playbook={item.playbook} />
+
+					<form action={completeActionItem.bind(null, item.id)}>
+						<button className="rounded-lg border border-slate-700 px-4 py-2 text-sm font-medium text-slate-200 hover:border-sky-500 hover:text-sky-400">
+							Complete
+						</button>
+					</form>
+				</div>
+			</div>
+		</div>
+	);
+}
+
+function formatCommitmentWindow(commitment: Commitment) {
+	if (commitment.startsAt && commitment.endsAt) {
+		return `${formatAppTime(commitment.startsAt)}-${formatAppTime(commitment.endsAt)}`;
+	}
+
+	if (commitment.startsAt) {
+		return formatAppTime(commitment.startsAt);
+	}
+
+	return "Any time today";
 }
 
 function CurrentTaskCard({

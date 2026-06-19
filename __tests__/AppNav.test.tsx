@@ -30,6 +30,14 @@ describe("AppNav", () => {
 			"href",
 			"/tasks",
 		);
+		expect(screen.getByRole("link", { name: "Actions" })).toHaveAttribute(
+			"href",
+			"/action-items",
+		);
+		expect(screen.getByRole("link", { name: "Schedule" })).toHaveAttribute(
+			"href",
+			"/commitments",
+		);
 		expect(screen.getByRole("link", { name: "Time" })).toHaveAttribute(
 			"href",
 			"/downtime",
@@ -69,6 +77,13 @@ describe("AppNav", () => {
 			"href",
 			"/today",
 		);
+		expect(within(menu).getByRole("link", { name: "Actions" })).toHaveAttribute(
+			"href",
+			"/action-items",
+		);
+		expect(
+			within(menu).getByRole("link", { name: "Schedule" }),
+		).toHaveAttribute("href", "/commitments");
 		expect(within(menu).getByRole("link", { name: "History" })).toHaveAttribute(
 			"href",
 			"/history",
