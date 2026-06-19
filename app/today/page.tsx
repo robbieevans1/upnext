@@ -1,4 +1,5 @@
 import AppNav from "@/components/AppNav";
+import DailyReviewPrompt from "@/components/DailyReviewPrompt";
 import TaskPlaybookButton from "@/components/TaskPlaybookButton";
 import TaskTimerControls from "@/components/TaskTimerControls";
 import { completeActionItem } from "@/app/actions/action-items";
@@ -10,7 +11,13 @@ import { Prisma } from "@prisma/client";
 import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
 import { authOptions } from "@/lib/auth";
-import { formatAppDate, formatAppTime, getAppTodayDate } from "@/lib/app-date";
+import {
+	addAppDays,
+	formatAppDate,
+	formatAppTime,
+	getAppDateKey,
+	getAppTodayDate,
+} from "@/lib/app-date";
 import { connection } from "next/server";
 
 type TaskWithLastCompletion = Prisma.TaskGetPayload<{
@@ -134,6 +141,7 @@ export default async function TodayPage() {
 	}
 	// const user = await getDemoUser();
 	const today = getAppTodayDate();
+	const yesterday = addAppDays(today, -1);
 
 	const groups = await prisma.taskGroup.findMany({
 		where: {
@@ -227,6 +235,33 @@ export default async function TodayPage() {
 				createdAt: "asc",
 			},
 		],
+	});
+
+	const dailyChecks = await prisma.dailyCheck.findMany({
+		where: {
+			userId: session.user.id,
+			isActive: true,
+		},
+		orderBy: {
+			sortOrder: "asc",
+		},
+		include: {
+			results: {
+				where: {
+					targetDay: yesterday,
+				},
+				take: 1,
+			},
+		},
+	});
+
+	const dailyReviewDismissal = await prisma.dailyReviewDismissal.findUnique({
+		where: {
+			userId_targetDay: {
+				userId: session.user.id,
+				targetDay: yesterday,
+			},
+		},
 	});
 
 	const activeTaskSession = await prisma.taskSession.findFirst({
@@ -336,6 +371,18 @@ export default async function TodayPage() {
 							{progressPercent}% done today
 						</p>
 					</div>
+
+					<DailyReviewPrompt
+						targetDayKey={getAppDateKey(yesterday)}
+						targetDayLabel={formatAppDate(yesterday)}
+						wasDismissed={Boolean(dailyReviewDismissal)}
+						checks={dailyChecks.map((check) => ({
+							id: check.id,
+							title: check.title,
+							description: check.description,
+							result: check.results[0]?.status ?? null,
+						}))}
+					/>
 
 					{currentTask ? (
 						<CurrentTaskCard

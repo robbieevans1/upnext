@@ -18,15 +18,18 @@ model User {
   accounts Account[]
   sessions Session[]
 
-  taskGroups         TaskGroup[]
-  tasks              Task[]
-  taskCompletions    TaskCompletion[]
-  taskSessions       TaskSession[]
-  taskSubtasks       TaskSubtask[]
-  subtaskCompletions SubtaskCompletion[]
-  downtimeSessions   DowntimeSession[]
-  actionItems        ActionItem[]
-  commitments        Commitment[]
+  taskGroups            TaskGroup[]
+  tasks                 Task[]
+  taskCompletions       TaskCompletion[]
+  taskSessions          TaskSession[]
+  taskSubtasks          TaskSubtask[]
+  subtaskCompletions    SubtaskCompletion[]
+  downtimeSessions      DowntimeSession[]
+  actionItems           ActionItem[]
+  commitments           Commitment[]
+  dailyChecks           DailyCheck[]
+  dailyCheckResults     DailyCheckResult[]
+  dailyReviewDismissals DailyReviewDismissal[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -251,4 +254,62 @@ model Commitment {
   @@index([userId, startsAt])
   @@index([userId, completedAt])
   @@index([userId, canceledAt])
+}
+
+enum DailyCheckStatus {
+  YES
+  NO
+  SKIP
+  UNSURE
+}
+
+model DailyCheck {
+  id          String  @id @default(cuid())
+  title       String
+  description String?
+  isActive    Boolean @default(true)
+  sortOrder   Int     @default(0)
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  results DailyCheckResult[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId, isActive, sortOrder])
+}
+
+model DailyCheckResult {
+  id String @id @default(cuid())
+
+  dailyCheckId String
+  dailyCheck   DailyCheck @relation(fields: [dailyCheckId], references: [id], onDelete: Cascade)
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  targetDay DateTime
+  status    DailyCheckStatus
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([dailyCheckId, targetDay])
+  @@index([userId, targetDay])
+  @@index([status, targetDay])
+}
+
+model DailyReviewDismissal {
+  id String @id @default(cuid())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  targetDay   DateTime
+  dismissedAt DateTime @default(now())
+
+  @@unique([userId, targetDay])
+  @@index([userId, dismissedAt])
 }

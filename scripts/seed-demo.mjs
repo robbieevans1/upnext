@@ -553,6 +553,80 @@ async function createCommitments(today) {
 	return commitments.length;
 }
 
+async function createDailyChecks(today) {
+	const checks = [
+		{
+			id: "demo-daily-check-calories",
+			title: "Was below calorie limit?",
+			description: "Answer based on yesterday's full day of eating.",
+		},
+		{
+			id: "demo-daily-check-protein",
+			title: "Hit protein target?",
+			description: "Count the day as a yes if meals supported recovery.",
+		},
+		{
+			id: "demo-daily-check-late-snack",
+			title: "Avoided late-night snacking?",
+			description: "Use this to spot evening routine patterns.",
+		},
+		{
+			id: "demo-daily-check-sleep",
+			title: "Got 7+ hours of sleep?",
+			description: "Answer yes when sleep was long enough to recover.",
+		},
+		{
+			id: "demo-daily-check-spending",
+			title: "Avoided unnecessary spending?",
+			description: "A quick check for impulse purchases and delivery.",
+		},
+	];
+	const results = [];
+
+	await prisma.dailyCheck.createMany({
+		data: checks.map((check, index) => ({
+			...check,
+			userId: DEMO_USER_ID,
+			sortOrder: index,
+		})),
+	});
+
+	for (let offset = 20; offset >= 1; offset -= 1) {
+		const day = addAppDays(today, -offset);
+
+		for (const [index, check] of checks.entries()) {
+			const selector = (offset + index) % 9;
+			const status =
+				selector === 0
+					? "UNSURE"
+					: selector === 1
+						? "SKIP"
+						: selector <= 3
+							? "NO"
+							: "YES";
+
+			results.push({
+				dailyCheckId: check.id,
+				userId: DEMO_USER_ID,
+				targetDay: day,
+				status,
+				createdAt: atAppTime(addAppDays(day, 1), 8, 15 + index),
+				updatedAt: atAppTime(addAppDays(day, 1), 8, 15 + index),
+			});
+		}
+	}
+
+	await prisma.dailyCheckResult.createMany({
+		data: results,
+		skipDuplicates: true,
+	});
+
+	return {
+		checks: checks.length,
+		results: results.length,
+	};
+}
+
 async function main() {
 	requireSafeEnvironment();
 
@@ -564,6 +638,7 @@ async function main() {
 	const downtimeSessions = await createDowntime(today);
 	const actionItems = await createActionItems(today);
 	const commitments = await createCommitments(today);
+	const dailyReview = await createDailyChecks(today);
 
 	console.log("Seeded demo data.");
 	console.log(`Email: ${DEMO_EMAIL}`);
@@ -575,6 +650,8 @@ async function main() {
 	console.log(`Downtime sessions: ${downtimeSessions}`);
 	console.log(`Action items: ${actionItems}`);
 	console.log(`Commitments: ${commitments}`);
+	console.log(`Daily checks: ${dailyReview.checks}`);
+	console.log(`Daily check results: ${dailyReview.results}`);
 }
 
 main()

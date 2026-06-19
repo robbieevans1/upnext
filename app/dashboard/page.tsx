@@ -26,7 +26,14 @@ export default async function DashboardPage() {
 	const startDay = addAppDays(today, -(DASHBOARD_DAYS - 1));
 	const tomorrow = addAppDays(today, 1);
 
-	const [tasks, taskSessions, downtimeSessions, actionItems, commitments] =
+	const [
+		tasks,
+		taskSessions,
+		downtimeSessions,
+		actionItems,
+		commitments,
+		dailyCheckResults,
+	] =
 		await Promise.all([
 		prisma.task.findMany({
 			where: {
@@ -100,6 +107,24 @@ export default async function DashboardPage() {
 				playbook: true,
 			},
 		}),
+		prisma.dailyCheckResult.findMany({
+			where: {
+				userId: session.user.id,
+				targetDay: {
+					gte: startDay,
+					lt: tomorrow,
+				},
+			},
+			select: {
+				status: true,
+				targetDay: true,
+				dailyCheck: {
+					select: {
+						title: true,
+					},
+				},
+			},
+		}),
 		]);
 
 	const analytics = buildDashboardAnalytics({
@@ -108,6 +133,7 @@ export default async function DashboardPage() {
 		downtimeSessions,
 		actionItems,
 		commitments,
+		dailyCheckResults,
 		today,
 		now,
 		days: DASHBOARD_DAYS,
@@ -166,6 +192,11 @@ export default async function DashboardPage() {
 							value={`${analytics.playbookSummary.coverage}%`}
 							detail={`${analytics.playbookSummary.withPlaybook} of ${analytics.playbookSummary.total} items have notes`}
 						/>
+						<MetricTile
+							label="Daily Review"
+							value={`${analytics.dailyReviewSummary.successRate}%`}
+							detail={`${analytics.dailyReviewSummary.yes} yes and ${analytics.dailyReviewSummary.no} no answers`}
+						/>
 					</div>
 
 					<div className="mt-8 grid gap-6 lg:grid-cols-[1.3fr_1fr]">
@@ -221,6 +252,48 @@ export default async function DashboardPage() {
 					</div>
 
 					<div className="mt-6 grid gap-6 lg:grid-cols-2">
+						<Panel title="Daily Review Checks">
+							{analytics.dailyCheckTotals.length > 0 ? (
+								<div className="space-y-4">
+									{analytics.dailyCheckTotals.map((check) => {
+										const total =
+											check.yes + check.no + check.skip + check.unsure;
+										const answered = check.yes + check.no;
+										const successRate =
+											answered === 0
+												? 0
+												: Math.round((check.yes / answered) * 100);
+
+										return (
+											<div
+												key={check.title}
+												className="rounded-xl border border-slate-800 bg-slate-950 p-4"
+											>
+												<div className="flex items-start justify-between gap-3">
+													<div>
+														<h3 className="font-semibold text-slate-100">
+															{check.title}
+														</h3>
+														<p className="mt-1 text-sm text-slate-500">
+															{total} answers · {check.skip} skipped ·{" "}
+															{check.unsure} unsure
+														</p>
+													</div>
+													<span className="rounded-full bg-sky-500/10 px-3 py-1 text-sm font-semibold text-sky-300">
+														{successRate}%
+													</span>
+												</div>
+											</div>
+										);
+									})}
+								</div>
+							) : (
+								<EmptyState>
+									Answer daily review checks to populate this panel.
+								</EmptyState>
+							)}
+						</Panel>
+
 						<Panel title="Completion By Area">
 							{analytics.groupCompletionTotals.length > 0 ? (
 								<div className="space-y-4">
