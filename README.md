@@ -2,7 +2,7 @@
 
 UpNext is a stack-based productivity app for deciding what to do next, not just storing a long checklist.
 
-The app organizes recurring work into a daily stack. Mandatory tasks stay visible until completed, grouped tasks rotate after completion, and a downtime tracker captures time spent on sleep, social plans, eating, and other non-task life needs. Together, the app is meant to show both progress and the real amount of flexible time available in a day.
+The app organizes recurring work into a daily stack. Mandatory tasks stay visible until completed, grouped tasks rotate after completion, and task playbooks keep execution notes close at hand. UpNext also includes task history and a downtime tracker for sleep, social plans, eating, and other non-task life needs. Together, the app is meant to show both progress and the real amount of flexible time available in a day.
 
 ## Features
 
@@ -10,12 +10,17 @@ The app organizes recurring work into a daily stack. Mandatory tasks stay visibl
 - Daily task stack for the signed-in user
 - Mandatory tasks that stay prioritized until completed
 - Task groups for rotating recurring work
+- Task playbooks for tips, steps, mindset cues, and mistakes to avoid
+- Playbook modal available from task cards and task management
 - Completed Today section with same-day undo
+- History page for browsing completed tasks by day
+- Recent completed-day shortcuts with app-day aggregation
 - Eastern-time app day handling for daily rollover
 - Task completion history stored for analytics
 - Downtime timer for sleep, social, eating, and other time
 - Downtime sessions continue running after leaving the page
 - Active downtime sessions split cleanly at Eastern midnight
+- Responsive mobile navigation with a side menu
 - Soft deletes for tasks and groups
 - CI checks for linting, types, tests, unused code, and production build
 
@@ -44,6 +49,40 @@ Career stack
 ```
 
 This makes repeated work harder to avoid and helps rotate attention across important areas.
+
+## Task Playbooks
+
+Task descriptions stay short and card-facing. Playbooks are separate notes for how to perform a task well.
+
+For example, a task like `Go to work function` might have a brief description:
+
+```text
+Attend the networking event after work.
+```
+
+And a playbook:
+
+```text
+- Stand up straight
+- Smile before entering conversations
+- Ask people what they are working on
+- Keep answers concise and positive
+- Do not check your phone
+```
+
+Playbooks can be added or edited from the Tasks page. Task cards show a Playbook button that opens the notes in a modal without navigating away from the current page.
+
+## Completion History
+
+The History page lets users review completed tasks by day. It includes:
+
+- Previous Day and Next Day navigation
+- A Today shortcut
+- Recent completed-day shortcuts
+- Sorted completed task cards for the selected day
+- App-day aggregation for older completion timestamps
+
+History uses the same Eastern-time app-day logic as Today, so task completions are grouped by the day the app considers active rather than by the server's raw UTC date.
 
 ## Downtime Tracking
 
@@ -75,7 +114,7 @@ This data is intended for future analytics around available free time, routines,
 
 - `User` stores account data.
 - `TaskGroup` stores related task groups.
-- `Task` stores recurring tasks, mandatory status, group membership, and stack order.
+- `Task` stores recurring tasks, mandatory status, group membership, stack order, and optional playbook notes.
 - `TaskCompletion` stores per-day task completion history.
 - `DowntimeSession` stores timed sleep, social, eating, and other sessions.
 
@@ -165,7 +204,7 @@ The CI workflow runs on pull requests and pushes to `main`. It installs dependen
 
 ## Roadmap
 
-- Analytics dashboard for task completion and downtime trends
+- Analytics dashboard for task completion, playbook usage, and downtime trends
 - Weekly and monthly summaries
 - Streak tracking
 - Most skipped or neglected task insights
@@ -173,7 +212,7 @@ The CI workflow runs on pull requests and pushes to `main`. It installs dependen
 - Drag-and-drop task ordering
 - Skip reasons
 - Notifications and reminders
-- Mobile UI polish
+- Richer playbook formatting or reusable playbook templates
 
 ## Screenshots
 <img width="2876" height="1284" alt="image" src="https://github.com/user-attachments/assets/dc244633-7ad0-4678-b66d-dd6ce07c2e4e" />
@@ -181,4 +220,3 @@ The CI workflow runs on pull requests and pushes to `main`. It installs dependen
 <img width="2879" height="1433" alt="image" src="https://github.com/user-attachments/assets/2166a7c5-399e-4fca-837d-0be4e83ecd4b" />
 <img width="2880" height="1538" alt="image" src="https://github.com/user-attachments/assets/d199e017-a63a-49e9-8988-b62d9e9323d9" />
 <img width="2880" height="1552" alt="image" src="https://github.com/user-attachments/assets/19bbe223-e05e-44fa-b204-c4ecb6102bbf" />
-
