@@ -18,13 +18,15 @@ model User {
   accounts Account[]
   sessions Session[]
 
-  taskGroups      TaskGroup[]
-  tasks           Task[]
-  taskCompletions TaskCompletion[]
-  taskSessions    TaskSession[]
-  downtimeSessions DowntimeSession[]
-  actionItems      ActionItem[]
-  commitments      Commitment[]
+  taskGroups         TaskGroup[]
+  tasks              Task[]
+  taskCompletions    TaskCompletion[]
+  taskSessions       TaskSession[]
+  taskSubtasks       TaskSubtask[]
+  subtaskCompletions SubtaskCompletion[]
+  downtimeSessions   DowntimeSession[]
+  actionItems        ActionItem[]
+  commitments        Commitment[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -84,8 +86,10 @@ model Task {
   groupId String?
   group   TaskGroup? @relation(fields: [groupId], references: [id], onDelete: SetNull)
 
-  completions TaskCompletion[]
-  sessions    TaskSession[]
+  completions        TaskCompletion[]
+  sessions           TaskSession[]
+  subtasks           TaskSubtask[]
+  subtaskCompletions SubtaskCompletion[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -104,6 +108,48 @@ model TaskCompletion {
   createdAt   DateTime @default(now())
 
   @@unique([taskId, completedOn])
+  @@index([userId, completedOn])
+}
+
+model TaskSubtask {
+  id    String @id @default(cuid())
+  title String
+
+  isActive   Boolean @default(true)
+  stackOrder Int     @default(0)
+
+  taskId String
+  task   Task   @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  completions SubtaskCompletion[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([taskId, stackOrder])
+  @@index([userId, isActive])
+}
+
+model SubtaskCompletion {
+  id String @id @default(cuid())
+
+  subtaskId String
+  subtask   TaskSubtask @relation(fields: [subtaskId], references: [id], onDelete: Cascade)
+
+  taskId String
+  task   Task   @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  completedOn DateTime
+  createdAt   DateTime @default(now())
+
+  @@unique([subtaskId, completedOn])
+  @@index([taskId, completedOn])
   @@index([userId, completedOn])
 }
 
@@ -162,7 +208,7 @@ model DowntimeSession {
 }
 
 model ActionItem {
-  id          String    @id @default(cuid())
+  id          String  @id @default(cuid())
   title       String
   description String?
   playbook    String?

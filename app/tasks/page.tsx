@@ -2,12 +2,15 @@ import AppNav from "@/components/AppNav";
 import TaskPlaybookButton from "@/components/TaskPlaybookButton";
 import { prisma } from "@/lib/prisma";
 import {
+	addTaskSubtask,
 	createTask,
 	createTaskGroup,
 	deleteTask,
 	deleteTaskGroup,
+	deleteTaskSubtask,
 	updateTask,
 	updateTaskGroup,
+	updateTaskSubtask,
 } from "@/app/actions/tasks";
 import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
@@ -28,12 +31,12 @@ import { authOptions } from "@/lib/auth";
 // }
 
 export default async function TasksPage() {
-		const session = await getServerSession(authOptions);
+	const session = await getServerSession(authOptions);
 
 	if (!session?.user) {
 		redirect("/login");
 	}
-		// const user = await getDemoUser();
+	// const user = await getDemoUser();
 
 	const groups = await prisma.taskGroup.findMany({
 		where: {
@@ -52,6 +55,14 @@ export default async function TasksPage() {
 		},
 		include: {
 			group: true,
+			subtasks: {
+				where: {
+					isActive: true,
+				},
+				orderBy: {
+					stackOrder: "asc",
+				},
+			},
 		},
 		orderBy: [
 			{
@@ -141,6 +152,18 @@ export default async function TasksPage() {
 										</option>
 									))}
 								</select>
+							</div>
+
+							<div>
+								<label className="text-sm font-medium text-slate-300">
+									Subtasks
+								</label>
+
+								<textarea
+									name="subtasks"
+									placeholder="Write one subtask per line"
+									className="mt-2 min-h-28 w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-white outline-none focus:border-sky-500"
+								/>
 							</div>
 
 							<label className="flex items-center gap-3 text-sm text-slate-300">
@@ -372,6 +395,74 @@ export default async function TasksPage() {
 												/>
 											</div>
 										</form>
+
+										<div className="mt-5 border-t border-slate-800 pt-4">
+											<h3 className="text-sm font-semibold text-slate-200">
+												Subtasks
+											</h3>
+
+											{task.subtasks.length === 0 ? (
+												<p className="mt-2 text-sm text-slate-500">
+													No subtasks yet.
+												</p>
+											) : (
+												<div className="mt-3 space-y-3">
+													{task.subtasks.map((subtask) => (
+														<div
+															key={subtask.id}
+															className="flex flex-col gap-2 rounded-xl border border-slate-800 bg-slate-950 p-3 sm:flex-row sm:items-center"
+														>
+															<form
+																action={updateTaskSubtask}
+																className="flex flex-1 flex-col gap-2 sm:flex-row"
+															>
+																<input
+																	type="hidden"
+																	name="subtaskId"
+																	value={subtask.id}
+																/>
+
+																<input
+																	name="title"
+																	defaultValue={subtask.title}
+																	className="min-w-0 flex-1 rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white outline-none focus:border-sky-500"
+																/>
+
+																<button className="rounded-lg bg-sky-500 px-3 py-2 text-sm font-semibold text-slate-950 hover:bg-sky-400">
+																	Save
+																</button>
+															</form>
+
+															<form
+																action={deleteTaskSubtask.bind(null, subtask.id)}
+															>
+																<button className="rounded-lg border border-red-500/40 px-3 py-2 text-sm text-red-300 hover:bg-red-500/10">
+																	Delete
+																</button>
+															</form>
+														</div>
+													))}
+												</div>
+											)}
+
+											<form
+												action={addTaskSubtask}
+												className="mt-3 flex flex-col gap-2 sm:flex-row"
+											>
+												<input type="hidden" name="taskId" value={task.id} />
+
+												<input
+													name="title"
+													placeholder="Add a subtask"
+													className="min-w-0 flex-1 rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-white outline-none focus:border-sky-500"
+												/>
+
+												<button className="rounded-lg border border-sky-500/50 px-3 py-2 text-sm font-semibold text-sky-200 hover:bg-sky-500/10">
+													Add Subtask
+												</button>
+											</form>
+										</div>
+
 										<form
 											action={deleteTask.bind(null, task.id)}
 											className="mt-3"

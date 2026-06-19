@@ -3,7 +3,7 @@ import TaskPlaybookButton from "@/components/TaskPlaybookButton";
 import TaskTimerControls from "@/components/TaskTimerControls";
 import { completeActionItem } from "@/app/actions/action-items";
 import { completeCommitment } from "@/app/actions/commitments";
-import { undoTodayCompletion } from "@/app/actions/tasks";
+import { completeSubtask, undoTodayCompletion } from "@/app/actions/tasks";
 import { prisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
 
@@ -16,6 +16,11 @@ import { connection } from "next/server";
 type TaskWithLastCompletion = Prisma.TaskGetPayload<{
 	include: {
 		completions: true;
+		subtasks: {
+			include: {
+				completions: true;
+			};
+		};
 	};
 }>;
 
@@ -154,6 +159,22 @@ export default async function TodayPage() {
 					completedOn: "desc",
 				},
 				take: 1,
+			},
+			subtasks: {
+				where: {
+					isActive: true,
+				},
+				orderBy: {
+					stackOrder: "asc",
+				},
+				include: {
+					completions: {
+						where: {
+							completedOn: today,
+						},
+						take: 1,
+					},
+				},
 			},
 		},
 	});
@@ -606,6 +627,8 @@ function CurrentTaskCard({
 					startButtonClassName="rounded-xl bg-sky-500 px-5 py-3 font-semibold text-slate-950 hover:bg-sky-400 disabled:cursor-not-allowed disabled:opacity-60"
 				/>
 			</div>
+
+			<SubtaskChecklist task={task} />
 		</div>
 	);
 }
@@ -697,6 +720,63 @@ function TaskRow({
 					completeButtonClassName="rounded-lg border border-slate-700 px-4 py-2 text-sm font-medium text-slate-200 hover:border-sky-500 hover:text-sky-400 disabled:cursor-not-allowed disabled:opacity-60"
 					startButtonClassName="rounded-lg border border-slate-700 px-4 py-2 text-sm font-medium text-slate-200 hover:border-sky-500 hover:text-sky-400 disabled:cursor-not-allowed disabled:opacity-60"
 				/>
+			</div>
+
+			<SubtaskChecklist task={task} />
+		</div>
+	);
+}
+
+function SubtaskChecklist({ task }: { task: TaskWithLastCompletion }) {
+	if (task.subtasks.length === 0) {
+		return null;
+	}
+
+	return (
+		<div className="mt-5 border-t border-slate-800 pt-4">
+			<h5 className="text-sm font-semibold text-slate-200">Subtasks</h5>
+
+			<div className="mt-3 space-y-2">
+				{task.subtasks.map((subtask) => {
+					const isComplete = subtask.completions.length > 0;
+
+					return (
+						<div
+							key={subtask.id}
+							className="flex flex-col gap-2 rounded-lg border border-slate-800 bg-slate-950/70 px-3 py-2 sm:flex-row sm:items-center sm:justify-between"
+						>
+							<div className="flex min-w-0 items-center gap-2">
+								<span
+									className={`h-2.5 w-2.5 shrink-0 rounded-full ${
+										isComplete ? "bg-emerald-400" : "bg-slate-600"
+									}`}
+								/>
+
+								<span
+									className={`text-sm ${
+										isComplete
+											? "text-slate-500 line-through"
+											: "text-slate-200"
+									}`}
+								>
+									{subtask.title}
+								</span>
+							</div>
+
+							{isComplete ? (
+								<span className="self-start rounded-full bg-emerald-500/10 px-3 py-1 text-xs font-medium text-emerald-300 sm:self-auto">
+									Done
+								</span>
+							) : (
+								<form action={completeSubtask.bind(null, subtask.id)}>
+									<button className="rounded-lg border border-slate-700 px-3 py-1.5 text-sm font-medium text-slate-200 hover:border-sky-500 hover:text-sky-400">
+										Complete
+									</button>
+								</form>
+							)}
+						</div>
+					);
+				})}
 			</div>
 		</div>
 	);
