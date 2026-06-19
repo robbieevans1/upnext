@@ -26,7 +26,8 @@ export default async function DashboardPage() {
 	const startDay = addAppDays(today, -(DASHBOARD_DAYS - 1));
 	const tomorrow = addAppDays(today, 1);
 
-	const [tasks, downtimeSessions, actionItems, commitments] = await Promise.all([
+	const [tasks, taskSessions, downtimeSessions, actionItems, commitments] =
+		await Promise.all([
 		prisma.task.findMany({
 			where: {
 				userId: session.user.id,
@@ -46,6 +47,22 @@ export default async function DashboardPage() {
 					},
 					select: {
 						completedOn: true,
+					},
+				},
+			},
+		}),
+		prisma.taskSession.findMany({
+			where: {
+				userId: session.user.id,
+				day: {
+					gte: startDay,
+					lt: tomorrow,
+				},
+			},
+			include: {
+				task: {
+					select: {
+						title: true,
 					},
 				},
 			},
@@ -83,10 +100,11 @@ export default async function DashboardPage() {
 				playbook: true,
 			},
 		}),
-	]);
+		]);
 
 	const analytics = buildDashboardAnalytics({
 		tasks,
+		taskSessions,
 		downtimeSessions,
 		actionItems,
 		commitments,
@@ -134,14 +152,14 @@ export default async function DashboardPage() {
 							detail={`${analytics.totalCompletions} completions across ${analytics.activeTaskCount} active tasks`}
 						/>
 						<MetricTile
+							label="Task Time"
+							value={formatHours(analytics.totalTaskSeconds)}
+							detail="Focused time captured from task timers"
+						/>
+						<MetricTile
 							label="Downtime Logged"
 							value={formatHours(analytics.totalDowntimeSeconds)}
 							detail="Sleep, social, eating, and other life time"
-						/>
-						<MetricTile
-							label="Scheduled Time"
-							value={formatHours(analytics.totalCommitmentSeconds)}
-							detail={`${analytics.commitmentSummary.upcoming} upcoming commitments`}
 						/>
 						<MetricTile
 							label="Playbook Coverage"
@@ -239,6 +257,29 @@ export default async function DashboardPage() {
 					</div>
 
 					<div className="mt-6 grid gap-6 lg:grid-cols-[1fr_1fr]">
+						<Panel title="Task Time By Task">
+							{analytics.taskTimeTotals.length > 0 ? (
+								<div className="space-y-3">
+									{analytics.taskTimeTotals.slice(0, 8).map((task) => (
+										<HorizontalBar
+											key={task.title}
+											label={task.title}
+											value={formatHours(task.totalSeconds)}
+											percent={
+												analytics.totalTaskSeconds === 0
+													? 0
+													: (task.totalSeconds / analytics.totalTaskSeconds) *
+														100
+											}
+											colorClass="bg-sky-400"
+										/>
+									))}
+								</div>
+							) : (
+								<EmptyState>Start task timers to track task time.</EmptyState>
+							)}
+						</Panel>
+
 						<Panel title="Daily Downtime">
 							<div className="space-y-3">
 								{analytics.dayBuckets.map((bucket) => (
@@ -255,7 +296,7 @@ export default async function DashboardPage() {
 							</div>
 						</Panel>
 
-						<Panel title="Scheduled Load">
+						<Panel title="Scheduled Load" className="lg:col-start-2">
 							<div className="space-y-4">
 								<SmallStat
 									label="Upcoming"

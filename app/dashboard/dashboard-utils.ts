@@ -20,7 +20,16 @@ type DashboardTask = {
 	}[];
 };
 
-export type DashboardDowntimeSession = {
+type DashboardTaskSession = {
+	taskId: string;
+	startedAt: Date;
+	stoppedAt: Date | null;
+	task: {
+		title: string;
+	};
+};
+
+type DashboardDowntimeSession = {
 	category: string;
 	day: Date;
 	startedAt: Date;
@@ -45,6 +54,7 @@ export type DashboardCommitment = {
 
 export type DashboardAnalyticsInput = {
 	tasks: DashboardTask[];
+	taskSessions?: DashboardTaskSession[];
 	downtimeSessions: DashboardDowntimeSession[];
 	actionItems: DashboardActionItem[];
 	commitments: DashboardCommitment[];
@@ -54,7 +64,10 @@ export type DashboardAnalyticsInput = {
 };
 
 function getStoppedDurationSeconds(
-	session: DashboardDowntimeSession,
+	session: {
+		startedAt: Date;
+		stoppedAt: Date | null;
+	},
 	now: Date,
 ) {
 	const stoppedAt = session.stoppedAt ?? now;
@@ -84,6 +97,7 @@ function hasPlaybook(value: string | null) {
 
 export function buildDashboardAnalytics({
 	tasks,
+	taskSessions = [],
 	downtimeSessions,
 	actionItems,
 	commitments,
@@ -198,6 +212,22 @@ export function buildDashboardAnalytics({
 		(total, bucket) => total + bucket.downtimeSeconds,
 		0,
 	);
+	const taskTimeTotals = new Map<string, { title: string; totalSeconds: number }>();
+
+	for (const taskSession of taskSessions) {
+		const existingTotal = taskTimeTotals.get(taskSession.taskId) ?? {
+			title: taskSession.task.title,
+			totalSeconds: 0,
+		};
+
+		existingTotal.totalSeconds += getStoppedDurationSeconds(taskSession, now);
+		taskTimeTotals.set(taskSession.taskId, existingTotal);
+	}
+
+	const totalTaskSeconds = Array.from(taskTimeTotals.values()).reduce(
+		(total, task) => total + task.totalSeconds,
+		0,
+	);
 	const totalCommitmentSeconds = dayBuckets.reduce(
 		(total, bucket) => total + bucket.commitmentSeconds,
 		0,
@@ -246,6 +276,7 @@ export function buildDashboardAnalytics({
 		dayBuckets,
 		completionRate,
 		totalCompletions,
+		totalTaskSeconds,
 		totalDowntimeSeconds,
 		totalCommitmentSeconds,
 		activeTaskCount: activeTasks.length,
@@ -259,6 +290,12 @@ export function buildDashboardAnalytics({
 		taskCompletionTotals: Array.from(taskCompletionTotals.values())
 			.filter((task) => task.count > 0)
 			.sort((a, b) => b.count - a.count || a.title.localeCompare(b.title)),
+		taskTimeTotals: Array.from(taskTimeTotals.values())
+			.filter((task) => task.totalSeconds > 0)
+			.sort(
+				(a, b) =>
+					b.totalSeconds - a.totalSeconds || a.title.localeCompare(b.title),
+			),
 		downtimeCategoryTotals,
 		actionItemSummary: {
 			open: openActionItems,

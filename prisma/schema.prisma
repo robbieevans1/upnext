@@ -21,6 +21,7 @@ model User {
   taskGroups      TaskGroup[]
   tasks           Task[]
   taskCompletions TaskCompletion[]
+  taskSessions    TaskSession[]
   downtimeSessions DowntimeSession[]
   actionItems      ActionItem[]
   commitments      Commitment[]
@@ -84,6 +85,7 @@ model Task {
   group   TaskGroup? @relation(fields: [groupId], references: [id], onDelete: SetNull)
 
   completions TaskCompletion[]
+  sessions    TaskSession[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -118,6 +120,27 @@ model TaskGroup {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+model TaskSession {
+  id String @id @default(cuid())
+
+  taskId String
+  task   Task   @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  day       DateTime
+  startedAt DateTime
+  stoppedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId, day])
+  @@index([userId, stoppedAt])
+  @@index([taskId, day])
 }
 
 model DowntimeSession {

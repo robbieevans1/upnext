@@ -49,6 +49,22 @@ export default async function DowntimePage() {
 			startedAt: "asc",
 		},
 	});
+	const activeTaskSession = await prisma.taskSession.findFirst({
+		where: {
+			userId: session.user.id,
+			stoppedAt: null,
+		},
+		include: {
+			task: {
+				select: {
+					title: true,
+				},
+			},
+		},
+		orderBy: {
+			startedAt: "desc",
+		},
+	});
 
 	const activeSession = downtimeSessions.find(
 		(downtimeSession) => downtimeSession.stoppedAt === null,
@@ -95,6 +111,14 @@ export default async function DowntimePage() {
 								? {
 										category: activeSession.category,
 										startedAt: activeSession.startedAt.toISOString(),
+									}
+								: null
+						}
+						activeTaskSession={
+							activeTaskSession
+								? {
+										taskTitle: activeTaskSession.task.title,
+										startedAt: activeTaskSession.startedAt.toISOString(),
 									}
 								: null
 						}
