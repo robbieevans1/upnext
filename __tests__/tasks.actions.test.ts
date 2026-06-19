@@ -395,6 +395,21 @@ describe("task server actions", () => {
 		expect(revalidatePath).toHaveBeenCalledWith("/today");
 	});
 
+	it("stops a continued task timer without changing completion state", async () => {
+		const { stopTaskTimer } = await import("@/app/actions/tasks");
+
+		await stopTaskTimer("task-1");
+
+		expect(stopActiveTaskSessionAndStartOther).toHaveBeenCalledWith(
+			"user-1",
+			"task-1",
+		);
+		expect(prisma.taskCompletion.upsert).not.toHaveBeenCalled();
+		expect(prisma.task.findMany).not.toHaveBeenCalled();
+		expect(revalidatePath).toHaveBeenCalledWith("/downtime");
+		expect(revalidatePath).toHaveBeenCalledWith("/today");
+	});
+
 	it("completes a task once per app day", async () => {
 		vi.useFakeTimers();
 		vi.setSystemTime(new Date("2026-06-15T15:30:00.000Z"));

@@ -455,9 +455,14 @@ export default async function TodayPage() {
 														Done
 													</span>
 
-													<TaskPlaybookButton
+													<TaskTimerControls
+														taskId={task.id}
 														taskTitle={task.title}
 														playbook={task.playbook}
+														activeTaskSession={activeTaskTimer}
+														isCompleted
+														completeButtonClassName="rounded-lg border border-emerald-400/40 px-3 py-1.5 text-sm font-medium text-emerald-100 hover:bg-emerald-500/10 disabled:cursor-not-allowed disabled:opacity-60"
+														startButtonClassName="rounded-lg border border-emerald-400/40 px-3 py-1.5 text-sm font-medium text-emerald-100 hover:bg-emerald-500/10 disabled:cursor-not-allowed disabled:opacity-60"
 													/>
 
 													<form action={undoTodayCompletion.bind(null, task.id)}>

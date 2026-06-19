@@ -356,6 +356,15 @@ export async function startTaskTimer(taskId: string) {
 	revalidateTaskViews();
 }
 
+export async function stopTaskTimer(taskId: string) {
+	const userId = await getCurrentUserId();
+
+	await stopActiveTaskSessionAndStartOther(userId, taskId);
+
+	revalidatePath("/downtime");
+	revalidateTaskViews();
+}
+
 export async function completeTask(taskId: string) {
 	const userId = await getCurrentUserId();
 

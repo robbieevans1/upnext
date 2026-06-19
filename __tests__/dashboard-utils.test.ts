@@ -54,6 +54,14 @@ describe("dashboard analytics", () => {
 					stoppedAt: new Date("2026-06-16T14:00:00.000Z"),
 				},
 				{
+					taskId: "task-1",
+					task: {
+						title: "Portfolio",
+					},
+					startedAt: new Date("2026-06-16T14:00:00.000Z"),
+					stoppedAt: new Date("2026-06-16T14:30:00.000Z"),
+				},
+				{
 					taskId: "task-2",
 					task: {
 						title: "Gym",
@@ -115,11 +123,11 @@ describe("dashboard analytics", () => {
 		expect(analytics.dayBuckets.map((bucket) => bucket.completions)).toEqual([
 			1, 1, 1,
 		]);
-		expect(analytics.totalTaskSeconds).toBe(5400);
+		expect(analytics.totalTaskSeconds).toBe(7200);
 		expect(analytics.taskTimeTotals).toEqual([
 			{
 				title: "Portfolio",
-				totalSeconds: 3600,
+				totalSeconds: 5400,
 			},
 			{
 				title: "Gym",

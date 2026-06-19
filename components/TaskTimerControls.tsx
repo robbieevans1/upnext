@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { completeTask, startTaskTimer } from "@/app/actions/tasks";
+import { completeTask, startTaskTimer, stopTaskTimer } from "@/app/actions/tasks";
 import TaskPlaybookButton from "@/components/TaskPlaybookButton";
 
 type TaskTimerControlsProps = {
@@ -17,6 +17,7 @@ type TaskTimerControlsProps = {
 		| null;
 	completeButtonClassName: string;
 	startButtonClassName: string;
+	isCompleted?: boolean;
 };
 
 function formatDuration(totalSeconds: number) {
@@ -38,6 +39,7 @@ export default function TaskTimerControls({
 	activeTaskSession,
 	completeButtonClassName,
 	startButtonClassName,
+	isCompleted = false,
 }: TaskTimerControlsProps) {
 	const router = useRouter();
 	const [now, setNow] = useState(() => Date.now());
@@ -66,7 +68,11 @@ export default function TaskTimerControls({
 
 	function handleComplete() {
 		startTransition(async () => {
-			await completeTask(taskId);
+			if (isCompleted) {
+				await stopTaskTimer(taskId);
+			} else {
+				await completeTask(taskId);
+			}
 			router.refresh();
 		});
 	}
@@ -88,7 +94,7 @@ export default function TaskTimerControls({
 					disabled={isPending}
 					className={completeButtonClassName}
 				>
-					Complete
+					{isCompleted ? "Stop" : "Complete"}
 				</button>
 			) : (
 				<button
@@ -97,7 +103,11 @@ export default function TaskTimerControls({
 					disabled={isPending || isAnotherTaskRunning}
 					className={startButtonClassName}
 				>
-					{isAnotherTaskRunning ? "Timer Running" : "Start"}
+					{isAnotherTaskRunning
+						? "Timer Running"
+						: isCompleted
+							? "Continue"
+							: "Start"}
 				</button>
 			)}
 		</div>
