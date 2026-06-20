@@ -1,12 +1,10 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { authOptions } from "@/lib/auth";
 import { getAppDateFromKey } from "@/lib/app-date";
 import { prisma } from "@/lib/prisma";
+import { requireUserId } from "@/lib/server-auth";
 import { DailyCheckStatus } from "@prisma/client";
-import { getServerSession } from "next-auth";
-import { redirect } from "next/navigation";
 
 const DAILY_CHECK_STATUSES = new Set<string>([
 	DailyCheckStatus.YES,
@@ -22,18 +20,8 @@ function revalidateDailyReviewViews() {
 	revalidatePath("/dashboard");
 }
 
-async function getCurrentUserId() {
-	const session = await getServerSession(authOptions);
-
-	if (!session?.user?.id) {
-		redirect("/login");
-	}
-
-	return session.user.id;
-}
-
 export async function createDailyCheck(formData: FormData) {
-	const userId = await getCurrentUserId();
+	const userId = await requireUserId();
 	const title = String(formData.get("title") ?? "").trim();
 	const description = String(formData.get("description") ?? "").trim();
 
@@ -59,7 +47,7 @@ export async function createDailyCheck(formData: FormData) {
 }
 
 export async function updateDailyCheck(formData: FormData) {
-	const userId = await getCurrentUserId();
+	const userId = await requireUserId();
 	const dailyCheckId = String(formData.get("dailyCheckId") ?? "");
 	const title = String(formData.get("title") ?? "").trim();
 	const description = String(formData.get("description") ?? "").trim();
@@ -82,7 +70,7 @@ export async function updateDailyCheck(formData: FormData) {
 }
 
 export async function deleteDailyCheck(dailyCheckId: string) {
-	const userId = await getCurrentUserId();
+	const userId = await requireUserId();
 
 	await prisma.dailyCheck.updateMany({
 		where: {
@@ -99,7 +87,7 @@ export async function deleteDailyCheck(dailyCheckId: string) {
 }
 
 export async function saveDailyReview(formData: FormData) {
-	const userId = await getCurrentUserId();
+	const userId = await requireUserId();
 	const targetDayKey = String(formData.get("targetDay") ?? "");
 	const targetDay = getAppDateFromKey(targetDayKey);
 
@@ -154,7 +142,7 @@ export async function saveDailyReview(formData: FormData) {
 }
 
 export async function dismissDailyReview(targetDayKey: string) {
-	const userId = await getCurrentUserId();
+	const userId = await requireUserId();
 	const targetDay = getAppDateFromKey(targetDayKey);
 
 	if (!targetDay) return;

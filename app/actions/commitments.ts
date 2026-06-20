@@ -1,25 +1,13 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { getServerSession } from "next-auth";
-import { redirect } from "next/navigation";
-import { authOptions } from "@/lib/auth";
 import { getAppDateFromKey, getAppDateTimeFromKeys } from "@/lib/app-date";
 import { prisma } from "@/lib/prisma";
+import { requireUserId } from "@/lib/server-auth";
 
 function revalidateCommitmentViews() {
 	revalidatePath("/today");
 	revalidatePath("/commitments");
-}
-
-async function getCurrentUserId() {
-	const session = await getServerSession(authOptions);
-
-	if (!session?.user?.id) {
-		redirect("/login");
-	}
-
-	return session.user.id;
 }
 
 function getCommitmentDateTimes(formData: FormData) {
@@ -47,7 +35,7 @@ function getCommitmentDateTimes(formData: FormData) {
 }
 
 export async function createCommitment(formData: FormData) {
-	const userId = await getCurrentUserId();
+	const userId = await requireUserId();
 	const title = String(formData.get("title") ?? "").trim();
 	const description = String(formData.get("description") ?? "").trim();
 	const playbook = String(formData.get("playbook") ?? "").trim();
@@ -73,7 +61,7 @@ export async function createCommitment(formData: FormData) {
 }
 
 export async function updateCommitment(formData: FormData) {
-	const userId = await getCurrentUserId();
+	const userId = await requireUserId();
 	const commitmentId = String(formData.get("commitmentId") ?? "");
 	const title = String(formData.get("title") ?? "").trim();
 	const description = String(formData.get("description") ?? "").trim();
@@ -103,7 +91,7 @@ export async function updateCommitment(formData: FormData) {
 }
 
 export async function completeCommitment(commitmentId: string) {
-	const userId = await getCurrentUserId();
+	const userId = await requireUserId();
 
 	await prisma.commitment.updateMany({
 		where: {
@@ -121,7 +109,7 @@ export async function completeCommitment(commitmentId: string) {
 }
 
 export async function reopenCommitment(commitmentId: string) {
-	const userId = await getCurrentUserId();
+	const userId = await requireUserId();
 
 	await prisma.commitment.updateMany({
 		where: {
@@ -138,7 +126,7 @@ export async function reopenCommitment(commitmentId: string) {
 }
 
 export async function cancelCommitment(commitmentId: string) {
-	const userId = await getCurrentUserId();
+	const userId = await requireUserId();
 
 	await prisma.commitment.updateMany({
 		where: {
