@@ -34,6 +34,10 @@ describe("AppNav", () => {
 			"href",
 			"/tasks",
 		);
+		expect(screen.getByRole("link", { name: "Topics" })).toHaveAttribute(
+			"href",
+			"/topics",
+		);
 		expect(screen.getByRole("link", { name: "Actions" })).toHaveAttribute(
 			"href",
 			"/action-items",
@@ -88,6 +92,10 @@ describe("AppNav", () => {
 			"href",
 			"/action-items",
 		);
+		expect(within(menu).getByRole("link", { name: "Topics" })).toHaveAttribute(
+			"href",
+			"/topics",
+		);
 		expect(
 			within(menu).getByRole("link", { name: "Schedule" }),
 		).toHaveAttribute("href", "/commitments");
@@ -95,6 +103,8 @@ describe("AppNav", () => {
 			"href",
 			"/history",
 		);
+		expect(within(menu).getByText("Plan")).toBeInTheDocument();
+		expect(within(menu).getByText("Track")).toBeInTheDocument();
 
 		fireEvent.click(
 			within(menu).getByRole("button", { name: "Close navigation menu" }),
