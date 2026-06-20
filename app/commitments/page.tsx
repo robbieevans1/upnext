@@ -236,33 +236,33 @@ function DateTimeFields({
 	endsAt?: Date | null;
 }) {
 	return (
-		<div className="grid gap-4 md:grid-cols-3">
-			<div>
+		<div className="grid min-w-0 gap-4 md:grid-cols-3">
+			<div className="min-w-0">
 				<label className="text-sm font-medium text-slate-300">Date</label>
 				<input
 					type="date"
 					name="day"
 					required
 					defaultValue={day ? getAppDateKey(day) : getAppDateKey()}
-					className="mt-2 w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-white outline-none focus:border-sky-500"
+					className="mt-2 w-full min-w-0 max-w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-white outline-none focus:border-sky-500"
 				/>
 			</div>
-			<div>
+			<div className="min-w-0">
 				<label className="text-sm font-medium text-slate-300">Start</label>
 				<input
 					type="time"
 					name="startTime"
 					defaultValue={startsAt ? getAppTimeKey(startsAt) : ""}
-					className="mt-2 w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-white outline-none focus:border-sky-500"
+					className="mt-2 w-full min-w-0 max-w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-white outline-none focus:border-sky-500"
 				/>
 			</div>
-			<div>
+			<div className="min-w-0">
 				<label className="text-sm font-medium text-slate-300">End</label>
 				<input
 					type="time"
 					name="endTime"
 					defaultValue={endsAt ? getAppTimeKey(endsAt) : ""}
-					className="mt-2 w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-white outline-none focus:border-sky-500"
+					className="mt-2 w-full min-w-0 max-w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-white outline-none focus:border-sky-500"
 				/>
 			</div>
 		</div>

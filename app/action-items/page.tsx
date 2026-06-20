@@ -82,14 +82,14 @@ export default async function ActionItemsPage() {
 								tall
 							/>
 
-							<div>
+							<div className="min-w-0">
 								<label className="text-sm font-medium text-slate-300">
 									Due date
 								</label>
 								<input
 									type="date"
 									name="dueOn"
-									className="mt-2 w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-white outline-none focus:border-sky-500"
+									className="mt-2 w-full min-w-0 max-w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-white outline-none focus:border-sky-500"
 								/>
 							</div>
 
@@ -157,13 +157,13 @@ function ActionItemCard({ item }: { item: ActionItem }) {
 					tall
 				/>
 
-				<div>
+				<div className="min-w-0">
 					<label className="text-sm font-medium text-slate-300">Due date</label>
 					<input
 						type="date"
 						name="dueOn"
 						defaultValue={item.dueOn ? getAppDateKey(item.dueOn) : ""}
-						className="mt-2 w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-white outline-none focus:border-sky-500"
+						className="mt-2 w-full min-w-0 max-w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-white outline-none focus:border-sky-500"
 					/>
 				</div>
 
@@ -237,7 +237,7 @@ function TextInput({
 				name={name}
 				placeholder={placeholder}
 				defaultValue={defaultValue}
-				className="mt-2 w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-white outline-none focus:border-sky-500"
+				className="mt-2 w-full min-w-0 max-w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-white outline-none focus:border-sky-500"
 			/>
 		</div>
 	);
