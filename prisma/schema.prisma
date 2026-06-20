@@ -27,6 +27,7 @@ model User {
   downtimeSessions      DowntimeSession[]
   actionItems           ActionItem[]
   commitments           Commitment[]
+  commitmentOccurrences CommitmentOccurrenceCompletion[]
   dailyChecks           DailyCheck[]
   dailyCheckResults     DailyCheckResult[]
   dailyReviewDismissals DailyReviewDismissal[]
@@ -244,16 +245,43 @@ model Commitment {
   completedAt DateTime?
   canceledAt  DateTime?
 
+  recurrence          CommitmentRecurrence @default(NONE)
+  recurrenceDayOfWeek Int?
+
   userId String
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  occurrenceCompletions CommitmentOccurrenceCompletion[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([userId, day])
+  @@index([userId, recurrence, recurrenceDayOfWeek])
   @@index([userId, startsAt])
   @@index([userId, completedAt])
   @@index([userId, canceledAt])
+}
+
+model CommitmentOccurrenceCompletion {
+  id String @id @default(cuid())
+
+  commitmentId String
+  commitment   Commitment @relation(fields: [commitmentId], references: [id], onDelete: Cascade)
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  occurrenceDay DateTime
+  completedAt   DateTime @default(now())
+
+  @@unique([commitmentId, occurrenceDay])
+  @@index([userId, occurrenceDay])
+}
+
+enum CommitmentRecurrence {
+  NONE
+  WEEKLY
 }
 
 enum DailyCheckStatus {

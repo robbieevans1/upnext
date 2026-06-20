@@ -3,10 +3,14 @@ import DailyReviewPrompt from "@/components/DailyReviewPrompt";
 import TaskPlaybookButton from "@/components/TaskPlaybookButton";
 import TaskTimerControls from "@/components/TaskTimerControls";
 import { completeActionItem } from "@/app/actions/action-items";
-import { completeCommitment } from "@/app/actions/commitments";
+import {
+	completeCommitment,
+	completeCommitmentOccurrence,
+} from "@/app/actions/commitments";
 import { completeSubtask, undoTodayCompletion } from "@/app/actions/tasks";
+import { getAppDayOfWeek, getWeekdayLabel } from "@/lib/commitments";
 import { prisma } from "@/lib/prisma";
-import { Prisma } from "@prisma/client";
+import { CommitmentRecurrence, Prisma } from "@prisma/client";
 
 import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
@@ -35,6 +39,10 @@ type TaskStatus = "normal" | "stale" | "overdue";
 
 type ActionItem = Prisma.ActionItemGetPayload<object>;
 type Commitment = Prisma.CommitmentGetPayload<object>;
+type TodayCommitment = Commitment & {
+	occurrenceDay: Date;
+	isRecurringOccurrence: boolean;
+};
 
 function getDaysSinceLastCompleted(
 	lastCompleted: Date | undefined,
@@ -194,21 +202,71 @@ export default async function TodayPage() {
 		},
 	});
 
-	const commitmentsToday = await prisma.commitment.findMany({
-		where: {
-			userId: session.user.id,
-			day: today,
-			completedAt: null,
-			canceledAt: null,
-		},
-		orderBy: [
-			{
-				startsAt: "asc",
-			},
-			{
-				createdAt: "asc",
-			},
-		],
+	const [oneTimeCommitmentsToday, recurringCommitmentsToday] =
+		await Promise.all([
+			prisma.commitment.findMany({
+				where: {
+					userId: session.user.id,
+					day: today,
+					recurrence: CommitmentRecurrence.NONE,
+					completedAt: null,
+					canceledAt: null,
+				},
+				orderBy: [
+					{
+						startsAt: "asc",
+					},
+					{
+						createdAt: "asc",
+					},
+				],
+			}),
+			prisma.commitment.findMany({
+				where: {
+					userId: session.user.id,
+					recurrence: CommitmentRecurrence.WEEKLY,
+					recurrenceDayOfWeek: getAppDayOfWeek(today),
+					day: {
+						lte: today,
+					},
+					completedAt: null,
+					canceledAt: null,
+					occurrenceCompletions: {
+						none: {
+							occurrenceDay: today,
+						},
+					},
+				},
+				orderBy: [
+					{
+						startsAt: "asc",
+					},
+					{
+						createdAt: "asc",
+					},
+				],
+			}),
+		]);
+	const commitmentsToday: TodayCommitment[] = [
+		...oneTimeCommitmentsToday.map((commitment) => ({
+			...commitment,
+			occurrenceDay: commitment.day,
+			isRecurringOccurrence: false,
+		})),
+		...recurringCommitmentsToday.map((commitment) => ({
+			...commitment,
+			occurrenceDay: today,
+			isRecurringOccurrence: true,
+		})),
+	].sort((a, b) => {
+		const aTime = a.startsAt?.getTime() ?? 0;
+		const bTime = b.startsAt?.getTime() ?? 0;
+
+		if (aTime !== bTime) {
+			return aTime - bTime;
+		}
+
+		return a.createdAt.getTime() - b.createdAt.getTime();
 	});
 
 	const actionItems = await prisma.actionItem.findMany({
@@ -534,7 +592,15 @@ export default async function TodayPage() {
 	);
 }
 
-function CommitmentRow({ commitment }: { commitment: Commitment }) {
+function CommitmentRow({ commitment }: { commitment: TodayCommitment }) {
+	const completeAction = commitment.isRecurringOccurrence
+		? completeCommitmentOccurrence.bind(
+				null,
+				commitment.id,
+				getAppDateKey(commitment.occurrenceDay),
+			)
+		: completeCommitment.bind(null, commitment.id);
+
 	return (
 		<div className="rounded-xl border border-indigo-500/30 bg-indigo-500/10 p-4">
 			<div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
@@ -553,6 +619,13 @@ function CommitmentRow({ commitment }: { commitment: Commitment }) {
 						{formatCommitmentWindow(commitment)}
 						{commitment.location ? ` · ${commitment.location}` : ""}
 					</p>
+
+					{commitment.isRecurringOccurrence && (
+						<p className="mt-1 text-xs font-medium text-indigo-200/70">
+							Repeats weekly on{" "}
+							{getWeekdayLabel(commitment.recurrenceDayOfWeek)}
+						</p>
+					)}
 				</div>
 
 				<div className="flex min-w-0 flex-wrap gap-2 sm:shrink-0">
@@ -561,7 +634,7 @@ function CommitmentRow({ commitment }: { commitment: Commitment }) {
 						playbook={commitment.playbook}
 					/>
 
-					<form action={completeCommitment.bind(null, commitment.id)}>
+					<form action={completeAction}>
 						<button className="rounded-lg border border-indigo-300/40 px-4 py-2 text-sm font-medium text-indigo-100 hover:bg-indigo-500/10">
 							Complete
 						</button>

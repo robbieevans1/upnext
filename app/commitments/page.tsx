@@ -13,8 +13,15 @@ import {
 	formatAppTime,
 	getAppDateKey,
 	getAppTimeKey,
+	getAppTodayDate,
 } from "@/lib/app-date";
+import {
+	getAppDayOfWeek,
+	getWeekdayLabel,
+	WEEKDAY_OPTIONS,
+} from "@/lib/commitments";
 import { prisma } from "@/lib/prisma";
+import { CommitmentRecurrence } from "@prisma/client";
 import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
 
@@ -171,12 +178,19 @@ function CommitmentCard({ commitment }: { commitment: Commitment }) {
 					day={commitment.day}
 					startsAt={commitment.startsAt}
 					endsAt={commitment.endsAt}
+					isWeekly={commitment.recurrence === CommitmentRecurrence.WEEKLY}
+					recurrenceDayOfWeek={commitment.recurrenceDayOfWeek}
 				/>
 
 				<div className="flex flex-wrap gap-2">
 					<span className="rounded-full bg-sky-500/10 px-3 py-1 text-xs font-medium text-sky-400">
 						{formatCommitmentWindow(commitment)}
 					</span>
+					{commitment.recurrence === CommitmentRecurrence.WEEKLY && (
+						<span className="rounded-full bg-indigo-500/10 px-3 py-1 text-xs font-medium text-indigo-300">
+							Weekly {getWeekdayLabel(commitment.recurrenceDayOfWeek)}
+						</span>
+					)}
 					{commitment.completedAt && (
 						<span className="rounded-full bg-emerald-500/10 px-3 py-1 text-xs font-medium text-emerald-300">
 							Completed
@@ -230,40 +244,78 @@ function DateTimeFields({
 	day,
 	startsAt,
 	endsAt,
+	isWeekly = false,
+	recurrenceDayOfWeek,
 }: {
 	day?: Date;
 	startsAt?: Date | null;
 	endsAt?: Date | null;
+	isWeekly?: boolean;
+	recurrenceDayOfWeek?: number | null;
 }) {
+	const selectedRecurrenceDay =
+		recurrenceDayOfWeek ?? getAppDayOfWeek(day ?? getAppTodayDate());
+
 	return (
-		<div className="grid min-w-0 gap-4 md:grid-cols-3">
-			<div className="min-w-0">
-				<label className="text-sm font-medium text-slate-300">Date</label>
-				<input
-					type="date"
-					name="day"
-					required
-					defaultValue={day ? getAppDateKey(day) : getAppDateKey()}
-					className="mt-2 w-full min-w-0 max-w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-white outline-none focus:border-sky-500"
-				/>
+		<div className="space-y-4">
+			<div className="grid min-w-0 gap-4 md:grid-cols-3">
+				<div className="min-w-0">
+					<label className="text-sm font-medium text-slate-300">Date</label>
+					<input
+						type="date"
+						name="day"
+						required
+						defaultValue={day ? getAppDateKey(day) : getAppDateKey()}
+						className="mt-2 w-full min-w-0 max-w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-white outline-none focus:border-sky-500"
+					/>
+				</div>
+				<div className="min-w-0">
+					<label className="text-sm font-medium text-slate-300">Start</label>
+					<input
+						type="time"
+						name="startTime"
+						defaultValue={startsAt ? getAppTimeKey(startsAt) : ""}
+						className="mt-2 w-full min-w-0 max-w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-white outline-none focus:border-sky-500"
+					/>
+				</div>
+				<div className="min-w-0">
+					<label className="text-sm font-medium text-slate-300">End</label>
+					<input
+						type="time"
+						name="endTime"
+						defaultValue={endsAt ? getAppTimeKey(endsAt) : ""}
+						className="mt-2 w-full min-w-0 max-w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-white outline-none focus:border-sky-500"
+					/>
+				</div>
 			</div>
-			<div className="min-w-0">
-				<label className="text-sm font-medium text-slate-300">Start</label>
-				<input
-					type="time"
-					name="startTime"
-					defaultValue={startsAt ? getAppTimeKey(startsAt) : ""}
-					className="mt-2 w-full min-w-0 max-w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-white outline-none focus:border-sky-500"
-				/>
-			</div>
-			<div className="min-w-0">
-				<label className="text-sm font-medium text-slate-300">End</label>
-				<input
-					type="time"
-					name="endTime"
-					defaultValue={endsAt ? getAppTimeKey(endsAt) : ""}
-					className="mt-2 w-full min-w-0 max-w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-white outline-none focus:border-sky-500"
-				/>
+
+			<div className="rounded-xl border border-slate-800 bg-slate-950 p-4">
+				<label className="flex items-center gap-3 text-sm font-medium text-slate-300">
+					<input
+						type="checkbox"
+						name="isWeekly"
+						defaultChecked={isWeekly}
+						className="h-4 w-4"
+					/>
+					Repeat weekly
+				</label>
+
+				<div className="mt-3 min-w-0">
+					<label className="text-sm font-medium text-slate-300">
+						Weekly day
+					</label>
+					<select
+						name="recurrenceDayOfWeek"
+						defaultValue={selectedRecurrenceDay}
+						className="mt-2 w-full min-w-0 max-w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-white outline-none focus:border-sky-500"
+					>
+						{WEEKDAY_OPTIONS.map((option) => (
+							<option key={option.value} value={option.value}>
+								{option.label}
+							</option>
+						))}
+					</select>
+				</div>
 			</div>
 		</div>
 	);
