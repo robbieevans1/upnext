@@ -16,7 +16,7 @@ The app organizes recurring work into a daily stack. Mandatory tasks stay visibl
 - Task playbooks for tips, steps, mindset cues, and mistakes to avoid
 - Playbook modal available from task cards and task management
 - One-off action items for async errands or tasks outside the recurring stack
-- Scheduled commitments for events, appointments, errands, and time-based obligations
+- Scheduled commitments for events, appointments, errands, recurring obligations, and time-based plans
 - Daily Review checks for next-day self-audits like calorie limits, sleep, spending, and nutrition goals
 - Dashboard with completion trends, task-time totals, downtime charts, scheduled load, daily review results, action item status, and playbook coverage
 - Completed Today section with same-day undo
@@ -152,9 +152,12 @@ Dentist appointment
 Work function
 Interview
 Grocery pickup
+Go to church every Sunday at 11 AM
 ```
 
-They can include a date, optional start and end time, location, description, and playbook. Commitments for the current app day appear in Today under Scheduled Today.
+They can include a date, optional start and end time, location, description, and playbook. Commitments can also repeat weekly on a selected weekday. For example, a recurring `Go to church` commitment can appear in Today every Sunday until the series is changed or canceled.
+
+Recurring commitment completions are stored per occurrence, so completing this Sunday's event does not complete the whole series.
 
 ## Downtime Tracking
 
@@ -210,7 +213,8 @@ The dashboard uses existing database records rather than separate analytics tabl
 - `SubtaskCompletion` stores per-day subtask completion history.
 - `DowntimeSession` stores timed sleep, social, eating, and other sessions.
 - `ActionItem` stores one-off async tasks with optional due dates, completion status, cancellation status, and playbook notes.
-- `Commitment` stores date-based or time-based obligations with optional location, start/end times, completion status, cancellation status, and playbook notes.
+- `Commitment` stores date-based, time-based, and weekly recurring obligations with optional location, start/end times, completion status, cancellation status, and playbook notes.
+- `CommitmentOccurrenceCompletion` stores per-day completions for recurring commitment instances.
 - `DailyCheck` stores active next-day outcome prompts for a user.
 - `DailyCheckResult` stores Yes, No, Skip, or Not sure answers against the reviewed app day.
 - `DailyReviewDismissal` stores when a user dismisses a day's review prompt.

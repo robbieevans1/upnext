@@ -90,6 +90,12 @@ function getAppTodayDate(date = new Date()) {
 	return getUtcInstantForTimeZoneDate(getDateParts(date));
 }
 
+function getAppDayOfWeek(date) {
+	const parts = getDateParts(date);
+
+	return new Date(Date.UTC(parts.year, parts.month - 1, parts.day)).getUTCDay();
+}
+
 function addAppDays(date, days) {
 	const parts = getDateParts(date);
 
@@ -484,6 +490,7 @@ async function createActionItems(today) {
 }
 
 async function createCommitments(today) {
+	const todayDayOfWeek = getAppDayOfWeek(today);
 	const commitments = [
 		{
 			title: "Team standup",
@@ -495,6 +502,8 @@ async function createCommitments(today) {
 			endsAt: atAppTime(today, 9, 50),
 			completedAt: null,
 			canceledAt: null,
+			recurrence: "NONE",
+			recurrenceDayOfWeek: null,
 		},
 		{
 			title: "Work function",
@@ -507,6 +516,35 @@ async function createCommitments(today) {
 			endsAt: atAppTime(today, 20, 0),
 			completedAt: null,
 			canceledAt: null,
+			recurrence: "NONE",
+			recurrenceDayOfWeek: null,
+		},
+		{
+			title: "Weekly planning review",
+			description: "Review the week and choose the next priorities.",
+			playbook:
+				"Open the dashboard first. Pick one adjustment for time, one for tasks, and one for social plans.",
+			location: "Home",
+			day: addAppDays(today, -7),
+			startsAt: atAppTime(addAppDays(today, -7), 10, 0),
+			endsAt: atAppTime(addAppDays(today, -7), 10, 45),
+			completedAt: null,
+			canceledAt: null,
+			recurrence: "WEEKLY",
+			recurrenceDayOfWeek: todayDayOfWeek,
+		},
+		{
+			title: "Go to church",
+			description: "Weekly service.",
+			playbook: "Arrive a few minutes early. Put phone away. Say hello after.",
+			location: "Church",
+			day: addAppDays(today, -todayDayOfWeek),
+			startsAt: atAppTime(addAppDays(today, -todayDayOfWeek), 11, 0),
+			endsAt: atAppTime(addAppDays(today, -todayDayOfWeek), 12, 15),
+			completedAt: null,
+			canceledAt: null,
+			recurrence: "WEEKLY",
+			recurrenceDayOfWeek: 0,
 		},
 		{
 			title: "Grocery pickup",
@@ -518,6 +556,8 @@ async function createCommitments(today) {
 			endsAt: atAppTime(addAppDays(today, 1), 18, 0),
 			completedAt: null,
 			canceledAt: null,
+			recurrence: "NONE",
+			recurrenceDayOfWeek: null,
 		},
 		{
 			title: "Coffee with Sam",
@@ -529,6 +569,8 @@ async function createCommitments(today) {
 			endsAt: atAppTime(addAppDays(today, -2), 17, 0),
 			completedAt: atAppTime(addAppDays(today, -2), 17, 5),
 			canceledAt: null,
+			recurrence: "NONE",
+			recurrenceDayOfWeek: null,
 		},
 		{
 			title: "Dentist appointment",
@@ -540,6 +582,8 @@ async function createCommitments(today) {
 			endsAt: atAppTime(addAppDays(today, -5), 8, 45),
 			completedAt: null,
 			canceledAt: atAppTime(addAppDays(today, -6), 14, 0),
+			recurrence: "NONE",
+			recurrenceDayOfWeek: null,
 		},
 	];
 

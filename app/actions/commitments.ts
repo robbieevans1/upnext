@@ -2,8 +2,10 @@
 
 import { revalidatePath } from "next/cache";
 import { getAppDateFromKey, getAppDateTimeFromKeys } from "@/lib/app-date";
+import { getAppDayOfWeek, parseWeekday } from "@/lib/commitments";
 import { prisma } from "@/lib/prisma";
 import { requireUserId } from "@/lib/server-auth";
+import { CommitmentRecurrence } from "@prisma/client";
 
 function revalidateCommitmentViews() {
 	revalidatePath("/today");
@@ -34,6 +36,26 @@ function getCommitmentDateTimes(formData: FormData) {
 	};
 }
 
+function getCommitmentRecurrence(formData: FormData) {
+	const recurrence =
+		formData.get("isWeekly") === "on"
+			? CommitmentRecurrence.WEEKLY
+			: CommitmentRecurrence.NONE;
+	const recurrenceDayOfWeek =
+		recurrence === CommitmentRecurrence.WEEKLY
+			? parseWeekday(formData.get("recurrenceDayOfWeek"))
+			: null;
+
+	if (recurrence === CommitmentRecurrence.WEEKLY && recurrenceDayOfWeek === null) {
+		return null;
+	}
+
+	return {
+		recurrence,
+		recurrenceDayOfWeek,
+	};
+}
+
 export async function createCommitment(formData: FormData) {
 	const userId = await requireUserId();
 	const title = String(formData.get("title") ?? "").trim();
@@ -41,8 +63,9 @@ export async function createCommitment(formData: FormData) {
 	const playbook = String(formData.get("playbook") ?? "").trim();
 	const location = String(formData.get("location") ?? "").trim();
 	const dateTimes = getCommitmentDateTimes(formData);
+	const recurrence = getCommitmentRecurrence(formData);
 
-	if (!title || !dateTimes) return;
+	if (!title || !dateTimes || !recurrence) return;
 
 	await prisma.commitment.create({
 		data: {
@@ -53,6 +76,8 @@ export async function createCommitment(formData: FormData) {
 			day: dateTimes.day,
 			startsAt: dateTimes.startsAt,
 			endsAt: dateTimes.endsAt,
+			recurrence: recurrence.recurrence,
+			recurrenceDayOfWeek: recurrence.recurrenceDayOfWeek,
 			userId,
 		},
 	});
@@ -68,8 +93,9 @@ export async function updateCommitment(formData: FormData) {
 	const playbook = String(formData.get("playbook") ?? "").trim();
 	const location = String(formData.get("location") ?? "").trim();
 	const dateTimes = getCommitmentDateTimes(formData);
+	const recurrence = getCommitmentRecurrence(formData);
 
-	if (!commitmentId || !title || !dateTimes) return;
+	if (!commitmentId || !title || !dateTimes || !recurrence) return;
 
 	await prisma.commitment.updateMany({
 		where: {
@@ -84,6 +110,8 @@ export async function updateCommitment(formData: FormData) {
 			day: dateTimes.day,
 			startsAt: dateTimes.startsAt,
 			endsAt: dateTimes.endsAt,
+			recurrence: recurrence.recurrence,
+			recurrenceDayOfWeek: recurrence.recurrenceDayOfWeek,
 		},
 	});
 
@@ -102,6 +130,56 @@ export async function completeCommitment(commitmentId: string) {
 		},
 		data: {
 			completedAt: new Date(),
+		},
+	});
+
+	revalidateCommitmentViews();
+}
+
+export async function completeCommitmentOccurrence(
+	commitmentId: string,
+	occurrenceDayKey: string,
+) {
+	const userId = await requireUserId();
+	const occurrenceDay = getAppDateFromKey(occurrenceDayKey);
+
+	if (!occurrenceDay) return;
+
+	const commitment = await prisma.commitment.findFirst({
+		where: {
+			id: commitmentId,
+			userId,
+			recurrence: CommitmentRecurrence.WEEKLY,
+			canceledAt: null,
+			completedAt: null,
+			day: {
+				lte: occurrenceDay,
+			},
+		},
+		select: {
+			id: true,
+			recurrenceDayOfWeek: true,
+		},
+	});
+
+	if (!commitment) return;
+
+	if (commitment.recurrenceDayOfWeek !== getAppDayOfWeek(occurrenceDay)) {
+		return;
+	}
+
+	await prisma.commitmentOccurrenceCompletion.upsert({
+		where: {
+			commitmentId_occurrenceDay: {
+				commitmentId,
+				occurrenceDay,
+			},
+		},
+		update: {},
+		create: {
+			commitmentId,
+			userId,
+			occurrenceDay,
 		},
 	});
 
