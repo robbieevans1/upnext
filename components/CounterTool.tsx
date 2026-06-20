@@ -1,9 +1,36 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+
+const counterStorageKey = "upnext.tools.counter.value";
 
 export default function CounterTool() {
 	const [count, setCount] = useState(0);
+	const [hasLoadedSavedCount, setHasLoadedSavedCount] = useState(false);
+
+	useEffect(() => {
+		queueMicrotask(() => {
+			const savedCount = window.localStorage.getItem(counterStorageKey);
+
+			if (savedCount !== null) {
+				const parsedCount = Number.parseInt(savedCount, 10);
+
+				if (Number.isFinite(parsedCount)) {
+					setCount(parsedCount);
+				}
+			}
+
+			setHasLoadedSavedCount(true);
+		});
+	}, []);
+
+	useEffect(() => {
+		if (!hasLoadedSavedCount) {
+			return;
+		}
+
+		window.localStorage.setItem(counterStorageKey, count.toString());
+	}, [count, hasLoadedSavedCount]);
 
 	return (
 		<section className="mt-8 rounded-2xl border border-slate-800 bg-slate-900 p-6 shadow-xl">
@@ -35,7 +62,10 @@ export default function CounterTool() {
 				</button>
 				<button
 					type="button"
-					onClick={() => setCount(0)}
+					onClick={() => {
+						setCount(0);
+						window.localStorage.removeItem(counterStorageKey);
+					}}
 					className="rounded-lg border border-slate-700 px-5 py-3 font-semibold text-slate-200 transition hover:border-red-400 hover:text-red-300"
 				>
 					Reset
