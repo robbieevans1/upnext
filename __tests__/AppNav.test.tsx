@@ -54,6 +54,10 @@ describe("AppNav", () => {
 			"href",
 			"/history",
 		);
+		expect(screen.getByRole("link", { name: "Counter" })).toHaveAttribute(
+			"href",
+			"/tools/counter",
+		);
 		expect(screen.getByRole("link", { name: "About" })).toHaveAttribute(
 			"href",
 			"/about",
@@ -103,8 +107,13 @@ describe("AppNav", () => {
 			"href",
 			"/history",
 		);
+		expect(within(menu).getByRole("link", { name: "Counter" })).toHaveAttribute(
+			"href",
+			"/tools/counter",
+		);
 		expect(within(menu).getByText("Plan")).toBeInTheDocument();
 		expect(within(menu).getByText("Track")).toBeInTheDocument();
+		expect(within(menu).getByText("Tools")).toBeInTheDocument();
 
 		fireEvent.click(
 			within(menu).getByRole("button", { name: "Close navigation menu" }),

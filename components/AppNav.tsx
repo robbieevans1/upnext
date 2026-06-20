@@ -50,6 +50,15 @@ const navGroups = [
 			},
 		],
 	},
+	{
+		label: "Tools",
+		links: [
+			{
+				href: "/tools/counter",
+				label: "Counter",
+			},
+		],
+	},
 ];
 
 const utilityLinks = [
