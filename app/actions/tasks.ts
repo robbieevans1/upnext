@@ -2,9 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
-import { getServerSession } from "next-auth";
-import { redirect } from "next/navigation";
-import { authOptions } from "@/lib/auth";
+import { requireUserId } from "@/lib/server-auth";
 import { getAppTodayDate } from "@/lib/app-date";
 import {
 	startTaskSession,
@@ -26,31 +24,27 @@ function getSubtaskTitles(formData: FormData) {
 		.filter(Boolean);
 }
 
-async function getCurrentUserId() {
-	const session = await getServerSession(authOptions);
-
-	if (!session?.user?.id) {
-		redirect("/login");
+async function getOwnedGroupId(userId: string, groupIdValue: string) {
+	if (!groupIdValue) {
+		return null;
 	}
 
-	return session.user.id;
+	const group = await prisma.taskGroup.findFirst({
+		where: {
+			id: groupIdValue,
+			userId,
+			isActive: true,
+		},
+		select: {
+			id: true,
+		},
+	});
+
+	return group?.id ?? null;
 }
-// async function getDemoUser() {
-// 	return prisma.user.upsert({
-// 		where: {
-// 			email: "demo@upnext.dev",
-// 		},
-// 		update: {},
-// 		create: {
-// 			id: DEMO_USER_ID,
-// 			email: "demo@upnext.dev",
-// 			name: "Demo User",
-// 		},
-// 	});
-// }
 
 export async function createTaskGroup(formData: FormData) {
-	const userId = await getCurrentUserId();
+	const userId = await requireUserId();
 
 	const name = String(formData.get("name") ?? "").trim();
 	const description = String(formData.get("description") ?? "").trim();
@@ -69,15 +63,18 @@ export async function createTaskGroup(formData: FormData) {
 }
 
 export async function updateTaskGroup(formData: FormData) {
+	const userId = await requireUserId();
 	const groupId = String(formData.get("groupId") ?? "");
-	const name = String(formData.get("name") ?? "");
-	const description = String(formData.get("description") ?? "");
+	const name = String(formData.get("name") ?? "").trim();
+	const description = String(formData.get("description") ?? "").trim();
 
-	if (!groupId || !name.trim()) return;
+	if (!groupId || !name) return;
 
-	await prisma.taskGroup.update({
+	await prisma.taskGroup.updateMany({
 		where: {
 			id: groupId,
+			userId,
+			isActive: true,
 		},
 		data: {
 			name,
@@ -89,28 +86,36 @@ export async function updateTaskGroup(formData: FormData) {
 }
 
 export async function deleteTaskGroup(groupId: string) {
-	await prisma.taskGroup.update({
-		where: {
-			id: groupId,
-		},
-		data: {
-			isActive: false,
-			tasks: {
-				updateMany: {
-					where: {},
-					data: {
-						isActive: false,
-					},
-				},
+	const userId = await requireUserId();
+
+	await prisma.$transaction([
+		prisma.taskGroup.updateMany({
+			where: {
+				id: groupId,
+				userId,
+				isActive: true,
 			},
-		},
-	});
+			data: {
+				isActive: false,
+			},
+		}),
+		prisma.task.updateMany({
+			where: {
+				groupId,
+				userId,
+				isActive: true,
+			},
+			data: {
+				isActive: false,
+			},
+		}),
+	]);
 
 	revalidateTaskViews();
 }
 
 export async function createTask(formData: FormData) {
-	const userId = await getCurrentUserId();
+	const userId = await requireUserId();
 
 	const title = String(formData.get("title") ?? "").trim();
 	const description = String(formData.get("description") ?? "").trim();
@@ -120,7 +125,7 @@ export async function createTask(formData: FormData) {
 
 	if (!title) return;
 
-	const groupId = groupIdValue || null;
+	const groupId = await getOwnedGroupId(userId, groupIdValue);
 	const subtaskTitles = getSubtaskTitles(formData);
 
 	const existingTasksInStack = await prisma.task.count({
@@ -158,25 +163,30 @@ export async function createTask(formData: FormData) {
 }
 
 export async function updateTask(formData: FormData) {
+	const userId = await requireUserId();
 	const taskId = String(formData.get("taskId") ?? "");
-	const title = String(formData.get("title") ?? "");
-	const description = String(formData.get("description") ?? "");
-	const playbook = String(formData.get("playbook") ?? "");
+	const title = String(formData.get("title") ?? "").trim();
+	const description = String(formData.get("description") ?? "").trim();
+	const playbook = String(formData.get("playbook") ?? "").trim();
 	const groupIdValue = String(formData.get("groupId") ?? "");
 	const isMandatory = formData.get("isMandatory") === "on";
 
-	if (!taskId || !title.trim()) return;
+	if (!taskId || !title) return;
 
-	await prisma.task.update({
+	const groupId = await getOwnedGroupId(userId, groupIdValue);
+
+	await prisma.task.updateMany({
 		where: {
 			id: taskId,
+			userId,
+			isActive: true,
 		},
 		data: {
 			title,
 			description,
 			playbook,
 			isMandatory,
-			groupId: groupIdValue || null,
+			groupId,
 		},
 	});
 
@@ -184,9 +194,13 @@ export async function updateTask(formData: FormData) {
 }
 
 export async function deleteTask(taskId: string) {
-	await prisma.task.update({
+	const userId = await requireUserId();
+
+	await prisma.task.updateMany({
 		where: {
 			id: taskId,
+			userId,
+			isActive: true,
 		},
 		data: {
 			isActive: false,
@@ -197,7 +211,7 @@ export async function deleteTask(taskId: string) {
 }
 
 export async function addTaskSubtask(formData: FormData) {
-	const userId = await getCurrentUserId();
+	const userId = await requireUserId();
 
 	const taskId = String(formData.get("taskId") ?? "");
 	const title = String(formData.get("title") ?? "").trim();
@@ -238,7 +252,7 @@ export async function addTaskSubtask(formData: FormData) {
 }
 
 export async function updateTaskSubtask(formData: FormData) {
-	const userId = await getCurrentUserId();
+	const userId = await requireUserId();
 
 	const subtaskId = String(formData.get("subtaskId") ?? "");
 	const title = String(formData.get("title") ?? "").trim();
@@ -260,7 +274,7 @@ export async function updateTaskSubtask(formData: FormData) {
 }
 
 export async function deleteTaskSubtask(subtaskId: string) {
-	const userId = await getCurrentUserId();
+	const userId = await requireUserId();
 
 	await prisma.taskSubtask.updateMany({
 		where: {
@@ -277,7 +291,7 @@ export async function deleteTaskSubtask(subtaskId: string) {
 }
 
 export async function completeSubtask(subtaskId: string) {
-	const userId = await getCurrentUserId();
+	const userId = await requireUserId();
 	const today = getAppTodayDate();
 
 	const subtask = await prisma.taskSubtask.findFirst({
@@ -348,7 +362,7 @@ export async function completeSubtask(subtaskId: string) {
 }
 
 export async function startTaskTimer(taskId: string) {
-	const userId = await getCurrentUserId();
+	const userId = await requireUserId();
 
 	await startTaskSession(userId, taskId);
 
@@ -357,7 +371,7 @@ export async function startTaskTimer(taskId: string) {
 }
 
 export async function stopTaskTimer(taskId: string) {
-	const userId = await getCurrentUserId();
+	const userId = await requireUserId();
 
 	await stopActiveTaskSessionAndStartOther(userId, taskId);
 
@@ -366,7 +380,7 @@ export async function stopTaskTimer(taskId: string) {
 }
 
 export async function completeTask(taskId: string) {
-	const userId = await getCurrentUserId();
+	const userId = await requireUserId();
 
 	const today = getAppTodayDate();
 
@@ -439,7 +453,7 @@ export async function completeTask(taskId: string) {
 }
 
 export async function undoTodayCompletion(taskId: string) {
-	const userId = await getCurrentUserId();
+	const userId = await requireUserId();
 	const today = getAppTodayDate();
 
 	await prisma.taskCompletion.deleteMany({

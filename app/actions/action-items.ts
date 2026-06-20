@@ -1,25 +1,13 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { getServerSession } from "next-auth";
-import { redirect } from "next/navigation";
-import { authOptions } from "@/lib/auth";
 import { getAppDateFromKey } from "@/lib/app-date";
 import { prisma } from "@/lib/prisma";
+import { requireUserId } from "@/lib/server-auth";
 
 function revalidateActionItemViews() {
 	revalidatePath("/today");
 	revalidatePath("/action-items");
-}
-
-async function getCurrentUserId() {
-	const session = await getServerSession(authOptions);
-
-	if (!session?.user?.id) {
-		redirect("/login");
-	}
-
-	return session.user.id;
 }
 
 function getOptionalAppDate(formData: FormData, key: string) {
@@ -33,7 +21,7 @@ function getOptionalAppDate(formData: FormData, key: string) {
 }
 
 export async function createActionItem(formData: FormData) {
-	const userId = await getCurrentUserId();
+	const userId = await requireUserId();
 	const title = String(formData.get("title") ?? "").trim();
 	const description = String(formData.get("description") ?? "").trim();
 	const playbook = String(formData.get("playbook") ?? "").trim();
@@ -55,7 +43,7 @@ export async function createActionItem(formData: FormData) {
 }
 
 export async function updateActionItem(formData: FormData) {
-	const userId = await getCurrentUserId();
+	const userId = await requireUserId();
 	const actionItemId = String(formData.get("actionItemId") ?? "");
 	const title = String(formData.get("title") ?? "").trim();
 	const description = String(formData.get("description") ?? "").trim();
@@ -81,7 +69,7 @@ export async function updateActionItem(formData: FormData) {
 }
 
 export async function completeActionItem(actionItemId: string) {
-	const userId = await getCurrentUserId();
+	const userId = await requireUserId();
 
 	await prisma.actionItem.updateMany({
 		where: {
@@ -99,7 +87,7 @@ export async function completeActionItem(actionItemId: string) {
 }
 
 export async function reopenActionItem(actionItemId: string) {
-	const userId = await getCurrentUserId();
+	const userId = await requireUserId();
 
 	await prisma.actionItem.updateMany({
 		where: {
@@ -116,7 +104,7 @@ export async function reopenActionItem(actionItemId: string) {
 }
 
 export async function cancelActionItem(actionItemId: string) {
-	const userId = await getCurrentUserId();
+	const userId = await requireUserId();
 
 	await prisma.actionItem.updateMany({
 		where: {

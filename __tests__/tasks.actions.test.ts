@@ -9,6 +9,7 @@ const prisma = {
 		findFirst: vi.fn(),
 		findMany: vi.fn(),
 		update: vi.fn((args) => args),
+		updateMany: vi.fn((args) => args),
 	},
 	taskCompletion: {
 		deleteMany: vi.fn(),
@@ -20,14 +21,16 @@ const prisma = {
 		findFirst: vi.fn(),
 		findMany: vi.fn(),
 		update: vi.fn((args) => args),
-		updateMany: vi.fn(),
+		updateMany: vi.fn((args) => args),
 	},
 	subtaskCompletion: {
 		upsert: vi.fn(),
 	},
 	taskGroup: {
 		create: vi.fn(),
+		findFirst: vi.fn(),
 		update: vi.fn(),
+		updateMany: vi.fn((args) => args),
 	},
 };
 
@@ -90,6 +93,7 @@ describe("task server actions", () => {
 
 	it("creates tasks at the bottom of the matching active stack", async () => {
 		prisma.task.count.mockResolvedValue(3);
+		prisma.taskGroup.findFirst.mockResolvedValue({ id: "career" });
 		const { createTask } = await import("@/app/actions/tasks");
 
 		await createTask(
@@ -102,6 +106,16 @@ describe("task server actions", () => {
 			}),
 		);
 
+		expect(prisma.taskGroup.findFirst).toHaveBeenCalledWith({
+			where: {
+				id: "career",
+				userId: "user-1",
+				isActive: true,
+			},
+			select: {
+				id: true,
+			},
+		});
 		expect(prisma.task.count).toHaveBeenCalledWith({
 			where: {
 				userId: "user-1",
@@ -120,6 +134,34 @@ describe("task server actions", () => {
 				stackOrder: 3,
 			},
 		});
+	});
+
+	it("does not attach tasks to groups owned by another user", async () => {
+		prisma.task.count.mockResolvedValue(0);
+		prisma.taskGroup.findFirst.mockResolvedValue(null);
+		const { createTask } = await import("@/app/actions/tasks");
+
+		await createTask(
+			formDataFrom({
+				title: "Read",
+				groupId: "other-user-group",
+			}),
+		);
+
+		expect(prisma.task.count).toHaveBeenCalledWith({
+			where: {
+				userId: "user-1",
+				isActive: true,
+				groupId: null,
+			},
+		});
+		expect(prisma.task.create).toHaveBeenCalledWith(
+			expect.objectContaining({
+				data: expect.objectContaining({
+					groupId: null,
+				}),
+			}),
+		);
 	});
 
 	it("does not attach an empty subtask create when no subtasks are provided", async () => {
@@ -240,9 +282,11 @@ describe("task server actions", () => {
 			}),
 		);
 
-		expect(prisma.task.update).toHaveBeenCalledWith({
+		expect(prisma.task.updateMany).toHaveBeenCalledWith({
 			where: {
 				id: "task-1",
+				userId: "user-1",
+				isActive: true,
 			},
 			data: {
 				title: "Work function",
@@ -254,25 +298,102 @@ describe("task server actions", () => {
 		});
 	});
 
+	it("does not move tasks into groups owned by another user", async () => {
+		prisma.taskGroup.findFirst.mockResolvedValue(null);
+		const { updateTask } = await import("@/app/actions/tasks");
+
+		await updateTask(
+			formDataFrom({
+				taskId: "task-1",
+				title: "Read",
+				groupId: "other-user-group",
+			}),
+		);
+
+		expect(prisma.taskGroup.findFirst).toHaveBeenCalledWith({
+			where: {
+				id: "other-user-group",
+				userId: "user-1",
+				isActive: true,
+			},
+			select: {
+				id: true,
+			},
+		});
+		expect(prisma.task.updateMany).toHaveBeenCalledWith({
+			where: {
+				id: "task-1",
+				userId: "user-1",
+				isActive: true,
+			},
+			data: expect.objectContaining({
+				groupId: null,
+			}),
+		});
+	});
+
 	it("soft deletes a group and all of its tasks", async () => {
 		const { deleteTaskGroup } = await import("@/app/actions/tasks");
 
 		await deleteTaskGroup("group-1");
 
-		expect(prisma.taskGroup.update).toHaveBeenCalledWith({
+		expect(prisma.$transaction).toHaveBeenCalledWith([
+			{
+				where: {
+					id: "group-1",
+					userId: "user-1",
+					isActive: true,
+				},
+				data: {
+					isActive: false,
+				},
+			},
+			{
+				where: {
+					groupId: "group-1",
+					userId: "user-1",
+					isActive: true,
+				},
+				data: {
+					isActive: false,
+				},
+			},
+		]);
+		expect(prisma.taskGroup.updateMany).toHaveBeenCalledWith({
 			where: {
 				id: "group-1",
+				userId: "user-1",
+				isActive: true,
 			},
 			data: {
 				isActive: false,
-				tasks: {
-					updateMany: {
-						where: {},
-						data: {
-							isActive: false,
-						},
-					},
-				},
+			},
+		});
+		expect(prisma.task.updateMany).toHaveBeenCalledWith({
+			where: {
+				groupId: "group-1",
+				userId: "user-1",
+				isActive: true,
+			},
+			data: {
+				isActive: false,
+			},
+		});
+	});
+
+	it("soft deletes only current-user owned active tasks", async () => {
+		const { deleteTask } = await import("@/app/actions/tasks");
+
+		await deleteTask("task-1");
+
+		expect(prisma.task.updateMany).toHaveBeenCalledWith({
+			where: {
+				id: "task-1",
+				userId: "user-1",
+				isActive: true,
+			},
+			data: {
+				isActive: false,
 			},
 		});
 	});
