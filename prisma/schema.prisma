@@ -28,6 +28,7 @@ model User {
   actionItems           ActionItem[]
   commitments           Commitment[]
   commitmentOccurrences CommitmentOccurrenceCompletion[]
+  topics                Topic[]
   dailyChecks           DailyCheck[]
   dailyCheckResults     DailyCheckResult[]
   dailyReviewDismissals DailyReviewDismissal[]
@@ -230,6 +231,24 @@ model ActionItem {
   @@index([userId, dueOn])
   @@index([userId, completedAt])
   @@index([userId, canceledAt])
+}
+
+model Topic {
+  id          String  @id @default(cuid())
+  title       String
+  category    String?
+  description String?
+  body        String?
+  isArchived  Boolean @default(false)
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId, isArchived, updatedAt])
+  @@index([userId, category])
 }
 
 model Commitment {

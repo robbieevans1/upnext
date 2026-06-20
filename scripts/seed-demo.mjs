@@ -671,6 +671,59 @@ async function createDailyChecks(today) {
 	};
 }
 
+async function createTopics() {
+	const topics = [
+		{
+			title: "Networking events",
+			category: "Social",
+			description: "A general playbook for work functions and meetups.",
+			body:
+				"Stand up straight. Smile before entering conversations. Ask what people are working on. Keep answers concise and positive. Put the phone away.",
+			isArchived: false,
+		},
+		{
+			title: "Interview mindset",
+			category: "Career",
+			description: "Reminders to reread before interviews.",
+			body:
+				"Pause before answering. Use specific examples. Explain tradeoffs. Ask thoughtful questions about the team, expectations, and success criteria.",
+			isArchived: false,
+		},
+		{
+			title: "Current projects",
+			category: "Focus",
+			description: "A snapshot of active work areas.",
+			body:
+				"UpNext polish, portfolio improvements, interview practice, consistent workouts, and better evening routines.",
+			isArchived: false,
+		},
+		{
+			title: "Nutrition rules",
+			category: "Health",
+			description: "Simple rules that make food decisions easier.",
+			body:
+				"Protein first. Plan dinner early. Keep easy snacks out of sight. Do not make food decisions while hungry.",
+			isArchived: false,
+		},
+		{
+			title: "Old focus area",
+			category: "Archive",
+			description: "An example archived topic.",
+			body: "This topic is kept for reference but hidden from active focus.",
+			isArchived: true,
+		},
+	];
+
+	await prisma.topic.createMany({
+		data: topics.map((topic) => ({
+			...topic,
+			userId: DEMO_USER_ID,
+		})),
+	});
+
+	return topics.length;
+}
+
 async function main() {
 	requireSafeEnvironment();
 
@@ -683,6 +736,7 @@ async function main() {
 	const actionItems = await createActionItems(today);
 	const commitments = await createCommitments(today);
 	const dailyReview = await createDailyChecks(today);
+	const topics = await createTopics();
 
 	console.log("Seeded demo data.");
 	console.log(`Email: ${DEMO_EMAIL}`);
@@ -694,6 +748,7 @@ async function main() {
 	console.log(`Downtime sessions: ${downtimeSessions}`);
 	console.log(`Action items: ${actionItems}`);
 	console.log(`Commitments: ${commitments}`);
+	console.log(`Topics: ${topics}`);
 	console.log(`Daily checks: ${dailyReview.checks}`);
 	console.log(`Daily check results: ${dailyReview.results}`);
 }

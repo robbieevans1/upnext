@@ -9,30 +9,50 @@ const navLinks = [
 		href: "/today",
 		label: "Today",
 	},
+];
+
+const navGroups = [
 	{
-		href: "/dashboard",
-		label: "Dashboard",
+		label: "Plan",
+		links: [
+			{
+				href: "/tasks",
+				label: "Tasks",
+			},
+			{
+				href: "/action-items",
+				label: "Actions",
+			},
+			{
+				href: "/commitments",
+				label: "Schedule",
+			},
+			{
+				href: "/topics",
+				label: "Topics",
+			},
+		],
 	},
 	{
-		href: "/tasks",
-		label: "Tasks",
+		label: "Track",
+		links: [
+			{
+				href: "/dashboard",
+				label: "Dashboard",
+			},
+			{
+				href: "/downtime",
+				label: "Time",
+			},
+			{
+				href: "/history",
+				label: "History",
+			},
+		],
 	},
-	{
-		href: "/action-items",
-		label: "Actions",
-	},
-	{
-		href: "/commitments",
-		label: "Schedule",
-	},
-	{
-		href: "/downtime",
-		label: "Time",
-	},
-	{
-		href: "/history",
-		label: "History",
-	},
+];
+
+const utilityLinks = [
 	{
 		href: "/about",
 		label: "About",
@@ -55,8 +75,39 @@ export default function AppNav() {
 					UpNext
 				</Link>
 
-				<div className="hidden items-center gap-2.5 text-sm text-slate-300 lg:flex">
+				<div className="hidden items-center gap-3 text-sm text-slate-300 lg:flex">
 					{navLinks.map((link) => (
+						<Link key={link.href} href={link.href} className="hover:text-sky-400">
+							{link.label}
+						</Link>
+					))}
+
+					{navGroups.map((group) => (
+						<div key={group.label} className="group relative">
+							<button
+								type="button"
+								className="rounded-lg px-2 py-1.5 transition hover:bg-slate-900 hover:text-sky-400"
+							>
+								{group.label}
+							</button>
+
+							<div className="invisible absolute left-0 top-full z-40 w-44 pt-2 opacity-0 transition group-hover:visible group-hover:opacity-100 group-focus-within:visible group-focus-within:opacity-100">
+								<div className="rounded-xl border border-slate-800 bg-slate-950 p-2 shadow-2xl">
+									{group.links.map((link) => (
+										<Link
+											key={link.href}
+											href={link.href}
+											className="block rounded-lg px-3 py-2 text-slate-200 transition hover:bg-slate-900 hover:text-sky-300"
+										>
+											{link.label}
+										</Link>
+									))}
+								</div>
+							</div>
+						</div>
+					))}
+
+					{utilityLinks.map((link) => (
 						<Link key={link.href} href={link.href} className="hover:text-sky-400">
 							{link.label}
 						</Link>
@@ -122,7 +173,7 @@ export default function AppNav() {
 							</button>
 						</div>
 
-						<div className="mt-8 flex flex-col gap-2">
+						<div className="mt-8 flex flex-col gap-5">
 							{navLinks.map((link) => (
 								<Link
 									key={link.href}
@@ -133,6 +184,44 @@ export default function AppNav() {
 									{link.label}
 								</Link>
 							))}
+
+							{navGroups.map((group) => (
+								<div key={group.label}>
+									<p className="px-3 text-xs font-semibold uppercase tracking-wide text-slate-500">
+										{group.label}
+									</p>
+									<div className="mt-2 flex flex-col gap-1">
+										{group.links.map((link) => (
+											<Link
+												key={link.href}
+												href={link.href}
+												onClick={() => setIsMenuOpen(false)}
+												className="rounded-lg px-3 py-3 text-base font-medium text-slate-200 transition hover:bg-slate-900 hover:text-sky-300"
+											>
+												{link.label}
+											</Link>
+										))}
+									</div>
+								</div>
+							))}
+
+							<div>
+								<p className="px-3 text-xs font-semibold uppercase tracking-wide text-slate-500">
+									Info
+								</p>
+								<div className="mt-2 flex flex-col gap-1">
+									{utilityLinks.map((link) => (
+										<Link
+											key={link.href}
+											href={link.href}
+											onClick={() => setIsMenuOpen(false)}
+											className="rounded-lg px-3 py-3 text-base font-medium text-slate-200 transition hover:bg-slate-900 hover:text-sky-300"
+										>
+											{link.label}
+										</Link>
+									))}
+								</div>
+							</div>
 						</div>
 
 						<button
