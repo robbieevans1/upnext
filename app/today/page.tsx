@@ -485,8 +485,8 @@ export default async function TodayPage() {
 											key={task.id}
 											className="rounded-xl border border-emerald-500/20 bg-emerald-500/10 p-4"
 										>
-											<div className="flex items-center justify-between gap-4">
-												<div>
+											<div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+												<div className="min-w-0">
 													<h4 className="text-lg font-semibold text-emerald-100">
 														{task.title}
 													</h4>
@@ -497,7 +497,7 @@ export default async function TodayPage() {
 													</p>
 												</div>
 
-												<div className="flex items-center gap-2">
+												<div className="flex min-w-0 flex-wrap items-center gap-2">
 													<span className="rounded-full bg-emerald-500/10 px-3 py-1 text-xs font-medium text-emerald-300">
 														Done
 													</span>
@@ -512,7 +512,10 @@ export default async function TodayPage() {
 														startButtonClassName="rounded-lg border border-emerald-400/40 px-3 py-1.5 text-sm font-medium text-emerald-100 hover:bg-emerald-500/10 disabled:cursor-not-allowed disabled:opacity-60"
 													/>
 
-													<form action={undoTodayCompletion.bind(null, task.id)}>
+													<form
+														action={undoTodayCompletion.bind(null, task.id)}
+														className="min-w-0"
+													>
 														<button className="rounded-lg border border-emerald-400/40 px-3 py-1.5 text-sm font-medium text-emerald-100 hover:bg-emerald-500/10">
 															Undo
 														</button>
@@ -534,9 +537,11 @@ export default async function TodayPage() {
 function CommitmentRow({ commitment }: { commitment: Commitment }) {
 	return (
 		<div className="rounded-xl border border-indigo-500/30 bg-indigo-500/10 p-4">
-			<div className="flex items-start justify-between gap-4">
-				<div>
-					<h4 className="text-lg font-semibold">{commitment.title}</h4>
+			<div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+				<div className="min-w-0">
+					<h4 className="break-words text-lg font-semibold">
+						{commitment.title}
+					</h4>
 
 					{commitment.description && (
 						<p className="mt-1 text-sm text-slate-300">
@@ -550,7 +555,7 @@ function CommitmentRow({ commitment }: { commitment: Commitment }) {
 					</p>
 				</div>
 
-				<div className="flex shrink-0 flex-wrap gap-2">
+				<div className="flex min-w-0 flex-wrap gap-2 sm:shrink-0">
 					<TaskPlaybookButton
 						taskTitle={commitment.title}
 						playbook={commitment.playbook}
@@ -572,9 +577,9 @@ function ActionItemRow({ item, today }: { item: ActionItem; today: Date }) {
 
 	return (
 		<div className="rounded-xl border border-slate-800 bg-slate-900 p-4">
-			<div className="flex items-start justify-between gap-4">
-				<div>
-					<h4 className="text-lg font-semibold">{item.title}</h4>
+			<div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+				<div className="min-w-0">
+					<h4 className="break-words text-lg font-semibold">{item.title}</h4>
 
 					{item.description && (
 						<p className="mt-1 text-sm text-slate-400">{item.description}</p>
@@ -599,7 +604,7 @@ function ActionItemRow({ item, today }: { item: ActionItem; today: Date }) {
 					</div>
 				</div>
 
-				<div className="flex shrink-0 flex-wrap gap-2">
+				<div className="flex min-w-0 flex-wrap gap-2 sm:shrink-0">
 					<TaskPlaybookButton taskTitle={item.title} playbook={item.playbook} />
 
 					<form action={completeActionItem.bind(null, item.id)}>
@@ -642,13 +647,13 @@ function CurrentTaskCard({
 
 	return (
 		<div className={currentTaskStyles[status]}>
-			<div className="flex items-start justify-between gap-4">
-				<div>
+			<div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+				<div className="min-w-0">
 					<p className="text-sm font-semibold uppercase tracking-wide text-sky-400">
 						Current Priority
 					</p>
 
-					<h2 className="mt-3 text-3xl font-bold">{task.title}</h2>
+					<h2 className="mt-3 break-words text-3xl font-bold">{task.title}</h2>
 
 					<p className="mt-2 text-slate-300">
 						{task.isMandatory
@@ -669,7 +674,7 @@ function CurrentTaskCard({
 				</span>
 			</div>
 
-			<div className="mt-6 flex flex-wrap gap-3">
+			<div className="mt-6 flex min-w-0 flex-wrap gap-3">
 				<TaskTimerControls
 					taskId={task.id}
 					taskTitle={task.title}
@@ -720,9 +725,9 @@ function TaskRow({
 
 	return (
 		<div className={taskRowStyles[status]}>
-			<div className="flex items-start justify-between gap-4">
-				<div>
-					<h4 className="text-lg font-semibold">{task.title}</h4>
+			<div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+				<div className="min-w-0">
+					<h4 className="break-words text-lg font-semibold">{task.title}</h4>
 
 					{task.description && (
 						<p className="mt-1 text-sm text-slate-400">{task.description}</p>
