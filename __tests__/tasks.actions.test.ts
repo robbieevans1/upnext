@@ -302,6 +302,30 @@ describe("task server actions", () => {
 		});
 	});
 
+	it("updates only a task playbook from the playbook modal", async () => {
+		const { updateTaskPlaybook } = await import("@/app/actions/tasks");
+
+		await updateTaskPlaybook(
+			formDataFrom({
+				taskId: "task-1",
+				playbook: "  Stand tall.\nSmile.\nAsk questions.  ",
+			}),
+		);
+
+		expect(prisma.task.updateMany).toHaveBeenCalledWith({
+			where: {
+				id: "task-1",
+				userId: "user-1",
+				isActive: true,
+			},
+			data: {
+				playbook: "Stand tall.\nSmile.\nAsk questions.",
+			},
+		});
+		expect(revalidatePath).toHaveBeenCalledWith("/today");
+		expect(revalidatePath).toHaveBeenCalledWith("/tasks");
+	});
+
 	it("does not move tasks into groups owned by another user", async () => {
 		prisma.taskGroup.findFirst.mockResolvedValue(null);
 		const { updateTask } = await import("@/app/actions/tasks");

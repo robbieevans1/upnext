@@ -1,8 +1,27 @@
-import { fireEvent, render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import TaskPlaybookButton from "@/components/TaskPlaybookButton";
 
+const mocks = vi.hoisted(() => ({
+	refresh: vi.fn(),
+	updateTaskPlaybook: vi.fn(),
+}));
+
+vi.mock("@/app/actions/tasks", () => ({
+	updateTaskPlaybook: mocks.updateTaskPlaybook,
+}));
+
+vi.mock("next/navigation", () => ({
+	useRouter: () => ({
+		refresh: mocks.refresh,
+	}),
+}));
+
 describe("TaskPlaybookButton", () => {
+	beforeEach(() => {
+		vi.clearAllMocks();
+	});
+
 	it("opens a playbook dialog with task notes", () => {
 		render(
 			<TaskPlaybookButton
@@ -19,6 +38,34 @@ describe("TaskPlaybookButton", () => {
 		expect(dialog).toHaveTextContent("Stand tall.");
 		expect(dialog).toHaveTextContent("Smile.");
 		expect(dialog).toHaveTextContent("Ask questions.");
+	});
+
+	it("edits and saves task playbook notes when a task id is provided", async () => {
+		render(
+			<TaskPlaybookButton
+				taskId="task-1"
+				taskTitle="Go to work function"
+				playbook="Stand tall."
+			/>,
+		);
+
+		fireEvent.click(screen.getByRole("button", { name: "Playbook" }));
+
+		const notes = screen.getByRole("textbox", { name: "Playbook notes" });
+		fireEvent.change(notes, {
+			target: {
+				value: "Stand tall.\nSmile.",
+			},
+		});
+		fireEvent.click(screen.getByRole("button", { name: "Save Playbook" }));
+
+		await waitFor(() => {
+			expect(mocks.updateTaskPlaybook).toHaveBeenCalledWith(expect.any(FormData));
+		});
+		const formData = mocks.updateTaskPlaybook.mock.calls[0][0] as FormData;
+		expect(formData.get("taskId")).toBe("task-1");
+		expect(formData.get("playbook")).toBe("Stand tall.\nSmile.");
+		expect(mocks.refresh).toHaveBeenCalled();
 	});
 
 	it("shows an empty state when a task has no playbook", () => {

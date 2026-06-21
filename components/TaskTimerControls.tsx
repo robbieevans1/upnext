@@ -79,7 +79,11 @@ export default function TaskTimerControls({
 
 	return (
 		<div className="flex w-full min-w-0 flex-wrap items-center gap-2 sm:w-auto sm:shrink-0">
-			<TaskPlaybookButton taskTitle={taskTitle} playbook={playbook} />
+			<TaskPlaybookButton
+				taskId={taskId}
+				taskTitle={taskTitle}
+				playbook={playbook}
+			/>
 
 			{isThisTaskRunning && (
 				<span className="rounded-lg border border-sky-500/40 bg-sky-500/10 px-3 py-2 font-mono text-sm tabular-nums text-sky-200">
