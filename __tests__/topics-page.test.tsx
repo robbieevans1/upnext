@@ -57,9 +57,15 @@ describe("TopicsPage", () => {
 		render(await TopicsPage());
 
 		expect(screen.getByRole("heading", { name: "Topics" })).toBeInTheDocument();
-		expect(screen.getByDisplayValue("Networking events")).toBeInTheDocument();
+		expect(screen.getByRole("link", { name: /Networking events/ })).toHaveAttribute(
+			"href",
+			"/topics/topic-1",
+		);
 		expect(screen.getByText("Social")).toBeInTheDocument();
-		expect(screen.getByDisplayValue("Old focus area")).toBeInTheDocument();
+		expect(screen.getByRole("link", { name: /Old focus area/ })).toHaveAttribute(
+			"href",
+			"/topics/topic-2",
+		);
 		expect(screen.getByText("Archived")).toBeInTheDocument();
 	});
 
