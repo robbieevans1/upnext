@@ -1,4 +1,5 @@
 import AppNav from "@/components/AppNav";
+import CompleteDayButton from "@/components/CompleteDayButton";
 import DailyReviewPrompt from "@/components/DailyReviewPrompt";
 import TaskPlaybookButton from "@/components/TaskPlaybookButton";
 import TaskTimerControls from "@/components/TaskTimerControls";
@@ -22,6 +23,7 @@ import {
 	getAppDateKey,
 	getAppTodayDate,
 } from "@/lib/app-date";
+import { getUserEffectiveTodayDate } from "@/lib/effective-day";
 import { connection } from "next/server";
 
 type TaskWithLastCompletion = Prisma.TaskGetPayload<{
@@ -148,7 +150,8 @@ export default async function TodayPage() {
 		redirect("/login");
 	}
 	// const user = await getDemoUser();
-	const today = getAppTodayDate();
+	const effectiveDay = await getUserEffectiveTodayDate(session.user.id);
+	const today = effectiveDay.today;
 	const yesterday = addAppDays(today, -1);
 
 	const groups = await prisma.taskGroup.findMany({
@@ -396,7 +399,7 @@ export default async function TodayPage() {
 
 			<main className="min-h-screen bg-slate-950 px-6 py-10 text-white">
 				<section className="mx-auto max-w-2xl">
-					<div className="flex items-start justify-between gap-4">
+					<div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
 						<div>
 							<p className="mb-2 text-sm font-medium text-sky-400">UpNext</p>
 
@@ -409,6 +412,13 @@ export default async function TodayPage() {
 								completion today, then return tomorrow at the bottom of their
 								group stack.
 							</p>
+						</div>
+
+						<div className="shrink-0">
+							<CompleteDayButton
+								isStartedEarly={effectiveDay.isStartedEarly}
+								tomorrowLabel={formatAppDate(effectiveDay.tomorrow)}
+							/>
 						</div>
 					</div>
 

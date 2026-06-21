@@ -3,6 +3,9 @@ import { formDataFrom } from "./test-utils";
 
 const prisma = {
 	$transaction: vi.fn(async (operations: unknown[]) => operations),
+	dayStartOverride: {
+		findUnique: vi.fn(),
+	},
 	task: {
 		count: vi.fn(),
 		create: vi.fn(),
@@ -55,6 +58,7 @@ describe("task server actions", () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
 		vi.useRealTimers();
+		prisma.dayStartOverride.findUnique.mockResolvedValue(null);
 		getServerSession.mockResolvedValue({
 			user: {
 				id: "user-1",
@@ -670,6 +674,34 @@ describe("task server actions", () => {
 	it("uses the Eastern calendar day after Eastern midnight", async () => {
 		vi.useFakeTimers();
 		vi.setSystemTime(new Date("2026-06-16T04:01:00.000Z"));
+		prisma.task.findFirst.mockResolvedValue({
+			id: "task-1",
+			groupId: null,
+		});
+		const { completeTask } = await import("@/app/actions/tasks");
+
+		await completeTask("task-1");
+
+		expect(prisma.taskCompletion.upsert).toHaveBeenCalledWith(
+			expect.objectContaining({
+				where: {
+					taskId_completedOn: {
+						taskId: "task-1",
+						completedOn: new Date("2026-06-16T04:00:00.000Z"),
+					},
+				},
+			}),
+		);
+	});
+
+	it("uses the effective next day when the user started tomorrow early", async () => {
+		vi.useFakeTimers();
+		vi.setSystemTime(new Date("2026-06-15T23:00:00.000Z"));
+		prisma.dayStartOverride.findUnique.mockResolvedValue({
+			baseDay: new Date("2026-06-15T04:00:00.000Z"),
+			targetDay: new Date("2026-06-16T04:00:00.000Z"),
+			expiresAt: new Date("2026-06-16T04:00:00.000Z"),
+		});
 		prisma.task.findFirst.mockResolvedValue({
 			id: "task-1",
 			groupId: null,
