@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireUserId } from "@/lib/server-auth";
-import { getAppTodayDate } from "@/lib/app-date";
+import { getUserEffectiveTodayDate } from "@/lib/effective-day";
 import {
 	startTaskSession,
 	stopActiveTaskSessionAndStartOther,
@@ -292,7 +292,7 @@ export async function deleteTaskSubtask(subtaskId: string) {
 
 export async function completeSubtask(subtaskId: string) {
 	const userId = await requireUserId();
-	const today = getAppTodayDate();
+	const { today } = await getUserEffectiveTodayDate(userId);
 
 	const subtask = await prisma.taskSubtask.findFirst({
 		where: {
@@ -382,7 +382,7 @@ export async function stopTaskTimer(taskId: string) {
 export async function completeTask(taskId: string) {
 	const userId = await requireUserId();
 
-	const today = getAppTodayDate();
+	const { today } = await getUserEffectiveTodayDate(userId);
 
 	const task = await prisma.task.findFirst({
 		where: {
@@ -454,7 +454,7 @@ export async function completeTask(taskId: string) {
 
 export async function undoTodayCompletion(taskId: string) {
 	const userId = await requireUserId();
-	const today = getAppTodayDate();
+	const { today } = await getUserEffectiveTodayDate(userId);
 
 	await prisma.taskCompletion.deleteMany({
 		where: {

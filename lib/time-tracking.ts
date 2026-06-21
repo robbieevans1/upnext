@@ -2,6 +2,7 @@ import {
 	getAppTodayDate,
 	getNextAppMidnightDate,
 } from "@/lib/app-date";
+import { getUserEffectiveTodayDate } from "@/lib/effective-day";
 import { prisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
 
@@ -12,17 +13,19 @@ type PrismaOperation = Prisma.PrismaPromise<unknown>;
 function getTaskSessionCreateOperation({
 	userId,
 	taskId,
+	day,
 	startedAt,
 }: {
 	userId: string;
 	taskId: string;
+	day: Date;
 	startedAt: Date;
 }) {
 	return prisma.taskSession.create({
 		data: {
 			userId,
 			taskId,
-			day: getAppTodayDate(startedAt),
+			day,
 			startedAt,
 		},
 	});
@@ -31,17 +34,19 @@ function getTaskSessionCreateOperation({
 function getDowntimeCreateOperation({
 	userId,
 	category,
+	day,
 	startedAt,
 }: {
 	userId: string;
 	category: string;
+	day: Date;
 	startedAt: Date;
 }) {
 	return prisma.downtimeSession.create({
 		data: {
 			userId,
 			category,
-			day: getAppTodayDate(startedAt),
+			day,
 			startedAt,
 		},
 	});
@@ -108,6 +113,7 @@ export async function rolloverActiveDowntimeSession(
 		getDowntimeCreateOperation({
 			userId,
 			category: activeSession.category,
+			day: today,
 			startedAt: today,
 		}),
 	);
@@ -178,6 +184,7 @@ export async function rolloverActiveTaskSession(
 		getTaskSessionCreateOperation({
 			userId,
 			taskId: activeSession.taskId,
+			day: today,
 			startedAt: today,
 		}),
 	);
@@ -191,6 +198,7 @@ export async function startTaskSession(userId: string, taskId: string) {
 	const now = new Date();
 	await rolloverActiveTaskSession(userId, now);
 	await rolloverActiveDowntimeSession(userId, now);
+	const { today } = await getUserEffectiveTodayDate(userId, now);
 
 	const task = await prisma.task.findFirst({
 		where: {
@@ -258,6 +266,7 @@ export async function startTaskSession(userId: string, taskId: string) {
 		getTaskSessionCreateOperation({
 			userId,
 			taskId,
+			day: today,
 			startedAt: now,
 		}),
 	);
@@ -273,6 +282,7 @@ export async function stopActiveTaskSessionAndStartOther(
 ) {
 	const now = new Date();
 	await rolloverActiveTaskSession(userId, now);
+	const { today } = await getUserEffectiveTodayDate(userId, now);
 
 	const activeTaskSession = await prisma.taskSession.findFirst({
 		where: {
@@ -306,6 +316,7 @@ export async function stopActiveTaskSessionAndStartOther(
 		getDowntimeCreateOperation({
 			userId,
 			category: DEFAULT_DOWNTIME_CATEGORY,
+			day: today,
 			startedAt: now,
 		}),
 	]);
@@ -316,6 +327,7 @@ export async function stopActiveTaskSessionAndStartOther(
 export async function ensureDefaultDowntimeSession(userId: string, now = new Date()) {
 	await rolloverActiveTaskSession(userId, now);
 	await rolloverActiveDowntimeSession(userId, now);
+	const { today } = await getUserEffectiveTodayDate(userId, now);
 
 	const activeTaskSession = await prisma.taskSession.findFirst({
 		where: {
@@ -346,7 +358,7 @@ export async function ensureDefaultDowntimeSession(userId: string, now = new Dat
 		data: {
 			userId,
 			category: DEFAULT_DOWNTIME_CATEGORY,
-			day: getAppTodayDate(now),
+			day: today,
 			startedAt: now,
 		},
 	});
@@ -356,6 +368,7 @@ export async function switchDowntimeSession(userId: string, category: string) {
 	const now = new Date();
 	await rolloverActiveTaskSession(userId, now);
 	await rolloverActiveDowntimeSession(userId, now);
+	const { today } = await getUserEffectiveTodayDate(userId, now);
 
 	const activeTaskSession = await prisma.taskSession.findFirst({
 		where: {
@@ -401,6 +414,7 @@ export async function switchDowntimeSession(userId: string, category: string) {
 		getDowntimeCreateOperation({
 			userId,
 			category,
+			day: today,
 			startedAt: now,
 		}),
 	);
