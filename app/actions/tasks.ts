@@ -193,6 +193,27 @@ export async function updateTask(formData: FormData) {
 	revalidateTaskViews();
 }
 
+export async function updateTaskPlaybook(formData: FormData) {
+	const userId = await requireUserId();
+	const taskId = String(formData.get("taskId") ?? "");
+	const playbook = String(formData.get("playbook") ?? "").trim();
+
+	if (!taskId) return;
+
+	await prisma.task.updateMany({
+		where: {
+			id: taskId,
+			userId,
+			isActive: true,
+		},
+		data: {
+			playbook,
+		},
+	});
+
+	revalidateTaskViews();
+}
+
 export async function deleteTask(taskId: string) {
 	const userId = await requireUserId();
 

@@ -14,11 +14,13 @@ The app organizes recurring work into a daily stack. Mandatory tasks stay visibl
 - Continue tracking time on a completed task without undoing completion
 - Subtasks that can be completed independently and move down the task card
 - Task playbooks for tips, steps, mindset cues, and mistakes to avoid
-- Playbook modal available from task cards and task management
+- Large editable playbook modal available from task cards and task management
 - Topics page for reusable notes, reminders, current focus areas, and general playbooks
+- Full-page topic editor for long-form notes
 - One-off action items for async errands or tasks outside the recurring stack
 - Scheduled commitments for events, appointments, errands, recurring obligations, and time-based plans
 - Daily Review checks for next-day self-audits like calorie limits, sleep, spending, and nutrition goals
+- Complete Day flow for starting tomorrow's stack early without marking unfinished tasks complete
 - Dashboard with completion trends, task-time totals, downtime charts, scheduled load, daily review results, action item status, and playbook coverage
 - Completed Today section with same-day undo
 - Continue button for completed tasks that need additional focused time
@@ -30,6 +32,7 @@ The app organizes recurring work into a daily stack. Mandatory tasks stay visibl
 - Downtime timer for sleep, social, eating, and other time
 - Downtime sessions continue running after leaving the page
 - Active downtime sessions split cleanly at Eastern midnight
+- Tools section with a persistent scratch counter
 - Demo seed script for local screenshots and realistic QA data
 - Public About page and public landing links
 - Responsive mobile navigation with a side menu
@@ -99,7 +102,13 @@ And a playbook:
 - Keep answers concise and positive
 ```
 
-Playbooks can be added or edited from the Tasks page. Task cards show a Playbook button that opens the notes in a modal without navigating away from the current page.
+Playbooks can be added or edited from the Tasks page. Task cards show a Playbook button that opens the notes in a large modal without navigating away from the current page. Task playbooks can also be edited and saved directly from that modal on Today, so useful notes can be improved at the moment they are needed.
+
+## Starting Tomorrow Early
+
+The Today page includes a Complete Day flow for unusual schedules. If a user wakes up late in the evening and wants to treat the next calendar day as active, they can confirm the action and start tomorrow's stack early.
+
+This does not complete unfinished tasks. It only changes the user's effective app day to tomorrow until real Eastern midnight arrives. The action is limited to one day ahead, so repeated clicks cannot jump multiple days forward.
 
 ## Completion History
 
@@ -174,7 +183,11 @@ Nutrition rules
 Sunday reset
 ```
 
-Topics can be categorized, edited, archived, and restored. They are separate from task playbooks today, but they are designed so future task-topic badges can connect reusable topic notes to specific tasks.
+Topics can be categorized, edited, archived, and restored. The Topics index stays compact with clickable rows, while each topic opens into a full-page editor with a large notes surface for longer reusable playbooks or reference material. Topics are separate from task playbooks today, but they are designed so future task-topic badges can connect reusable topic notes to specific tasks.
+
+## Tools
+
+The Tools section currently includes a persistent scratch counter. It is intentionally lightweight: the count is stored locally in the browser, survives navigation and app restarts, and stays there until Reset is pressed.
 
 ## Downtime Tracking
 
@@ -236,6 +249,7 @@ The dashboard uses existing database records rather than separate analytics tabl
 - `DailyCheck` stores active next-day outcome prompts for a user.
 - `DailyCheckResult` stores Yes, No, Skip, or Not sure answers against the reviewed app day.
 - `DailyReviewDismissal` stores when a user dismisses a day's review prompt.
+- `DayStartOverride` stores a temporary per-user effective-day override for starting tomorrow early.
 
 ## Getting Started
 
@@ -293,6 +307,16 @@ Password: demo-password
 ```
 
 The demo seed deletes and recreates only `demo@upnext.dev`. It does not touch other users. The script refuses to run with `NODE_ENV=production` unless `ALLOW_DEMO_SEED_PRODUCTION=true` is explicitly set.
+
+The seed includes realistic coverage for screenshots and QA:
+
+- 12 recurring tasks across Health, Career, Life Admin, and Social groups
+- Mandatory tasks, rotating grouped tasks, task playbooks, and subtasks
+- 21 days of task completions, task sessions, subtask completions, and downtime sessions
+- Action items with open, overdue, completed, and canceled states
+- One-time and weekly recurring commitments with occurrence completions
+- Daily Review checks and historical Yes/No/Skip/Unsure results
+- Long-form Topics for the full-page topic editor
 
 ## Quality Checks
 
@@ -363,6 +387,18 @@ The CI workflow runs on pull requests and pushes to `main`. It installs dependen
 
 ![Task Management](public/readme/tasks.png)
 
+### Editable Playbook Modal
+
+![Editable Playbook Modal](public/readme/playbook-modal.png)
+
+### Action Items
+
+![Action Items](public/readme/actions.png)
+
+### Schedule and Commitments
+
+![Schedule and Commitments](public/readme/commitments.png)
+
 ### Time Away Tracking
 
 ![Time Away Tracking](public/readme/time.png)
@@ -370,3 +406,15 @@ The CI workflow runs on pull requests and pushes to `main`. It installs dependen
 ### Completion History
 
 ![Completion History](public/readme/history.png)
+
+### Topics
+
+![Topics](public/readme/topics.png)
+
+### Full-Page Topic Editor
+
+![Full-Page Topic Editor](public/readme/topic-detail.png)
+
+### Persistent Counter Tool
+
+![Persistent Counter Tool](public/readme/counter.png)

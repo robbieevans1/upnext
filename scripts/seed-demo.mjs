@@ -273,6 +273,50 @@ async function createTasks(groupIds) {
 			stackOrder: 0,
 			subtasks: ["Pick person", "Send message", "Follow up if needed"],
 		},
+		{
+			id: "demo-task-job-application",
+			title: "Apply to one role",
+			description: "Submit one thoughtful application or improve one draft.",
+			playbook:
+				"Read the posting once for fit, then tailor the top third of the resume. Write a short note that proves you understand the role. Stop after one high-quality application.",
+			isMandatory: false,
+			groupId: groupIds.get("Career"),
+			stackOrder: 2,
+			subtasks: ["Pick role", "Tailor resume", "Submit application"],
+		},
+		{
+			id: "demo-task-morning-light",
+			title: "Morning light walk",
+			description: "Get outside early and set the rhythm for the day.",
+			playbook:
+				"Shoes on before checking messages. Walk without headphones for the first five minutes. Notice energy and mood when returning.",
+			isMandatory: false,
+			groupId: groupIds.get("Health"),
+			stackOrder: 2,
+			subtasks: ["Shoes on", "Walk 15 minutes", "Drink water"],
+		},
+		{
+			id: "demo-task-laundry",
+			title: "Laundry reset",
+			description: "Move clothes through one complete wash/dry/fold cycle.",
+			playbook:
+				"Start the washer before another task. Set a timer. Fold immediately so the task is actually done, not just moved.",
+			isMandatory: false,
+			groupId: groupIds.get("Life Admin"),
+			stackOrder: 2,
+			subtasks: ["Start load", "Move to dryer", "Fold and put away"],
+		},
+		{
+			id: "demo-task-date-prep",
+			title: "Date night prep",
+			description: "Prepare to show up calm, present, and confident.",
+			playbook:
+				"Pick clothes early. Confirm the plan. Arrive unrushed. Ask real questions and keep the phone away.",
+			isMandatory: false,
+			groupId: groupIds.get("Social"),
+			stackOrder: 1,
+			subtasks: ["Confirm plan", "Choose outfit", "Review conversation notes"],
+		},
 	];
 
 	for (const task of tasks) {
@@ -477,6 +521,40 @@ async function createActionItems(today) {
 			completedAt: null,
 			canceledAt: null,
 		},
+		{
+			title: "Update resume bullet",
+			description: "Rewrite one project bullet with a clearer impact statement.",
+			playbook:
+				"Start with the outcome. Include the constraint. End with a measurable result or user-facing improvement.",
+			dueOn: today,
+			completedAt: null,
+			canceledAt: null,
+		},
+		{
+			title: "Text Alex about Saturday",
+			description: "Confirm the plan while it is still easy to coordinate.",
+			playbook:
+				"Suggest one concrete time and place. Keep the message warm and simple.",
+			dueOn: addAppDays(today, 1),
+			completedAt: null,
+			canceledAt: null,
+		},
+		{
+			title: "Cancel unused trial",
+			description: "Avoid getting charged next week.",
+			playbook: "Search email for the receipt, cancel, and save confirmation.",
+			dueOn: addAppDays(today, -1),
+			completedAt: atAppTime(today, 8, 40),
+			canceledAt: null,
+		},
+		{
+			title: "Drop package at UPS",
+			description: "Return the shirt before the window closes.",
+			playbook: "Put the package by the door and go before lunch.",
+			dueOn: addAppDays(today, -3),
+			completedAt: null,
+			canceledAt: null,
+		},
 	];
 
 	await prisma.actionItem.createMany({
@@ -493,6 +571,7 @@ async function createCommitments(today) {
 	const todayDayOfWeek = getAppDayOfWeek(today);
 	const commitments = [
 		{
+			id: "demo-commitment-standup",
 			title: "Team standup",
 			description: "Share progress and blockers.",
 			playbook: "Be concise. Mention one concrete next step.",
@@ -506,6 +585,7 @@ async function createCommitments(today) {
 			recurrenceDayOfWeek: null,
 		},
 		{
+			id: "demo-commitment-work-function",
 			title: "Work function",
 			description: "Department networking event.",
 			playbook:
@@ -520,6 +600,7 @@ async function createCommitments(today) {
 			recurrenceDayOfWeek: null,
 		},
 		{
+			id: "demo-commitment-weekly-planning",
 			title: "Weekly planning review",
 			description: "Review the week and choose the next priorities.",
 			playbook:
@@ -534,6 +615,7 @@ async function createCommitments(today) {
 			recurrenceDayOfWeek: todayDayOfWeek,
 		},
 		{
+			id: "demo-commitment-church",
 			title: "Go to church",
 			description: "Weekly service.",
 			playbook: "Arrive a few minutes early. Put phone away. Say hello after.",
@@ -547,6 +629,7 @@ async function createCommitments(today) {
 			recurrenceDayOfWeek: 0,
 		},
 		{
+			id: "demo-commitment-grocery",
 			title: "Grocery pickup",
 			description: "Pick up meal prep groceries.",
 			playbook: "Stick to the list. Avoid adding snacks in the store.",
@@ -560,6 +643,7 @@ async function createCommitments(today) {
 			recurrenceDayOfWeek: null,
 		},
 		{
+			id: "demo-commitment-coffee",
 			title: "Coffee with Sam",
 			description: "Catch up and practice being present.",
 			playbook: "Phone away. Ask about their new job. Listen more than talk.",
@@ -573,6 +657,7 @@ async function createCommitments(today) {
 			recurrenceDayOfWeek: null,
 		},
 		{
+			id: "demo-commitment-dentist",
 			title: "Dentist appointment",
 			description: "Routine cleaning.",
 			playbook: null,
@@ -585,6 +670,36 @@ async function createCommitments(today) {
 			recurrence: "NONE",
 			recurrenceDayOfWeek: null,
 		},
+		{
+			id: "demo-commitment-interview",
+			title: "Mock interview",
+			description: "Practice behavioral and technical storytelling.",
+			playbook:
+				"Open with the situation, name the constraint, explain the action, and close with what changed.",
+			location: "Video call",
+			day: today,
+			startsAt: atAppTime(today, 15, 0),
+			endsAt: atAppTime(today, 16, 0),
+			completedAt: null,
+			canceledAt: null,
+			recurrence: "NONE",
+			recurrenceDayOfWeek: null,
+		},
+		{
+			id: "demo-commitment-family-call",
+			title: "Family call",
+			description: "Weekly check-in with parents.",
+			playbook:
+				"Call while walking. Ask about their week before talking about yours.",
+			location: "Phone",
+			day: addAppDays(today, -3),
+			startsAt: atAppTime(addAppDays(today, -3), 19, 0),
+			endsAt: atAppTime(addAppDays(today, -3), 19, 45),
+			completedAt: null,
+			canceledAt: null,
+			recurrence: "WEEKLY",
+			recurrenceDayOfWeek: getAppDayOfWeek(addAppDays(today, -3)),
+		},
 	];
 
 	await prisma.commitment.createMany({
@@ -592,6 +707,36 @@ async function createCommitments(today) {
 			...commitment,
 			userId: DEMO_USER_ID,
 		})),
+	});
+
+	await prisma.commitmentOccurrenceCompletion.createMany({
+		data: [
+			{
+				commitmentId: "demo-commitment-weekly-planning",
+				userId: DEMO_USER_ID,
+				occurrenceDay: addAppDays(today, -14),
+				completedAt: atAppTime(addAppDays(today, -14), 10, 50),
+			},
+			{
+				commitmentId: "demo-commitment-weekly-planning",
+				userId: DEMO_USER_ID,
+				occurrenceDay: addAppDays(today, -7),
+				completedAt: atAppTime(addAppDays(today, -7), 10, 45),
+			},
+			{
+				commitmentId: "demo-commitment-family-call",
+				userId: DEMO_USER_ID,
+				occurrenceDay: addAppDays(today, -3),
+				completedAt: atAppTime(addAppDays(today, -3), 19, 50),
+			},
+			{
+				commitmentId: "demo-commitment-family-call",
+				userId: DEMO_USER_ID,
+				occurrenceDay: addAppDays(today, -10),
+				completedAt: atAppTime(addAppDays(today, -10), 19, 40),
+			},
+		],
+		skipDuplicates: true,
 	});
 
 	return commitments.length;
@@ -623,6 +768,16 @@ async function createDailyChecks(today) {
 			id: "demo-daily-check-spending",
 			title: "Avoided unnecessary spending?",
 			description: "A quick check for impulse purchases and delivery.",
+		},
+		{
+			id: "demo-daily-check-screen-time",
+			title: "Stayed under screen time limit?",
+			description: "Use the phone report or an honest estimate.",
+		},
+		{
+			id: "demo-daily-check-bedtime",
+			title: "Went to bed before midnight?",
+			description: "Track whether the evening routine protected tomorrow.",
 		},
 	];
 	const results = [];
@@ -678,7 +833,7 @@ async function createTopics() {
 			category: "Social",
 			description: "A general playbook for work functions and meetups.",
 			body:
-				"Stand up straight. Smile before entering conversations. Ask what people are working on. Keep answers concise and positive. Put the phone away.",
+				"Before entering:\n- Stand up straight and breathe slowly.\n- Put the phone away before walking into the room.\n- Pick one simple opener: How do you know the host? or What are you working on lately?\n\nDuring conversations:\n- Smile before speaking.\n- Ask one follow-up before telling your own story.\n- Keep answers concise and positive.\n- Leave after two strong conversations instead of waiting until energy crashes.\n\nAfterward:\n- Write down one person to follow up with.\n- Send the message within 24 hours.",
 			isArchived: false,
 		},
 		{
@@ -686,7 +841,7 @@ async function createTopics() {
 			category: "Career",
 			description: "Reminders to reread before interviews.",
 			body:
-				"Pause before answering. Use specific examples. Explain tradeoffs. Ask thoughtful questions about the team, expectations, and success criteria.",
+				"Core posture:\n- Pause before answering.\n- Use specific examples.\n- Explain tradeoffs instead of pretending every choice was obvious.\n- Say what you learned.\n\nBehavioral answers:\nUse Situation, Task, Action, Result, Reflection. The reflection is where maturity shows.\n\nTechnical answers:\nState the simplest solution first, then improve it. Name constraints and edge cases. If stuck, narrate the next useful question.\n\nQuestions to ask:\n- What would success look like in the first 90 days?\n- What problems is the team most excited to solve this year?\n- Where do people usually struggle in this role?",
 			isArchived: false,
 		},
 		{
@@ -694,7 +849,7 @@ async function createTopics() {
 			category: "Focus",
 			description: "A snapshot of active work areas.",
 			body:
-				"UpNext polish, portfolio improvements, interview practice, consistent workouts, and better evening routines.",
+				"UpNext:\n- Polish Today mobile cards.\n- Expand dashboard analytics.\n- Connect reusable topics to tasks later.\n\nCareer:\n- Portfolio project improvements.\n- Mock interview reps.\n- Resume bullet cleanup.\n\nHealth:\n- Consistent workouts.\n- Protein target.\n- More stable evening routine.\n\nSocial:\n- Make one plan per week.\n- Practice showing up calm and present.",
 			isArchived: false,
 		},
 		{
@@ -702,7 +857,23 @@ async function createTopics() {
 			category: "Health",
 			description: "Simple rules that make food decisions easier.",
 			body:
-				"Protein first. Plan dinner early. Keep easy snacks out of sight. Do not make food decisions while hungry.",
+				"Default rules:\n- Protein first.\n- Plan dinner before 3 PM.\n- Keep easy snacks out of sight.\n- Do not make food decisions while hungry.\n- If eating out, decide the order before arriving.\n\nRecovery:\n- Water after workouts.\n- Do not punish a bad meal with skipped meals.\n- Look for weekly patterns, not one noisy day.",
+			isArchived: false,
+		},
+		{
+			title: "First date reminders",
+			category: "Social",
+			description: "A reusable note for being relaxed and present on dates.",
+			body:
+				"Before:\n- Pick clothes early.\n- Confirm the plan.\n- Arrive unrushed.\n\nDuring:\n- Ask about stories, not just facts.\n- Keep the phone out of sight.\n- Share enough to be known, then ask a follow-up.\n- Notice whether the conversation feels mutual.\n\nAfter:\n- If it went well, send a clear message instead of being vague.",
+			isArchived: false,
+		},
+		{
+			title: "Sunday reset",
+			category: "Life Admin",
+			description: "A repeatable reset routine for the apartment and week.",
+			body:
+				"1. Trash and dishes.\n2. Laundry started.\n3. Groceries or meal plan.\n4. Calendar scan.\n5. Pick three outcomes for the week.\n6. Set clothes and bag for Monday.\n\nThe goal is not a perfect apartment. The goal is a lower-friction Monday.",
 			isArchived: false,
 		},
 		{

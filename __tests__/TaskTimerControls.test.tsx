@@ -8,12 +8,14 @@ const mocks = vi.hoisted(() => ({
 	refresh: vi.fn(),
 	startTaskTimer: vi.fn(),
 	stopTaskTimer: vi.fn(),
+	updateTaskPlaybook: vi.fn(),
 }));
 
 vi.mock("@/app/actions/tasks", () => ({
 	completeTask: mocks.completeTask,
 	startTaskTimer: mocks.startTaskTimer,
 	stopTaskTimer: mocks.stopTaskTimer,
+	updateTaskPlaybook: mocks.updateTaskPlaybook,
 }));
 
 vi.mock("next/navigation", () => ({
