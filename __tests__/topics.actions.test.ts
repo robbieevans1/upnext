@@ -51,6 +51,7 @@ describe("topic server actions", () => {
 			},
 		});
 		expect(revalidatePath).toHaveBeenCalledWith("/topics");
+		expect(revalidatePath).not.toHaveBeenCalledWith("/topics/topic-1");
 	});
 
 	it("does not create blank topics", async () => {
@@ -86,6 +87,8 @@ describe("topic server actions", () => {
 				body: "Pause before answering.",
 			},
 		});
+		expect(revalidatePath).toHaveBeenCalledWith("/topics");
+		expect(revalidatePath).toHaveBeenCalledWith("/topics/topic-1");
 	});
 
 	it("archives and restores topics through scoped writes", async () => {
@@ -114,6 +117,8 @@ describe("topic server actions", () => {
 				isArchived: false,
 			},
 		});
+		expect(revalidatePath).toHaveBeenCalledWith("/topics");
+		expect(revalidatePath).toHaveBeenCalledWith("/topics/topic-1");
 	});
 
 	it("redirects unauthenticated users before mutating topics", async () => {

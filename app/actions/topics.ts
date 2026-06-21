@@ -8,6 +8,11 @@ function revalidateTopicViews() {
 	revalidatePath("/topics");
 }
 
+function revalidateTopicDetail(topicId: string) {
+	revalidateTopicViews();
+	revalidatePath(`/topics/${topicId}`);
+}
+
 function getTopicFields(formData: FormData) {
 	return {
 		title: String(formData.get("title") ?? "").trim(),
@@ -48,7 +53,7 @@ export async function updateTopic(formData: FormData) {
 		data: fields,
 	});
 
-	revalidateTopicViews();
+	revalidateTopicDetail(topicId);
 }
 
 export async function archiveTopic(topicId: string) {
@@ -65,7 +70,7 @@ export async function archiveTopic(topicId: string) {
 		},
 	});
 
-	revalidateTopicViews();
+	revalidateTopicDetail(topicId);
 }
 
 export async function restoreTopic(topicId: string) {
@@ -82,5 +87,5 @@ export async function restoreTopic(topicId: string) {
 		},
 	});
 
-	revalidateTopicViews();
+	revalidateTopicDetail(topicId);
 }
