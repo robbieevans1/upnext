@@ -8,7 +8,11 @@ import {
 	completeCommitment,
 	completeCommitmentOccurrence,
 } from "@/app/actions/commitments";
-import { completeSubtask, undoTodayCompletion } from "@/app/actions/tasks";
+import {
+	adjustCompletedTaskTime,
+	completeSubtask,
+	undoTodayCompletion,
+} from "@/app/actions/tasks";
 import {
 	getAppDayOfWeek,
 	getCommitmentRecurrenceDays,
@@ -33,6 +37,12 @@ import { connection } from "next/server";
 type TaskWithLastCompletion = Prisma.TaskGetPayload<{
 	include: {
 		completions: true;
+		sessions: {
+			select: {
+				startedAt: true;
+				stoppedAt: true;
+			};
+		};
 		subtasks: {
 			include: {
 				completions: true;
@@ -128,6 +138,42 @@ function getLastCompletedTime(task: TaskWithLastCompletion) {
 	return lastCompletedDate.getTime();
 }
 
+function getTaskTimeSeconds(task: TaskWithLastCompletion) {
+	const now = new Date();
+
+	return task.sessions.reduce((total, session) => {
+		const stoppedAt = session.stoppedAt ?? now;
+
+		return (
+			total +
+			Math.max(
+				0,
+				Math.floor((stoppedAt.getTime() - session.startedAt.getTime()) / 1000),
+			)
+		);
+	}, 0);
+}
+
+function formatTaskTime(totalSeconds: number) {
+	if (totalSeconds <= 0) {
+		return "No time tracked";
+	}
+
+	const totalMinutes = Math.max(1, Math.round(totalSeconds / 60));
+	const hours = Math.floor(totalMinutes / 60);
+	const minutes = totalMinutes % 60;
+
+	if (hours === 0) {
+		return `${minutes}m`;
+	}
+
+	if (minutes === 0) {
+		return `${hours}h`;
+	}
+
+	return `${hours}h ${String(minutes).padStart(2, "0")}m`;
+}
+
 function sortStack(tasks: TaskWithLastCompletion[]) {
 	return [...tasks].sort((a, b) => {
 		if (a.isMandatory !== b.isMandatory) {
@@ -183,6 +229,15 @@ export default async function TodayPage() {
 					completedOn: "desc",
 				},
 				take: 1,
+			},
+			sessions: {
+				where: {
+					day: today,
+				},
+				select: {
+					startedAt: true,
+					stoppedAt: true,
+				},
 			},
 			subtasks: {
 				where: {
@@ -564,11 +619,15 @@ export default async function TodayPage() {
 									const group = groups.find(
 										(group) => group.id === task.groupId,
 									);
+									const taskTimeSeconds = getTaskTimeSeconds(task);
+									const taskTimeMinutes = Math.round(taskTimeSeconds / 60);
+									const isTaskRunning =
+										activeTaskTimer?.taskId === task.id;
 
 									return (
 										<div
 											key={task.id}
-											className="rounded-xl border border-emerald-500/20 bg-emerald-500/10 p-4"
+											className="overflow-hidden rounded-xl border border-emerald-500/20 bg-emerald-500/10 p-4"
 										>
 											<div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
 												<div className="min-w-0">
@@ -579,6 +638,10 @@ export default async function TodayPage() {
 													<p className="mt-1 text-sm text-emerald-200/70">
 														Completed today
 														{group ? ` · ${group.name}` : ""}
+													</p>
+
+													<p className="mt-2 break-words text-sm font-medium text-emerald-100">
+														Task time: {formatTaskTime(taskTimeSeconds)}
 													</p>
 												</div>
 
@@ -606,6 +669,43 @@ export default async function TodayPage() {
 														</button>
 													</form>
 												</div>
+											</div>
+
+											<div className="mt-4 min-w-0 border-t border-emerald-400/20 pt-4">
+												{isTaskRunning ? (
+													<p className="text-sm text-emerald-200/80">
+														Stop the running timer before adjusting this
+														task&apos;s time.
+													</p>
+												) : (
+													<form
+														action={adjustCompletedTaskTime}
+														className="grid min-w-0 gap-2 sm:grid-cols-[minmax(0,10rem)_auto] sm:items-end"
+													>
+														<input
+															type="hidden"
+															name="taskId"
+															value={task.id}
+														/>
+
+														<label className="min-w-0 text-sm font-medium text-emerald-100">
+															<span>Total minutes</span>
+															<input
+																type="number"
+																name="totalMinutes"
+																min="0"
+																max="1440"
+																step="1"
+																defaultValue={taskTimeMinutes}
+																className="mt-2 w-full min-w-0 rounded-lg border border-emerald-400/30 bg-slate-950 px-3 py-2 text-sm text-white outline-none focus:border-emerald-300"
+															/>
+														</label>
+
+														<button className="min-w-0 rounded-lg border border-emerald-400/40 px-3 py-2 text-sm font-semibold text-emerald-100 hover:bg-emerald-500/10">
+															Adjust Time
+														</button>
+													</form>
+												)}
 											</div>
 										</div>
 									);

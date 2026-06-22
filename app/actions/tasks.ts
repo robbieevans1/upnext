@@ -8,6 +8,7 @@ import {
 	startTaskSession,
 	stopActiveTaskSessionAndStartOther,
 } from "@/lib/time-tracking";
+import { Prisma } from "@prisma/client";
 
 // const DEMO_USER_ID = "demo-user";
 
@@ -17,11 +18,45 @@ function revalidateTaskViews() {
 	revalidatePath("/tasks");
 }
 
+function revalidateTaskTimeViews() {
+	revalidateTaskViews();
+	revalidatePath("/dashboard");
+	revalidatePath("/history");
+}
+
 function getSubtaskTitles(formData: FormData) {
 	return String(formData.get("subtasks") ?? "")
 		.split(/\r?\n/)
 		.map((title) => title.trim())
 		.filter(Boolean);
+}
+
+function getTaskSessionDurationSeconds(session: {
+	startedAt: Date;
+	stoppedAt: Date | null;
+}) {
+	if (!session.stoppedAt) {
+		return 0;
+	}
+
+	return Math.max(
+		0,
+		Math.floor((session.stoppedAt.getTime() - session.startedAt.getTime()) / 1000),
+	);
+}
+
+function getTotalMinutes(formData: FormData) {
+	const totalMinutes = Number(formData.get("totalMinutes"));
+
+	if (!Number.isFinite(totalMinutes)) {
+		return null;
+	}
+
+	const roundedMinutes = Math.round(totalMinutes);
+
+	return roundedMinutes >= 0 && roundedMinutes <= 24 * 60
+		? roundedMinutes
+		: null;
 }
 
 async function getOwnedGroupId(userId: string, groupIdValue: string) {
@@ -212,6 +247,139 @@ export async function updateTaskPlaybook(formData: FormData) {
 	});
 
 	revalidateTaskViews();
+}
+
+export async function adjustCompletedTaskTime(formData: FormData) {
+	const userId = await requireUserId();
+	const taskId = String(formData.get("taskId") ?? "");
+	const totalMinutes = getTotalMinutes(formData);
+
+	if (!taskId || totalMinutes === null) return;
+
+	const { today } = await getUserEffectiveTodayDate(userId);
+
+	const task = await prisma.task.findFirst({
+		where: {
+			id: taskId,
+			userId,
+			isActive: true,
+			completions: {
+				some: {
+					completedOn: today,
+				},
+			},
+		},
+		select: {
+			id: true,
+		},
+	});
+
+	if (!task) return;
+
+	const activeSession = await prisma.taskSession.findFirst({
+		where: {
+			taskId,
+			userId,
+			day: today,
+			stoppedAt: null,
+		},
+		select: {
+			id: true,
+		},
+	});
+
+	if (activeSession) return;
+
+	const sessions = await prisma.taskSession.findMany({
+		where: {
+			taskId,
+			userId,
+			day: today,
+			stoppedAt: {
+				not: null,
+			},
+		},
+		orderBy: {
+			startedAt: "asc",
+		},
+		select: {
+			id: true,
+			startedAt: true,
+			stoppedAt: true,
+		},
+	});
+
+	const desiredTotalSeconds = totalMinutes * 60;
+	const currentTotalSeconds = sessions.reduce(
+		(total, session) => total + getTaskSessionDurationSeconds(session),
+		0,
+	);
+
+	if (desiredTotalSeconds === currentTotalSeconds) return;
+
+	if (desiredTotalSeconds > currentTotalSeconds) {
+		const additionalSeconds = desiredTotalSeconds - currentTotalSeconds;
+
+		await prisma.taskSession.create({
+			data: {
+				taskId,
+				userId,
+				day: today,
+				startedAt: today,
+				stoppedAt: new Date(today.getTime() + additionalSeconds * 1000),
+			},
+		});
+
+		revalidateTaskTimeViews();
+		return;
+	}
+
+	let secondsToRemove = currentTotalSeconds - desiredTotalSeconds;
+	const operations: Prisma.PrismaPromise<unknown>[] = [];
+
+	for (const session of [...sessions].reverse()) {
+		if (secondsToRemove <= 0) {
+			break;
+		}
+
+		const durationSeconds = getTaskSessionDurationSeconds(session);
+
+		if (durationSeconds <= secondsToRemove) {
+			operations.push(
+				prisma.taskSession.delete({
+					where: {
+						id: session.id,
+					},
+				}),
+			);
+			secondsToRemove -= durationSeconds;
+			continue;
+		}
+
+		if (!session.stoppedAt) {
+			continue;
+		}
+
+		operations.push(
+			prisma.taskSession.update({
+				where: {
+					id: session.id,
+				},
+				data: {
+					stoppedAt: new Date(
+						session.stoppedAt.getTime() - secondsToRemove * 1000,
+					),
+				},
+			}),
+		);
+		secondsToRemove = 0;
+	}
+
+	if (operations.length > 0) {
+		await prisma.$transaction(operations);
+	}
+
+	revalidateTaskTimeViews();
 }
 
 export async function deleteTask(taskId: string) {
