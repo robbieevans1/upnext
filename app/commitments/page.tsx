@@ -17,7 +17,8 @@ import {
 } from "@/lib/app-date";
 import {
 	getAppDayOfWeek,
-	getWeekdayLabel,
+	getCommitmentRecurrenceDays,
+	getWeekdayListLabel,
 	WEEKDAY_OPTIONS,
 } from "@/lib/commitments";
 import { prisma } from "@/lib/prisma";
@@ -180,6 +181,7 @@ function CommitmentCard({ commitment }: { commitment: Commitment }) {
 					endsAt={commitment.endsAt}
 					isWeekly={commitment.recurrence === CommitmentRecurrence.WEEKLY}
 					recurrenceDayOfWeek={commitment.recurrenceDayOfWeek}
+					recurrenceDays={getCommitmentRecurrenceDays(commitment)}
 				/>
 
 				<div className="flex flex-wrap gap-2">
@@ -188,7 +190,8 @@ function CommitmentCard({ commitment }: { commitment: Commitment }) {
 					</span>
 					{commitment.recurrence === CommitmentRecurrence.WEEKLY && (
 						<span className="rounded-full bg-indigo-500/10 px-3 py-1 text-xs font-medium text-indigo-300">
-							Weekly {getWeekdayLabel(commitment.recurrenceDayOfWeek)}
+							Weekly{" "}
+							{getWeekdayListLabel(getCommitmentRecurrenceDays(commitment))}
 						</span>
 					)}
 					{commitment.completedAt && (
@@ -246,15 +249,19 @@ function DateTimeFields({
 	endsAt,
 	isWeekly = false,
 	recurrenceDayOfWeek,
+	recurrenceDays,
 }: {
 	day?: Date;
 	startsAt?: Date | null;
 	endsAt?: Date | null;
 	isWeekly?: boolean;
 	recurrenceDayOfWeek?: number | null;
+	recurrenceDays?: number[];
 }) {
-	const selectedRecurrenceDay =
-		recurrenceDayOfWeek ?? getAppDayOfWeek(day ?? getAppTodayDate());
+	const selectedRecurrenceDays =
+		recurrenceDays && recurrenceDays.length > 0
+			? recurrenceDays
+			: [recurrenceDayOfWeek ?? getAppDayOfWeek(day ?? getAppTodayDate())];
 
 	return (
 		<div className="space-y-4">
@@ -300,22 +307,34 @@ function DateTimeFields({
 					Repeat weekly
 				</label>
 
-				<div className="mt-3 min-w-0">
-					<label className="text-sm font-medium text-slate-300">
-						Weekly day
-					</label>
-					<select
-						name="recurrenceDayOfWeek"
-						defaultValue={selectedRecurrenceDay}
-						className="mt-2 w-full min-w-0 max-w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-white outline-none focus:border-sky-500"
-					>
+				<fieldset className="mt-3 min-w-0">
+					<legend className="text-sm font-medium text-slate-300">
+						Repeat days
+					</legend>
+					<div className="mt-3 grid gap-2 sm:grid-cols-2">
 						{WEEKDAY_OPTIONS.map((option) => (
-							<option key={option.value} value={option.value}>
+							<label
+								key={option.value}
+								className="flex items-center gap-3 rounded-lg border border-slate-800 bg-slate-900 px-3 py-2 text-sm text-slate-200"
+							>
+								<input
+									type="checkbox"
+									name="recurrenceDays"
+									value={option.value}
+									defaultChecked={selectedRecurrenceDays.includes(
+										option.value,
+									)}
+									className="h-4 w-4"
+								/>
 								{option.label}
-							</option>
+							</label>
 						))}
-					</select>
-				</div>
+					</div>
+					<p className="mt-3 text-xs text-slate-500">
+						Choose one or more days. Select all seven for every day, or
+						Monday-Friday for weekdays.
+					</p>
+				</fieldset>
 			</div>
 		</div>
 	);

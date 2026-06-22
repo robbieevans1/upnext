@@ -2,7 +2,12 @@
 
 import { revalidatePath } from "next/cache";
 import { getAppDateFromKey, getAppDateTimeFromKeys } from "@/lib/app-date";
-import { getAppDayOfWeek, parseWeekday } from "@/lib/commitments";
+import {
+	getAppDayOfWeek,
+	getCommitmentRecurrenceDays,
+	parseWeekday,
+	parseWeekdays,
+} from "@/lib/commitments";
 import { prisma } from "@/lib/prisma";
 import { requireUserId } from "@/lib/server-auth";
 import { CommitmentRecurrence } from "@prisma/client";
@@ -41,18 +46,32 @@ function getCommitmentRecurrence(formData: FormData) {
 		formData.get("isWeekly") === "on"
 			? CommitmentRecurrence.WEEKLY
 			: CommitmentRecurrence.NONE;
-	const recurrenceDayOfWeek =
-		recurrence === CommitmentRecurrence.WEEKLY
-			? parseWeekday(formData.get("recurrenceDayOfWeek"))
-			: null;
 
-	if (recurrence === CommitmentRecurrence.WEEKLY && recurrenceDayOfWeek === null) {
+	if (recurrence !== CommitmentRecurrence.WEEKLY) {
+		return {
+			recurrence,
+			recurrenceDayOfWeek: null,
+			recurrenceDays: [],
+		};
+	}
+
+	const parsedRecurrenceDays = parseWeekdays(formData.getAll("recurrenceDays"));
+	const legacyRecurrenceDay = parseWeekday(formData.get("recurrenceDayOfWeek"));
+	const recurrenceDays =
+		parsedRecurrenceDays.length > 0
+			? parsedRecurrenceDays
+			: legacyRecurrenceDay === null
+				? []
+				: [legacyRecurrenceDay];
+
+	if (recurrenceDays.length === 0) {
 		return null;
 	}
 
 	return {
 		recurrence,
-		recurrenceDayOfWeek,
+		recurrenceDayOfWeek: recurrenceDays[0],
+		recurrenceDays,
 	};
 }
 
@@ -78,6 +97,7 @@ export async function createCommitment(formData: FormData) {
 			endsAt: dateTimes.endsAt,
 			recurrence: recurrence.recurrence,
 			recurrenceDayOfWeek: recurrence.recurrenceDayOfWeek,
+			recurrenceDays: recurrence.recurrenceDays,
 			userId,
 		},
 	});
@@ -112,6 +132,7 @@ export async function updateCommitment(formData: FormData) {
 			endsAt: dateTimes.endsAt,
 			recurrence: recurrence.recurrence,
 			recurrenceDayOfWeek: recurrence.recurrenceDayOfWeek,
+			recurrenceDays: recurrence.recurrenceDays,
 		},
 	});
 
@@ -159,12 +180,15 @@ export async function completeCommitmentOccurrence(
 		select: {
 			id: true,
 			recurrenceDayOfWeek: true,
+			recurrenceDays: true,
 		},
 	});
 
 	if (!commitment) return;
 
-	if (commitment.recurrenceDayOfWeek !== getAppDayOfWeek(occurrenceDay)) {
+	const recurrenceDays = getCommitmentRecurrenceDays(commitment);
+
+	if (!recurrenceDays.includes(getAppDayOfWeek(occurrenceDay))) {
 		return;
 	}
 

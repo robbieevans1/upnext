@@ -267,6 +267,7 @@ model Commitment {
 
   recurrence          CommitmentRecurrence @default(NONE)
   recurrenceDayOfWeek Int?
+  recurrenceDays      Int[]                @default([])
 
   userId String
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
