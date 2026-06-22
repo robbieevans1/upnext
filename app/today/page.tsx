@@ -469,6 +469,14 @@ export default async function TodayPage() {
 						}))}
 					/>
 
+					{commitmentsToday.length > 0 && (
+						<StackSection title="Scheduled Today">
+							{commitmentsToday.map((commitment) => (
+								<CommitmentRow key={commitment.id} commitment={commitment} />
+							))}
+						</StackSection>
+					)}
+
 					{currentTask ? (
 						<CurrentTaskCard
 							task={currentTask}
@@ -487,14 +495,6 @@ export default async function TodayPage() {
 								You completed everything in today&apos;s stack.
 							</p>
 						</div>
-					)}
-
-					{commitmentsToday.length > 0 && (
-						<StackSection title="Scheduled Today">
-							{commitmentsToday.map((commitment) => (
-								<CommitmentRow key={commitment.id} commitment={commitment} />
-							))}
-						</StackSection>
 					)}
 
 					{actionItems.length > 0 && (
