@@ -8,6 +8,7 @@ import {
 export type CompletionWithTask = {
 	id: string;
 	task: {
+		id: string;
 		title: string;
 		description: string | null;
 		isMandatory: boolean;
@@ -16,6 +17,12 @@ export type CompletionWithTask = {
 			name: string;
 		} | null;
 	};
+};
+
+export type TaskSessionForHistory = {
+	taskId: string;
+	startedAt: Date;
+	stoppedAt: Date | null;
 };
 
 export type RecentCompletionDay = {
@@ -64,6 +71,55 @@ export function sortCompletions(completions: CompletionWithTask[]) {
 
 		return a.task.title.localeCompare(b.task.title);
 	});
+}
+
+export function getTaskSessionDurationSeconds(
+	session: Pick<TaskSessionForHistory, "startedAt" | "stoppedAt">,
+	now = new Date(),
+) {
+	const stoppedAt = session.stoppedAt ?? now;
+
+	return Math.max(
+		0,
+		Math.floor((stoppedAt.getTime() - session.startedAt.getTime()) / 1000),
+	);
+}
+
+export function getTaskTimeTotalsByTaskId(
+	sessions: TaskSessionForHistory[],
+	now = new Date(),
+) {
+	const totalsByTaskId = new Map<string, number>();
+
+	for (const session of sessions) {
+		const existingTotal = totalsByTaskId.get(session.taskId) ?? 0;
+		totalsByTaskId.set(
+			session.taskId,
+			existingTotal + getTaskSessionDurationSeconds(session, now),
+		);
+	}
+
+	return totalsByTaskId;
+}
+
+export function formatTaskTime(totalSeconds: number) {
+	if (totalSeconds <= 0) {
+		return "No time tracked";
+	}
+
+	const totalMinutes = Math.max(1, Math.round(totalSeconds / 60));
+	const hours = Math.floor(totalMinutes / 60);
+	const minutes = totalMinutes % 60;
+
+	if (hours === 0) {
+		return `${minutes}m`;
+	}
+
+	if (minutes === 0) {
+		return `${hours}h`;
+	}
+
+	return `${hours}h ${String(minutes).padStart(2, "0")}m`;
 }
 
 export function aggregateRecentCompletionDays(

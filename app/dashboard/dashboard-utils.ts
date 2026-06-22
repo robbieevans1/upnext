@@ -26,6 +26,7 @@ type DashboardTaskSession = {
 	stoppedAt: Date | null;
 	task: {
 		title: string;
+		isActive?: boolean;
 	};
 };
 
@@ -63,6 +64,7 @@ export type DashboardCommitment = {
 export type DashboardAnalyticsInput = {
 	tasks: DashboardTask[];
 	taskSessions?: DashboardTaskSession[];
+	lifetimeTaskSessions?: DashboardTaskSession[];
 	downtimeSessions: DashboardDowntimeSession[];
 	actionItems: DashboardActionItem[];
 	commitments: DashboardCommitment[];
@@ -104,9 +106,42 @@ function hasPlaybook(value: string | null) {
 	return Boolean(value?.trim());
 }
 
+function buildTaskTimeTotals(
+	taskSessions: DashboardTaskSession[],
+	now: Date,
+	{ activeOnly = false }: { activeOnly?: boolean } = {},
+) {
+	const taskTimeTotals = new Map<
+		string,
+		{ title: string; totalSeconds: number }
+	>();
+
+	for (const taskSession of taskSessions) {
+		if (activeOnly && !taskSession.task.isActive) {
+			continue;
+		}
+
+		const existingTotal = taskTimeTotals.get(taskSession.taskId) ?? {
+			title: taskSession.task.title,
+			totalSeconds: 0,
+		};
+
+		existingTotal.totalSeconds += getStoppedDurationSeconds(taskSession, now);
+		taskTimeTotals.set(taskSession.taskId, existingTotal);
+	}
+
+	return Array.from(taskTimeTotals.values())
+		.filter((task) => task.totalSeconds > 0)
+		.sort(
+			(a, b) =>
+				b.totalSeconds - a.totalSeconds || a.title.localeCompare(b.title),
+		);
+}
+
 export function buildDashboardAnalytics({
 	tasks,
 	taskSessions = [],
+	lifetimeTaskSessions = [],
 	downtimeSessions,
 	actionItems,
 	commitments,
@@ -222,19 +257,15 @@ export function buildDashboardAnalytics({
 		(total, bucket) => total + bucket.downtimeSeconds,
 		0,
 	);
-	const taskTimeTotals = new Map<string, { title: string; totalSeconds: number }>();
-
-	for (const taskSession of taskSessions) {
-		const existingTotal = taskTimeTotals.get(taskSession.taskId) ?? {
-			title: taskSession.task.title,
-			totalSeconds: 0,
-		};
-
-		existingTotal.totalSeconds += getStoppedDurationSeconds(taskSession, now);
-		taskTimeTotals.set(taskSession.taskId, existingTotal);
-	}
-
-	const totalTaskSeconds = Array.from(taskTimeTotals.values()).reduce(
+	const taskTimeTotals = buildTaskTimeTotals(taskSessions, now);
+	const lifetimeTaskTimeTotals = buildTaskTimeTotals(lifetimeTaskSessions, now, {
+		activeOnly: true,
+	});
+	const totalTaskSeconds = taskTimeTotals.reduce(
+		(total, task) => total + task.totalSeconds,
+		0,
+	);
+	const totalLifetimeTaskSeconds = lifetimeTaskTimeTotals.reduce(
 		(total, task) => total + task.totalSeconds,
 		0,
 	);
@@ -328,6 +359,7 @@ export function buildDashboardAnalytics({
 		completionRate,
 		totalCompletions,
 		totalTaskSeconds,
+		totalLifetimeTaskSeconds,
 		totalDowntimeSeconds,
 		totalCommitmentSeconds,
 		activeTaskCount: activeTasks.length,
@@ -341,12 +373,8 @@ export function buildDashboardAnalytics({
 		taskCompletionTotals: Array.from(taskCompletionTotals.values())
 			.filter((task) => task.count > 0)
 			.sort((a, b) => b.count - a.count || a.title.localeCompare(b.title)),
-		taskTimeTotals: Array.from(taskTimeTotals.values())
-			.filter((task) => task.totalSeconds > 0)
-			.sort(
-				(a, b) =>
-					b.totalSeconds - a.totalSeconds || a.title.localeCompare(b.title),
-			),
+		taskTimeTotals,
+		lifetimeTaskTimeTotals,
 		downtimeCategoryTotals,
 		actionItemSummary: {
 			open: openActionItems,

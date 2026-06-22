@@ -70,6 +70,44 @@ describe("dashboard analytics", () => {
 					stoppedAt: null,
 				},
 			],
+			lifetimeTaskSessions: [
+				{
+					taskId: "task-1",
+					task: {
+						title: "Portfolio",
+						isActive: true,
+					},
+					startedAt: new Date("2026-06-01T13:00:00.000Z"),
+					stoppedAt: new Date("2026-06-01T15:00:00.000Z"),
+				},
+				{
+					taskId: "task-1",
+					task: {
+						title: "Portfolio",
+						isActive: true,
+					},
+					startedAt: new Date("2026-06-16T13:00:00.000Z"),
+					stoppedAt: new Date("2026-06-16T14:30:00.000Z"),
+				},
+				{
+					taskId: "task-2",
+					task: {
+						title: "Gym",
+						isActive: true,
+					},
+					startedAt: new Date("2026-06-16T13:30:00.000Z"),
+					stoppedAt: null,
+				},
+				{
+					taskId: "deleted-task",
+					task: {
+						title: "Deleted task",
+						isActive: false,
+					},
+					startedAt: new Date("2026-06-16T10:00:00.000Z"),
+					stoppedAt: new Date("2026-06-16T20:00:00.000Z"),
+				},
+			],
 			downtimeSessions: [
 				{
 					category: "Sleep",
@@ -162,6 +200,17 @@ describe("dashboard analytics", () => {
 			{
 				title: "Gym",
 				totalSeconds: 1800,
+			},
+		]);
+		expect(analytics.totalLifetimeTaskSeconds).toBe(18_000);
+		expect(analytics.lifetimeTaskTimeTotals).toEqual([
+			{
+				title: "Portfolio",
+				totalSeconds: 12_600,
+			},
+			{
+				title: "Gym",
+				totalSeconds: 5400,
 			},
 		]);
 		expect(analytics.totalDowntimeSeconds).toBe(9000);

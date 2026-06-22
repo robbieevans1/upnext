@@ -2,9 +2,12 @@ import { describe, expect, it, vi } from "vitest";
 import {
 	aggregateRecentCompletionDays,
 	CompletionWithTask,
+	formatTaskTime,
 	getDayHref,
 	getHistoryDayRange,
 	getSelectedDay,
+	getTaskSessionDurationSeconds,
+	getTaskTimeTotalsByTaskId,
 	sortCompletions,
 } from "@/app/history/history-utils";
 
@@ -15,6 +18,7 @@ function completion(
 	return {
 		id,
 		task: {
+			id,
 			title: id,
 			description: null,
 			isMandatory: false,
@@ -133,5 +137,60 @@ describe("history utilities", () => {
 			"later",
 			"health",
 		]);
+	});
+
+	it("sums task session time by task for history cards", () => {
+		const totalsByTaskId = getTaskTimeTotalsByTaskId(
+			[
+				{
+					taskId: "task-1",
+					startedAt: new Date("2026-06-18T14:00:00.000Z"),
+					stoppedAt: new Date("2026-06-18T14:30:00.000Z"),
+				},
+				{
+					taskId: "task-1",
+					startedAt: new Date("2026-06-18T15:00:00.000Z"),
+					stoppedAt: new Date("2026-06-18T15:10:00.000Z"),
+				},
+				{
+					taskId: "task-2",
+					startedAt: new Date("2026-06-18T16:00:00.000Z"),
+					stoppedAt: new Date("2026-06-18T17:05:00.000Z"),
+				},
+			],
+			new Date("2026-06-18T18:00:00.000Z"),
+		);
+
+		expect(totalsByTaskId.get("task-1")).toBe(40 * 60);
+		expect(totalsByTaskId.get("task-2")).toBe(65 * 60);
+	});
+
+	it("uses now for active task sessions and never returns negative duration", () => {
+		expect(
+			getTaskSessionDurationSeconds(
+				{
+					startedAt: new Date("2026-06-18T14:00:00.000Z"),
+					stoppedAt: null,
+				},
+				new Date("2026-06-18T14:25:00.000Z"),
+			),
+		).toBe(25 * 60);
+		expect(
+			getTaskSessionDurationSeconds(
+				{
+					startedAt: new Date("2026-06-18T14:25:00.000Z"),
+					stoppedAt: new Date("2026-06-18T14:00:00.000Z"),
+				},
+				new Date("2026-06-18T14:30:00.000Z"),
+			),
+		).toBe(0);
+	});
+
+	it("formats task time for compact history display", () => {
+		expect(formatTaskTime(0)).toBe("No time tracked");
+		expect(formatTaskTime(10)).toBe("1m");
+		expect(formatTaskTime(35 * 60)).toBe("35m");
+		expect(formatTaskTime(60 * 60)).toBe("1h");
+		expect(formatTaskTime(65 * 60)).toBe("1h 05m");
 	});
 });

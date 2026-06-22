@@ -29,6 +29,7 @@ export default async function DashboardPage() {
 	const [
 		tasks,
 		taskSessions,
+		lifetimeTaskSessions,
 		downtimeSessions,
 		actionItems,
 		commitments,
@@ -70,6 +71,22 @@ export default async function DashboardPage() {
 				task: {
 					select: {
 						title: true,
+					},
+				},
+			},
+		}),
+		prisma.taskSession.findMany({
+			where: {
+				userId: session.user.id,
+				task: {
+					isActive: true,
+				},
+			},
+			include: {
+				task: {
+					select: {
+						title: true,
+						isActive: true,
 					},
 				},
 			},
@@ -130,6 +147,7 @@ export default async function DashboardPage() {
 	const analytics = buildDashboardAnalytics({
 		tasks,
 		taskSessions,
+		lifetimeTaskSessions,
 		downtimeSessions,
 		actionItems,
 		commitments,
@@ -350,6 +368,32 @@ export default async function DashboardPage() {
 								</div>
 							) : (
 								<EmptyState>Start task timers to track task time.</EmptyState>
+							)}
+						</Panel>
+
+						<Panel title="Lifetime Task Time By Task">
+							{analytics.lifetimeTaskTimeTotals.length > 0 ? (
+								<div className="space-y-3">
+									{analytics.lifetimeTaskTimeTotals.slice(0, 8).map((task) => (
+										<HorizontalBar
+											key={task.title}
+											label={task.title}
+											value={formatHours(task.totalSeconds)}
+											percent={
+												analytics.totalLifetimeTaskSeconds === 0
+													? 0
+													: (task.totalSeconds /
+															analytics.totalLifetimeTaskSeconds) *
+														100
+											}
+											colorClass="bg-violet-400"
+										/>
+									))}
+								</div>
+							) : (
+								<EmptyState>
+									Start active task timers to build lifetime totals.
+								</EmptyState>
 							)}
 						</Panel>
 

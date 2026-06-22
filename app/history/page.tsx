@@ -1,13 +1,21 @@
 import AppNav from "@/components/AppNav";
-import { addAppDays, formatAppDate, getAppDateKey, getAppTodayDate } from "@/lib/app-date";
+import {
+	addAppDays,
+	formatAppDate,
+	getAppDateKey,
+	getAppTodayDate,
+} from "@/lib/app-date";
 import {
 	aggregateRecentCompletionDays,
 	CompletionWithTask,
+	formatTaskTime,
 	getDayHref,
 	getHistoryDayRange,
 	getSelectedDay,
+	getTaskTimeTotalsByTaskId,
 	RecentCompletionDay,
 	sortCompletions,
+	TaskSessionForHistory,
 } from "@/app/history/history-utils";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
@@ -59,6 +67,7 @@ async function getCompletionsForDay(
 	return completions.map((completion) => ({
 		id: completion.id,
 		task: {
+			id: completion.task.id,
 			title: completion.task.title,
 			description: completion.task.description,
 			isMandatory: completion.task.isMandatory,
@@ -70,6 +79,28 @@ async function getCompletionsForDay(
 				: null,
 		},
 	}));
+}
+
+async function getTaskSessionsForDay(
+	userId: string,
+	day: Date,
+): Promise<TaskSessionForHistory[]> {
+	const dayRange = getHistoryDayRange(day);
+
+	return prisma.taskSession.findMany({
+		where: {
+			userId,
+			day: {
+				gte: dayRange.start,
+				lt: dayRange.end,
+			},
+		},
+		select: {
+			taskId: true,
+			startedAt: true,
+			stoppedAt: true,
+		},
+	});
 }
 
 async function getRecentCompletionDays(
@@ -133,13 +164,16 @@ export default async function HistoryPage({ searchParams }: HistoryPageProps) {
 	const nextDay = addAppDays(selectedDay, 1);
 	const canGoNext = nextDay.getTime() <= today.getTime();
 
-	const [completions, recentDays, dailyCheckResults] = await Promise.all([
-		getCompletionsForDay(session.user.id, selectedDay),
-		getRecentCompletionDays(session.user.id),
-		getDailyCheckResultsForDay(session.user.id, selectedDay),
-	]);
+	const [completions, recentDays, dailyCheckResults, taskSessions] =
+		await Promise.all([
+			getCompletionsForDay(session.user.id, selectedDay),
+			getRecentCompletionDays(session.user.id),
+			getDailyCheckResultsForDay(session.user.id, selectedDay),
+			getTaskSessionsForDay(session.user.id, selectedDay),
+		]);
 
 	const sortedCompletions = sortCompletions(completions);
+	const taskTimeTotalsByTaskId = getTaskTimeTotalsByTaskId(taskSessions);
 	const selectedDayKey = getAppDateKey(selectedDay);
 
 	return (
@@ -306,6 +340,15 @@ export default async function HistoryPage({ searchParams }: HistoryPageProps) {
 
 												<p className="mt-2 text-sm text-slate-500">
 													{completion.task.group?.name ?? "Ungrouped"}
+												</p>
+
+												<p className="mt-2 text-sm font-medium text-sky-300">
+													Task time:{" "}
+													{formatTaskTime(
+														taskTimeTotalsByTaskId.get(
+															completion.task.id,
+														) ?? 0,
+													)}
 												</p>
 											</div>
 
