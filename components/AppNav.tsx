@@ -78,9 +78,12 @@ export default function AppNav() {
 	}
 
 	return (
-		<nav className="border-b border-slate-800 bg-slate-950 px-6 py-4 text-white">
-			<div className="mx-auto flex max-w-5xl items-center justify-between gap-3">
-				<Link href="/today" className="text-lg font-bold text-sky-400">
+		<nav className="border-b border-slate-800 bg-slate-950 px-4 py-4 text-white sm:px-6">
+			<div className="mx-auto flex w-full max-w-5xl items-center justify-between gap-3">
+				<Link
+					href="/today"
+					className="min-w-0 truncate text-lg font-bold text-sky-400"
+				>
 					UpNext
 				</Link>
 
@@ -137,7 +140,7 @@ export default function AppNav() {
 					aria-expanded={isMenuOpen}
 					aria-controls="mobile-navigation"
 					onClick={() => setIsMenuOpen(true)}
-					className="flex h-10 w-10 items-center justify-center rounded-lg border border-slate-700 text-slate-200 transition hover:border-sky-500 hover:text-sky-300 lg:hidden"
+					className="ml-auto flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-slate-700 text-slate-200 transition hover:border-sky-500 hover:text-sky-300 lg:hidden"
 				>
 					<span className="flex flex-col gap-1.5" aria-hidden="true">
 						<span className="block h-0.5 w-5 rounded-full bg-current" />
