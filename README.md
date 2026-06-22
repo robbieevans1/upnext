@@ -15,10 +15,12 @@ The app organizes recurring work into a daily stack. Mandatory tasks stay visibl
 - Subtasks that can be completed independently and move down the task card
 - Task playbooks for tips, steps, mindset cues, and mistakes to avoid
 - Large editable playbook modal available from task cards and task management
+- Highlighted Today playbook buttons when a task already has playbook notes
 - Topics page for reusable notes, reminders, current focus areas, and general playbooks
 - Full-page topic editor for long-form notes
 - One-off action items for async errands or tasks outside the recurring stack
 - Scheduled commitments for events, appointments, errands, recurring obligations, and time-based plans
+- Weekly recurring commitments that can repeat on one day, weekdays, every day, or any selected set of days
 - Daily Review checks for next-day self-audits like calorie limits, sleep, spending, and nutrition goals
 - Complete Day flow for starting tomorrow's stack early without marking unfinished tasks complete
 - Dashboard with completion trends, task-time totals, downtime charts, scheduled load, daily review results, action item status, and playbook coverage
@@ -102,7 +104,7 @@ And a playbook:
 - Keep answers concise and positive
 ```
 
-Playbooks can be added or edited from the Tasks page. Task cards show a Playbook button that opens the notes in a large modal without navigating away from the current page. Task playbooks can also be edited and saved directly from that modal on Today, so useful notes can be improved at the moment they are needed.
+Playbooks can be added or edited from the Tasks page. Task cards show a Playbook button that opens the notes in a large modal without navigating away from the current page. On Today, task Playbook buttons are highlighted when notes already exist, making tasks with execution guidance easier to spot. Task playbooks can also be edited and saved directly from that modal on Today, so useful notes can be improved at the moment they are needed.
 
 ## Starting Tomorrow Early
 
@@ -165,7 +167,7 @@ Grocery pickup
 Go to church every Sunday at 11 AM
 ```
 
-They can include a date, optional start and end time, location, description, and playbook. Commitments can also repeat weekly on a selected weekday. For example, a recurring `Go to church` commitment can appear in Today every Sunday until the series is changed or canceled.
+They can include a date, optional start and end time, location, description, and playbook. Commitments can also repeat weekly on one or more selected days. For example, a recurring `Go to church` commitment can appear in Today every Sunday, while a `Team standup` can repeat Monday-Friday and an `Evening shutdown` can repeat every day until the series is changed or canceled.
 
 Recurring commitment completions are stored per occurrence, so completing this Sunday's event does not complete the whole series.
 
@@ -314,7 +316,7 @@ The seed includes realistic coverage for screenshots and QA:
 - Mandatory tasks, rotating grouped tasks, task playbooks, and subtasks
 - 21 days of task completions, task sessions, subtask completions, and downtime sessions
 - Action items with open, overdue, completed, and canceled states
-- One-time and weekly recurring commitments with occurrence completions
+- One-time, single-day weekly, weekday, and every-day recurring commitments with occurrence completions
 - Daily Review checks and historical Yes/No/Skip/Unsure results
 - Long-form Topics for the full-page topic editor
 
