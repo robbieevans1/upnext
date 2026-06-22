@@ -9,7 +9,11 @@ import {
 	completeCommitmentOccurrence,
 } from "@/app/actions/commitments";
 import { completeSubtask, undoTodayCompletion } from "@/app/actions/tasks";
-import { getAppDayOfWeek, getWeekdayLabel } from "@/lib/commitments";
+import {
+	getAppDayOfWeek,
+	getCommitmentRecurrenceDays,
+	getWeekdayListLabel,
+} from "@/lib/commitments";
 import { prisma } from "@/lib/prisma";
 import { CommitmentRecurrence, Prisma } from "@prisma/client";
 
@@ -153,6 +157,7 @@ export default async function TodayPage() {
 	const effectiveDay = await getUserEffectiveTodayDate(session.user.id);
 	const today = effectiveDay.today;
 	const yesterday = addAppDays(today, -1);
+	const todayDayOfWeek = getAppDayOfWeek(today);
 
 	const groups = await prisma.taskGroup.findMany({
 		where: {
@@ -228,7 +233,19 @@ export default async function TodayPage() {
 				where: {
 					userId: session.user.id,
 					recurrence: CommitmentRecurrence.WEEKLY,
-					recurrenceDayOfWeek: getAppDayOfWeek(today),
+					OR: [
+						{
+							recurrenceDays: {
+								has: todayDayOfWeek,
+							},
+						},
+						{
+							recurrenceDays: {
+								isEmpty: true,
+							},
+							recurrenceDayOfWeek: todayDayOfWeek,
+						},
+					],
 					day: {
 						lte: today,
 					},
@@ -633,7 +650,7 @@ function CommitmentRow({ commitment }: { commitment: TodayCommitment }) {
 					{commitment.isRecurringOccurrence && (
 						<p className="mt-1 text-xs font-medium text-indigo-200/70">
 							Repeats weekly on{" "}
-							{getWeekdayLabel(commitment.recurrenceDayOfWeek)}
+							{getWeekdayListLabel(getCommitmentRecurrenceDays(commitment))}
 						</p>
 					)}
 				</div>

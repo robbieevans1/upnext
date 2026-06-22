@@ -60,6 +60,7 @@ describe("commitment server actions", () => {
 				endsAt: new Date("2026-06-16T14:15:00.000Z"),
 				recurrence: "NONE",
 				recurrenceDayOfWeek: null,
+				recurrenceDays: [],
 				userId: "user-1",
 			},
 		});
@@ -78,7 +79,7 @@ describe("commitment server actions", () => {
 				startTime: "11:00",
 				endTime: "",
 				isWeekly: "on",
-				recurrenceDayOfWeek: "0",
+				recurrenceDays: "0",
 			}),
 		);
 
@@ -93,8 +94,54 @@ describe("commitment server actions", () => {
 				endsAt: null,
 				recurrence: "WEEKLY",
 				recurrenceDayOfWeek: 0,
+				recurrenceDays: [0],
 				userId: "user-1",
 			},
+		});
+	});
+
+	it("creates weekly recurring commitments for multiple selected weekdays", async () => {
+		const { createCommitment } = await import("@/app/actions/commitments");
+
+		await createCommitment(
+			formDataFrom({
+				title: "Morning class",
+				day: "2026-06-22",
+				startTime: "07:00",
+				isWeekly: "on",
+				recurrenceDays: ["1", "3", "5"],
+			}),
+		);
+
+		expect(prisma.commitment.create).toHaveBeenCalledWith({
+			data: expect.objectContaining({
+				title: "Morning class",
+				recurrence: "WEEKLY",
+				recurrenceDayOfWeek: 1,
+				recurrenceDays: [1, 3, 5],
+				userId: "user-1",
+			}),
+		});
+	});
+
+	it("supports legacy single weekday recurring commitment submissions", async () => {
+		const { createCommitment } = await import("@/app/actions/commitments");
+
+		await createCommitment(
+			formDataFrom({
+				title: "Legacy church",
+				day: "2026-06-21",
+				isWeekly: "on",
+				recurrenceDayOfWeek: "0",
+			}),
+		);
+
+		expect(prisma.commitment.create).toHaveBeenCalledWith({
+			data: expect.objectContaining({
+				recurrence: "WEEKLY",
+				recurrenceDayOfWeek: 0,
+				recurrenceDays: [0],
+			}),
 		});
 	});
 
@@ -106,7 +153,7 @@ describe("commitment server actions", () => {
 				title: "Go to church",
 				day: "2026-06-21",
 				isWeekly: "on",
-				recurrenceDayOfWeek: "9",
+				recurrenceDays: "9",
 			}),
 		);
 
@@ -157,6 +204,7 @@ describe("commitment server actions", () => {
 				endsAt: null,
 				recurrence: "NONE",
 				recurrenceDayOfWeek: null,
+				recurrenceDays: [],
 			},
 		});
 	});
@@ -171,7 +219,7 @@ describe("commitment server actions", () => {
 				day: "2026-06-21",
 				startTime: "11:00",
 				isWeekly: "on",
-				recurrenceDayOfWeek: "0",
+				recurrenceDays: ["1", "3", "5"],
 			}),
 		);
 
@@ -189,7 +237,8 @@ describe("commitment server actions", () => {
 				startsAt: new Date("2026-06-21T15:00:00.000Z"),
 				endsAt: null,
 				recurrence: "WEEKLY",
-				recurrenceDayOfWeek: 0,
+				recurrenceDayOfWeek: 1,
+				recurrenceDays: [1, 3, 5],
 			},
 		});
 	});
@@ -241,6 +290,7 @@ describe("commitment server actions", () => {
 		prisma.commitment.findFirst.mockResolvedValue({
 			id: "commitment-1",
 			recurrenceDayOfWeek: 0,
+			recurrenceDays: [0, 3],
 		});
 		const { completeCommitmentOccurrence } = await import(
 			"@/app/actions/commitments"
@@ -262,6 +312,7 @@ describe("commitment server actions", () => {
 			select: {
 				id: true,
 				recurrenceDayOfWeek: true,
+				recurrenceDays: true,
 			},
 		});
 		expect(prisma.commitmentOccurrenceCompletion.upsert).toHaveBeenCalledWith({
@@ -285,6 +336,7 @@ describe("commitment server actions", () => {
 		prisma.commitment.findFirst.mockResolvedValue({
 			id: "commitment-1",
 			recurrenceDayOfWeek: 1,
+			recurrenceDays: [1, 3, 5],
 		});
 		const { completeCommitmentOccurrence } = await import(
 			"@/app/actions/commitments"
@@ -293,6 +345,21 @@ describe("commitment server actions", () => {
 		await completeCommitmentOccurrence("commitment-1", "2026-06-21");
 
 		expect(prisma.commitmentOccurrenceCompletion.upsert).not.toHaveBeenCalled();
+	});
+
+	it("completes recurring occurrences using the legacy weekday fallback", async () => {
+		prisma.commitment.findFirst.mockResolvedValue({
+			id: "commitment-1",
+			recurrenceDayOfWeek: 0,
+			recurrenceDays: [],
+		});
+		const { completeCommitmentOccurrence } = await import(
+			"@/app/actions/commitments"
+		);
+
+		await completeCommitmentOccurrence("commitment-1", "2026-06-21");
+
+		expect(prisma.commitmentOccurrenceCompletion.upsert).toHaveBeenCalled();
 	});
 
 	it("redirects unauthenticated users before creating commitments", async () => {

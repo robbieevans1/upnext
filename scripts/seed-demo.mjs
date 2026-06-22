@@ -569,6 +569,8 @@ async function createActionItems(today) {
 
 async function createCommitments(today) {
 	const todayDayOfWeek = getAppDayOfWeek(today);
+	const weekdays = [1, 2, 3, 4, 5];
+	const everyDay = [0, 1, 2, 3, 4, 5, 6];
 	const commitments = [
 		{
 			id: "demo-commitment-standup",
@@ -581,8 +583,9 @@ async function createCommitments(today) {
 			endsAt: atAppTime(today, 9, 50),
 			completedAt: null,
 			canceledAt: null,
-			recurrence: "NONE",
-			recurrenceDayOfWeek: null,
+			recurrence: "WEEKLY",
+			recurrenceDayOfWeek: 1,
+			recurrenceDays: weekdays,
 		},
 		{
 			id: "demo-commitment-work-function",
@@ -598,6 +601,7 @@ async function createCommitments(today) {
 			canceledAt: null,
 			recurrence: "NONE",
 			recurrenceDayOfWeek: null,
+			recurrenceDays: [],
 		},
 		{
 			id: "demo-commitment-weekly-planning",
@@ -613,6 +617,7 @@ async function createCommitments(today) {
 			canceledAt: null,
 			recurrence: "WEEKLY",
 			recurrenceDayOfWeek: todayDayOfWeek,
+			recurrenceDays: [todayDayOfWeek],
 		},
 		{
 			id: "demo-commitment-church",
@@ -627,6 +632,23 @@ async function createCommitments(today) {
 			canceledAt: null,
 			recurrence: "WEEKLY",
 			recurrenceDayOfWeek: 0,
+			recurrenceDays: [0],
+		},
+		{
+			id: "demo-commitment-evening-shutdown",
+			title: "Evening shutdown",
+			description: "Close loops and choose tomorrow's first task.",
+			playbook:
+				"Check calendar, clear loose notes, set the next task, and stop work on purpose.",
+			location: "Home",
+			day: addAppDays(today, -7),
+			startsAt: atAppTime(addAppDays(today, -7), 21, 0),
+			endsAt: atAppTime(addAppDays(today, -7), 21, 15),
+			completedAt: null,
+			canceledAt: null,
+			recurrence: "WEEKLY",
+			recurrenceDayOfWeek: 0,
+			recurrenceDays: everyDay,
 		},
 		{
 			id: "demo-commitment-grocery",
@@ -641,6 +663,7 @@ async function createCommitments(today) {
 			canceledAt: null,
 			recurrence: "NONE",
 			recurrenceDayOfWeek: null,
+			recurrenceDays: [],
 		},
 		{
 			id: "demo-commitment-coffee",
@@ -655,6 +678,7 @@ async function createCommitments(today) {
 			canceledAt: null,
 			recurrence: "NONE",
 			recurrenceDayOfWeek: null,
+			recurrenceDays: [],
 		},
 		{
 			id: "demo-commitment-dentist",
@@ -669,6 +693,7 @@ async function createCommitments(today) {
 			canceledAt: atAppTime(addAppDays(today, -6), 14, 0),
 			recurrence: "NONE",
 			recurrenceDayOfWeek: null,
+			recurrenceDays: [],
 		},
 		{
 			id: "demo-commitment-interview",
@@ -684,6 +709,7 @@ async function createCommitments(today) {
 			canceledAt: null,
 			recurrence: "NONE",
 			recurrenceDayOfWeek: null,
+			recurrenceDays: [],
 		},
 		{
 			id: "demo-commitment-family-call",
@@ -699,6 +725,7 @@ async function createCommitments(today) {
 			canceledAt: null,
 			recurrence: "WEEKLY",
 			recurrenceDayOfWeek: getAppDayOfWeek(addAppDays(today, -3)),
+			recurrenceDays: [getAppDayOfWeek(addAppDays(today, -3))],
 		},
 	];
 

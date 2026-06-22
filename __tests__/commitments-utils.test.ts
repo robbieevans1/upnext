@@ -1,8 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
+	getCommitmentRecurrenceDays,
 	getAppDayOfWeek,
 	getWeekdayLabel,
+	getWeekdayListLabel,
 	parseWeekday,
+	parseWeekdays,
 } from "@/lib/commitments";
 
 describe("commitment recurrence utilities", () => {
@@ -19,9 +22,41 @@ describe("commitment recurrence utilities", () => {
 		expect(parseWeekday(null)).toBeNull();
 	});
 
+	it("parses multiple weekday form values in sorted unique order", () => {
+		expect(parseWeekdays(["5", "1", "5", "bad", "3"])).toEqual([1, 3, 5]);
+		expect(parseWeekdays(["7", "Sunday"])).toEqual([]);
+	});
+
 	it("returns labels for valid weekdays", () => {
 		expect(getWeekdayLabel(0)).toBe("Sunday");
 		expect(getWeekdayLabel(6)).toBe("Saturday");
 		expect(getWeekdayLabel(null)).toBeUndefined();
+	});
+
+	it("summarizes common weekday sets", () => {
+		expect(getWeekdayListLabel([0, 1, 2, 3, 4, 5, 6])).toBe("Every day");
+		expect(getWeekdayListLabel([1, 2, 3, 4, 5])).toBe("Monday-Friday");
+		expect(getWeekdayListLabel([0, 3, 5])).toBe("Sunday, Wednesday, Friday");
+	});
+
+	it("falls back to the legacy recurrence weekday when needed", () => {
+		expect(
+			getCommitmentRecurrenceDays({
+				recurrenceDays: [1, 3, 5],
+				recurrenceDayOfWeek: 0,
+			}),
+		).toEqual([1, 3, 5]);
+		expect(
+			getCommitmentRecurrenceDays({
+				recurrenceDays: [],
+				recurrenceDayOfWeek: 0,
+			}),
+		).toEqual([0]);
+		expect(
+			getCommitmentRecurrenceDays({
+				recurrenceDays: [],
+				recurrenceDayOfWeek: null,
+			}),
+		).toEqual([]);
 	});
 });
