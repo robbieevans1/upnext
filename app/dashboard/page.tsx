@@ -12,6 +12,10 @@ import { connection } from "next/server";
 
 const DASHBOARD_DAYS = 14;
 
+function formatShortDateLabel(label: string) {
+	return label.replace(/\/20(\d{2})$/, "/$1");
+}
+
 export default async function DashboardPage() {
 	await connection();
 
@@ -177,19 +181,21 @@ export default async function DashboardPage() {
 		<>
 			<AppNav />
 
-			<main className="min-h-screen bg-slate-950 px-6 py-10 text-white">
-				<section className="mx-auto max-w-5xl">
+			<main className="min-h-screen overflow-x-hidden bg-slate-950 px-4 py-6 text-white sm:px-6 sm:py-10">
+				<section className="mx-auto min-w-0 max-w-5xl">
 					<p className="mb-2 text-sm font-medium text-sky-400">Analytics</p>
 
-					<h1 className="text-4xl font-bold tracking-tight">Dashboard</h1>
+					<h1 className="text-3xl font-bold tracking-tight sm:text-4xl">
+						Dashboard
+					</h1>
 
-					<p className="mt-3 max-w-2xl text-slate-400">
+					<p className="mt-3 max-w-2xl text-sm leading-6 text-slate-400 sm:text-base">
 						Review the last {DASHBOARD_DAYS} app days of task completion, time
 						away from improvement work, scheduled load, action items, and
 						playbook coverage.
 					</p>
 
-					<div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+					<div className="mt-6 grid min-w-0 gap-3 sm:mt-8 sm:grid-cols-2 sm:gap-4 lg:grid-cols-4">
 						<MetricTile
 							label="Task Completion Rate"
 							value={`${analytics.completionRate}%`}
@@ -217,30 +223,35 @@ export default async function DashboardPage() {
 						/>
 					</div>
 
-					<div className="mt-8 grid gap-6 lg:grid-cols-[1.3fr_1fr]">
+					<div className="mt-6 grid min-w-0 gap-5 sm:mt-8 sm:gap-6 lg:grid-cols-[1.3fr_1fr]">
 						<Panel title="Daily Completions">
-							<div className="flex h-56 items-end gap-2">
-								{analytics.dayBuckets.map((bucket) => (
-									<div
-										key={bucket.dayKey}
-										className="flex min-w-0 flex-1 flex-col items-center gap-2"
-									>
-										<div className="flex h-40 w-full items-end rounded-lg bg-slate-950 px-1">
-											<div
-												className="w-full rounded-md bg-sky-500"
-												style={{
-													height: `${Math.max(6, (bucket.completions / maxCompletions) * 100)}%`,
-												}}
-											/>
+							<div className="-mx-1 overflow-x-auto pb-2">
+								<div className="flex h-52 min-w-[48rem] items-end gap-3 px-1 sm:h-56 sm:min-w-0 sm:gap-2">
+									{analytics.dayBuckets.map((bucket) => (
+										<div
+											key={bucket.dayKey}
+											className="flex min-w-0 flex-1 flex-col items-center gap-2"
+										>
+											<div className="flex h-36 w-full items-end rounded-lg bg-slate-950 px-1 sm:h-40">
+												<div
+													className="w-full rounded-md bg-sky-500"
+													style={{
+														height: `${Math.max(6, (bucket.completions / maxCompletions) * 100)}%`,
+													}}
+												/>
+											</div>
+											<p className="text-xs font-medium text-slate-300">
+												{bucket.completions}
+											</p>
+											<p className="max-w-14 truncate text-center text-[11px] text-slate-500 sm:max-w-full">
+												<span className="sm:hidden">
+													{formatShortDateLabel(bucket.label)}
+												</span>
+												<span className="hidden sm:inline">{bucket.label}</span>
+											</p>
 										</div>
-										<p className="text-xs font-medium text-slate-300">
-											{bucket.completions}
-										</p>
-										<p className="truncate text-[11px] text-slate-500">
-											{bucket.label}
-										</p>
-									</div>
-								))}
+									))}
+								</div>
 							</div>
 						</Panel>
 
@@ -269,7 +280,7 @@ export default async function DashboardPage() {
 						</Panel>
 					</div>
 
-					<div className="mt-6 grid gap-6 lg:grid-cols-2">
+					<div className="mt-5 grid min-w-0 gap-5 sm:mt-6 sm:gap-6 lg:grid-cols-2">
 						<Panel title="Daily Review Checks">
 							{analytics.dailyCheckTotals.length > 0 ? (
 								<div className="space-y-4">
@@ -347,7 +358,7 @@ export default async function DashboardPage() {
 						</Panel>
 					</div>
 
-					<div className="mt-6 grid gap-6 lg:grid-cols-[1fr_1fr]">
+					<div className="mt-5 grid min-w-0 gap-5 sm:mt-6 sm:gap-6 lg:grid-cols-[1fr_1fr]">
 						<Panel title="Task Time By Task">
 							{analytics.taskTimeTotals.length > 0 ? (
 								<div className="space-y-3">
@@ -486,10 +497,12 @@ function MetricTile({
 	detail: string;
 }) {
 	return (
-		<div className="rounded-xl border border-slate-800 bg-slate-900 p-5">
+		<div className="min-w-0 rounded-xl border border-slate-800 bg-slate-900 p-4 sm:p-5">
 			<p className="text-sm font-medium text-slate-400">{label}</p>
-			<p className="mt-3 text-3xl font-bold text-slate-50">{value}</p>
-			<p className="mt-2 text-sm text-slate-500">{detail}</p>
+			<p className="mt-3 break-words text-2xl font-bold text-slate-50 sm:text-3xl">
+				{value}
+			</p>
+			<p className="mt-2 text-sm leading-6 text-slate-500">{detail}</p>
 		</div>
 	);
 }
@@ -505,9 +518,11 @@ function Panel({
 }) {
 	return (
 		<section
-			className={`rounded-xl border border-slate-800 bg-slate-900 p-5 ${className}`}
+			className={`min-w-0 overflow-hidden rounded-xl border border-slate-800 bg-slate-900 p-4 sm:p-5 ${className}`}
 		>
-			<h2 className="mb-5 text-lg font-semibold text-slate-100">{title}</h2>
+			<h2 className="mb-4 break-words text-base font-semibold text-slate-100 sm:mb-5 sm:text-lg">
+				{title}
+			</h2>
 			{children}
 		</section>
 	);
@@ -523,9 +538,11 @@ function SmallStat({
 	accent?: string;
 }) {
 	return (
-		<div className="rounded-xl border border-slate-800 bg-slate-950 p-4">
+		<div className="min-w-0 rounded-xl border border-slate-800 bg-slate-950 p-4">
 			<p className="text-sm text-slate-400">{label}</p>
-			<p className={`mt-2 text-2xl font-bold ${accent}`}>{value}</p>
+			<p className={`mt-2 break-words text-2xl font-bold ${accent}`}>
+				{value}
+			</p>
 		</div>
 	);
 }
@@ -542,9 +559,11 @@ function HorizontalBar({
 	colorClass: string;
 }) {
 	return (
-		<div>
-			<div className="mb-2 flex items-center justify-between gap-3 text-sm">
-				<span className="truncate font-medium text-slate-300">{label}</span>
+		<div className="min-w-0">
+			<div className="mb-2 flex min-w-0 items-center justify-between gap-3 text-sm">
+				<span className="min-w-0 truncate font-medium text-slate-300">
+					{label}
+				</span>
 				<span className="shrink-0 text-slate-500">{value}</span>
 			</div>
 			<div className="h-3 overflow-hidden rounded-full bg-slate-950">
@@ -559,7 +578,7 @@ function HorizontalBar({
 
 function EmptyState({ children }: { children: React.ReactNode }) {
 	return (
-		<div className="rounded-xl border border-slate-800 bg-slate-950 p-4 text-sm text-slate-400">
+		<div className="min-w-0 rounded-xl border border-slate-800 bg-slate-950 p-4 text-sm leading-6 text-slate-400">
 			{children}
 		</div>
 	);
