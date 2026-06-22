@@ -83,6 +83,7 @@ export default function TaskTimerControls({
 				taskId={taskId}
 				taskTitle={taskTitle}
 				playbook={playbook}
+				highlightWhenHasPlaybook
 			/>
 
 			{isThisTaskRunning && (

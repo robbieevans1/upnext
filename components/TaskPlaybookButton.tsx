@@ -8,12 +8,14 @@ type TaskPlaybookButtonProps = {
 	taskId?: string;
 	taskTitle: string;
 	playbook: string | null;
+	highlightWhenHasPlaybook?: boolean;
 };
 
 export default function TaskPlaybookButton({
 	taskId,
 	taskTitle,
 	playbook,
+	highlightWhenHasPlaybook = false,
 }: TaskPlaybookButtonProps) {
 	const router = useRouter();
 	const [isOpen, setIsOpen] = useState(false);
@@ -22,6 +24,10 @@ export default function TaskPlaybookButton({
 	const titleId = useId();
 	const hasPlaybook = Boolean(playbook?.trim());
 	const canEdit = Boolean(taskId);
+	const buttonClassName =
+		highlightWhenHasPlaybook && hasPlaybook
+			? "rounded-lg border border-amber-400/70 bg-amber-400/10 px-4 py-2 text-sm font-medium text-amber-100 transition hover:border-amber-300 hover:bg-amber-400/15 hover:text-amber-50"
+			: "rounded-lg border border-slate-700 px-4 py-2 text-sm font-medium text-slate-200 transition hover:border-sky-500 hover:text-sky-300";
 
 	function handleOpen() {
 		setPlaybookText(playbook ?? "");
@@ -41,7 +47,7 @@ export default function TaskPlaybookButton({
 			<button
 				type="button"
 				onClick={handleOpen}
-				className="rounded-lg border border-slate-700 px-4 py-2 text-sm font-medium text-slate-200 transition hover:border-sky-500 hover:text-sky-300"
+				className={buttonClassName}
 			>
 				Playbook
 			</button>
