@@ -40,6 +40,35 @@ describe("TaskPlaybookButton", () => {
 		expect(dialog).toHaveTextContent("Ask questions.");
 	});
 
+	it("highlights the button when requested and playbook notes exist", () => {
+		const { rerender } = render(
+			<TaskPlaybookButton
+				taskTitle="Go to work function"
+				playbook="Stand tall."
+				highlightWhenHasPlaybook
+			/>,
+		);
+
+		expect(screen.getByRole("button", { name: "Playbook" })).toHaveClass(
+			"border-amber-400/70",
+			"bg-amber-400/10",
+			"text-amber-100",
+		);
+
+		rerender(
+			<TaskPlaybookButton
+				taskTitle="Go to work function"
+				playbook="   "
+				highlightWhenHasPlaybook
+			/>,
+		);
+
+		expect(screen.getByRole("button", { name: "Playbook" })).toHaveClass(
+			"border-slate-700",
+			"text-slate-200",
+		);
+	});
+
 	it("edits and saves task playbook notes when a task id is provided", async () => {
 		render(
 			<TaskPlaybookButton
