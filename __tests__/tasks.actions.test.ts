@@ -18,6 +18,13 @@ const prisma = {
 		deleteMany: vi.fn(),
 		upsert: vi.fn(),
 	},
+	taskSession: {
+		create: vi.fn(),
+		delete: vi.fn((args) => args),
+		findFirst: vi.fn(),
+		findMany: vi.fn(),
+		update: vi.fn((args) => args),
+	},
 	taskSubtask: {
 		count: vi.fn(),
 		create: vi.fn(),
@@ -59,6 +66,8 @@ describe("task server actions", () => {
 		vi.clearAllMocks();
 		vi.useRealTimers();
 		prisma.dayStartOverride.findUnique.mockResolvedValue(null);
+		prisma.taskSession.findFirst.mockResolvedValue(null);
+		prisma.taskSession.findMany.mockResolvedValue([]);
 		getServerSession.mockResolvedValue({
 			user: {
 				id: "user-1",
@@ -324,6 +333,127 @@ describe("task server actions", () => {
 		});
 		expect(revalidatePath).toHaveBeenCalledWith("/today");
 		expect(revalidatePath).toHaveBeenCalledWith("/tasks");
+	});
+
+	it("adds adjustment time to a completed task for the current app day", async () => {
+		vi.useFakeTimers();
+		vi.setSystemTime(new Date("2026-06-15T15:30:00.000Z"));
+		prisma.task.findFirst.mockResolvedValue({ id: "task-1" });
+		prisma.taskSession.findMany.mockResolvedValue([
+			{
+				id: "session-1",
+				startedAt: new Date("2026-06-15T13:00:00.000Z"),
+				stoppedAt: new Date("2026-06-15T13:30:00.000Z"),
+			},
+		]);
+		const { adjustCompletedTaskTime } = await import("@/app/actions/tasks");
+
+		await adjustCompletedTaskTime(
+			formDataFrom({
+				taskId: "task-1",
+				totalMinutes: "45",
+			}),
+		);
+
+		expect(prisma.task.findFirst).toHaveBeenCalledWith({
+			where: {
+				id: "task-1",
+				userId: "user-1",
+				isActive: true,
+				completions: {
+					some: {
+						completedOn: new Date("2026-06-15T04:00:00.000Z"),
+					},
+				},
+			},
+			select: {
+				id: true,
+			},
+		});
+		expect(prisma.taskSession.create).toHaveBeenCalledWith({
+			data: {
+				taskId: "task-1",
+				userId: "user-1",
+				day: new Date("2026-06-15T04:00:00.000Z"),
+				startedAt: new Date("2026-06-15T04:00:00.000Z"),
+				stoppedAt: new Date("2026-06-15T04:15:00.000Z"),
+			},
+		});
+		expect(revalidatePath).toHaveBeenCalledWith("/dashboard");
+		expect(revalidatePath).toHaveBeenCalledWith("/history");
+	});
+
+	it("reduces completed task time by trimming and deleting sessions", async () => {
+		vi.useFakeTimers();
+		vi.setSystemTime(new Date("2026-06-15T15:30:00.000Z"));
+		prisma.task.findFirst.mockResolvedValue({ id: "task-1" });
+		prisma.taskSession.findMany.mockResolvedValue([
+			{
+				id: "session-1",
+				startedAt: new Date("2026-06-15T13:00:00.000Z"),
+				stoppedAt: new Date("2026-06-15T13:30:00.000Z"),
+			},
+			{
+				id: "session-2",
+				startedAt: new Date("2026-06-15T14:00:00.000Z"),
+				stoppedAt: new Date("2026-06-15T14:20:00.000Z"),
+			},
+		]);
+		const { adjustCompletedTaskTime } = await import("@/app/actions/tasks");
+
+		await adjustCompletedTaskTime(
+			formDataFrom({
+				taskId: "task-1",
+				totalMinutes: "20",
+			}),
+		);
+
+		expect(prisma.$transaction).toHaveBeenCalledWith([
+			{
+				where: {
+					id: "session-2",
+				},
+			},
+			{
+				where: {
+					id: "session-1",
+				},
+				data: {
+					stoppedAt: new Date("2026-06-15T13:20:00.000Z"),
+				},
+			},
+		]);
+	});
+
+	it("does not adjust time for tasks that are not completed today", async () => {
+		prisma.task.findFirst.mockResolvedValue(null);
+		const { adjustCompletedTaskTime } = await import("@/app/actions/tasks");
+
+		await adjustCompletedTaskTime(
+			formDataFrom({
+				taskId: "task-1",
+				totalMinutes: "45",
+			}),
+		);
+
+		expect(prisma.taskSession.create).not.toHaveBeenCalled();
+		expect(prisma.taskSession.findMany).not.toHaveBeenCalled();
+	});
+
+	it("does not adjust time while that task timer is running", async () => {
+		prisma.task.findFirst.mockResolvedValue({ id: "task-1" });
+		prisma.taskSession.findFirst.mockResolvedValue({ id: "active-session" });
+		const { adjustCompletedTaskTime } = await import("@/app/actions/tasks");
+
+		await adjustCompletedTaskTime(
+			formDataFrom({
+				taskId: "task-1",
+				totalMinutes: "45",
+			}),
+		);
+
+		expect(prisma.taskSession.create).not.toHaveBeenCalled();
+		expect(prisma.taskSession.findMany).not.toHaveBeenCalled();
 	});
 
 	it("does not move tasks into groups owned by another user", async () => {
