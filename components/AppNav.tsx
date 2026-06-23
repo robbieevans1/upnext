@@ -45,6 +45,10 @@ const navGroups = [
 				label: "Time",
 			},
 			{
+				href: "/nutrition",
+				label: "Nutrition",
+			},
+			{
 				href: "/history",
 				label: "History",
 			},
@@ -56,6 +60,10 @@ const navGroups = [
 			{
 				href: "/tools/counter",
 				label: "Counter",
+			},
+			{
+				href: "/announcements",
+				label: "Announcements",
 			},
 		],
 	},

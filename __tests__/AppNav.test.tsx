@@ -50,6 +50,10 @@ describe("AppNav", () => {
 			"href",
 			"/downtime",
 		);
+		expect(screen.getByRole("link", { name: "Nutrition" })).toHaveAttribute(
+			"href",
+			"/nutrition",
+		);
 		expect(screen.getByRole("link", { name: "History" })).toHaveAttribute(
 			"href",
 			"/history",
@@ -57,6 +61,10 @@ describe("AppNav", () => {
 		expect(screen.getByRole("link", { name: "Counter" })).toHaveAttribute(
 			"href",
 			"/tools/counter",
+		);
+		expect(screen.getByRole("link", { name: "Announcements" })).toHaveAttribute(
+			"href",
+			"/announcements",
 		);
 		expect(screen.getByRole("link", { name: "About" })).toHaveAttribute(
 			"href",
@@ -101,6 +109,9 @@ describe("AppNav", () => {
 			"/topics",
 		);
 		expect(
+			within(menu).getByRole("link", { name: "Nutrition" }),
+		).toHaveAttribute("href", "/nutrition");
+		expect(
 			within(menu).getByRole("link", { name: "Schedule" }),
 		).toHaveAttribute("href", "/commitments");
 		expect(within(menu).getByRole("link", { name: "History" })).toHaveAttribute(
@@ -111,6 +122,9 @@ describe("AppNav", () => {
 			"href",
 			"/tools/counter",
 		);
+		expect(
+			within(menu).getByRole("link", { name: "Announcements" }),
+		).toHaveAttribute("href", "/announcements");
 		expect(within(menu).getByText("Plan")).toBeInTheDocument();
 		expect(within(menu).getByText("Track")).toBeInTheDocument();
 		expect(within(menu).getByText("Tools")).toBeInTheDocument();
