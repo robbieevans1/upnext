@@ -16,6 +16,15 @@ function formatShortDateLabel(label: string) {
 	return label.replace(/\/20(\d{2})$/, "/$1");
 }
 
+function getStackedDateLabel(label: string) {
+	const [month, day, year] = label.split("/");
+
+	return {
+		monthDay: month && day ? `${month}/${day}` : label,
+		year: year ?? "",
+	};
+}
+
 export default async function DashboardPage() {
 	await connection();
 
@@ -227,30 +236,37 @@ export default async function DashboardPage() {
 						<Panel title="Daily Completions">
 							<div className="-mx-1 overflow-x-auto pb-2">
 								<div className="flex h-52 min-w-[48rem] items-end gap-3 px-1 sm:h-56 sm:min-w-0 sm:gap-2">
-									{analytics.dayBuckets.map((bucket) => (
-										<div
-											key={bucket.dayKey}
-											className="flex min-w-0 flex-1 flex-col items-center gap-2"
-										>
-											<div className="flex h-36 w-full items-end rounded-lg bg-slate-950 px-1 sm:h-40">
-												<div
-													className="w-full rounded-md bg-sky-500"
-													style={{
-														height: `${Math.max(6, (bucket.completions / maxCompletions) * 100)}%`,
-													}}
-												/>
+									{analytics.dayBuckets.map((bucket) => {
+										const stackedDateLabel = getStackedDateLabel(bucket.label);
+
+										return (
+											<div
+												key={bucket.dayKey}
+												className="flex min-w-0 flex-1 flex-col items-center gap-2"
+											>
+												<div className="flex h-36 w-full items-end rounded-lg bg-slate-950 px-1 sm:h-40">
+													<div
+														className="w-full rounded-md bg-sky-500"
+														style={{
+															height: `${Math.max(6, (bucket.completions / maxCompletions) * 100)}%`,
+														}}
+													/>
+												</div>
+												<p className="text-xs font-medium text-slate-300">
+													{bucket.completions}
+												</p>
+												<p className="max-w-14 truncate text-center text-[11px] text-slate-500 sm:max-w-none sm:overflow-visible sm:whitespace-normal sm:leading-tight">
+													<span className="sm:hidden">
+														{formatShortDateLabel(bucket.label)}
+													</span>
+													<span className="hidden sm:flex sm:flex-col sm:items-center">
+														<span>{stackedDateLabel.monthDay}</span>
+														<span>{stackedDateLabel.year}</span>
+													</span>
+												</p>
 											</div>
-											<p className="text-xs font-medium text-slate-300">
-												{bucket.completions}
-											</p>
-											<p className="max-w-14 truncate text-center text-[11px] text-slate-500 sm:max-w-full">
-												<span className="sm:hidden">
-													{formatShortDateLabel(bucket.label)}
-												</span>
-												<span className="hidden sm:inline">{bucket.label}</span>
-											</p>
-										</div>
-									))}
+										);
+									})}
 								</div>
 							</div>
 						</Panel>
