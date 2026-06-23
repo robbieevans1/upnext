@@ -1,4 +1,5 @@
 import AppNav from "@/components/AppNav";
+import CollapsibleSection from "@/components/CollapsibleSection";
 import CompleteDayButton from "@/components/CompleteDayButton";
 import DailyReviewPrompt from "@/components/DailyReviewPrompt";
 import TaskPlaybookButton from "@/components/TaskPlaybookButton";
@@ -569,7 +570,11 @@ export default async function TodayPage() {
 					)}
 
 					{commitmentsToday.length > 0 && (
-						<StackSection title="Scheduled Today">
+						<StackSection
+							title="Scheduled Today"
+							summary={`${commitmentsToday.length} scheduled`}
+							storageKey="today:scheduled"
+						>
 							{commitmentsToday.map((commitment) => (
 								<CommitmentRow key={commitment.id} commitment={commitment} />
 							))}
@@ -597,7 +602,11 @@ export default async function TodayPage() {
 					)}
 
 					{actionItems.length > 0 && (
-						<StackSection title="Action Items">
+						<StackSection
+							title="Action Items"
+							summary={`${actionItems.length} open`}
+							storageKey="today:actions"
+						>
 							{actionItems.map((item) => (
 								<ActionItemRow key={item.id} item={item} today={today} />
 							))}
@@ -605,7 +614,11 @@ export default async function TodayPage() {
 					)}
 
 					{mandatoryTasks.length > 0 && (
-						<StackSection title="Mandatory">
+						<StackSection
+							title="Mandatory"
+							summary={`${mandatoryTasks.length} remaining`}
+							storageKey="today:mandatory"
+						>
 							{mandatoryTasks.map((task) => (
 								<TaskRow
 									key={task.id}
@@ -619,7 +632,12 @@ export default async function TodayPage() {
 					)}
 
 					{groupedTasks.map(({ group, tasks }) => (
-						<StackSection key={group.id} title={group.name}>
+						<StackSection
+							key={group.id}
+							title={group.name}
+							summary={`${tasks.length} remaining`}
+							storageKey={`today:group:${group.id}`}
+						>
 							{group.description && (
 								<p className="mb-3 text-sm text-slate-500">
 									{group.description}
@@ -639,7 +657,11 @@ export default async function TodayPage() {
 					))}
 
 					{ungroupedTasks.length > 0 && (
-						<StackSection title="Ungrouped">
+						<StackSection
+							title="Ungrouped"
+							summary={`${ungroupedTasks.length} remaining`}
+							storageKey="today:ungrouped"
+						>
 							{ungroupedTasks.map((task) => (
 								<TaskRow
 									key={task.id}
@@ -653,11 +675,13 @@ export default async function TodayPage() {
 					)}
 
 					{completedTodayTasks.length > 0 && (
-						<div className="mt-10 border-t border-slate-800 pt-6">
-							<h3 className="mb-4 text-lg font-semibold text-slate-200">
-								Completed Today
-							</h3>
-
+						<CollapsibleSection
+							title="Completed Today"
+							summary={`${completedTodayTasks.length} completed`}
+							defaultOpen={false}
+							storageKey="today:completed"
+							className="mt-10 border-t border-slate-800 pt-6"
+						>
 							<div className="space-y-3">
 								{completedTodayTasks.map((task) => {
 									const group = groups.find(
@@ -755,7 +779,7 @@ export default async function TodayPage() {
 									);
 								})}
 							</div>
-						</div>
+						</CollapsibleSection>
 					)}
 				</section>
 			</main>
@@ -1021,17 +1045,24 @@ function CurrentTaskCard({
 
 function StackSection({
 	title,
+	summary,
+	storageKey,
 	children,
 }: {
 	title: string;
+	summary?: string;
+	storageKey?: string;
 	children: React.ReactNode;
 }) {
 	return (
-		<div className="mt-8">
-			<h3 className="mb-4 text-lg font-semibold text-slate-200">{title}</h3>
-
+		<CollapsibleSection
+			title={title}
+			summary={summary}
+			storageKey={storageKey}
+			className="mt-8"
+		>
 			<div className="space-y-3">{children}</div>
-		</div>
+		</CollapsibleSection>
 	);
 }
 

@@ -1,4 +1,5 @@
 import AppNav from "@/components/AppNav";
+import CollapsibleSection from "@/components/CollapsibleSection";
 import DeleteConfirmationForm from "@/components/DeleteConfirmationForm";
 import TaskPlaybookButton from "@/components/TaskPlaybookButton";
 import { prisma } from "@/lib/prisma";
@@ -139,13 +140,17 @@ export default async function TasksPage() {
 						Create task groups, add tasks, and manage your daily UpNext stack.
 					</p>
 
-					<form
-						action={createTask}
-						className="mt-8 rounded-2xl border border-slate-800 bg-slate-900 p-6"
+					<CollapsibleSection
+						title="Add Task"
+						summary="Create a stack item with optional subtasks and playbook notes"
+						storageKey="tasks:add-task"
+						className="mt-8"
 					>
-						<h2 className="text-xl font-bold">Add Task</h2>
-
-						<div className="mt-5 space-y-4">
+						<form
+							action={createTask}
+							className="rounded-2xl border border-slate-800 bg-slate-900 p-6"
+						>
+						<div className="space-y-4">
 							<div>
 								<label className="text-sm font-medium text-slate-300">
 									Task name
@@ -222,16 +227,21 @@ export default async function TasksPage() {
 							<button className="rounded-xl bg-sky-500 px-5 py-3 font-semibold text-slate-950 hover:bg-sky-400">
 								Add Task
 							</button>
-						</div>
-					</form>
+							</div>
+						</form>
+					</CollapsibleSection>
 
-					<form
-						action={createTaskGroup}
-						className="mt-8 rounded-2xl border border-slate-800 bg-slate-900 p-6"
+					<CollapsibleSection
+						title="Add Task Group"
+						summary="Create a group for rotating related tasks"
+						defaultOpen={false}
+						storageKey="tasks:add-group"
 					>
-						<h2 className="text-xl font-bold">Add Task Group</h2>
-
-						<div className="mt-5 space-y-4">
+						<form
+							action={createTaskGroup}
+							className="rounded-2xl border border-slate-800 bg-slate-900 p-6"
+						>
+						<div className="space-y-4">
 							<div>
 								<label className="text-sm font-medium text-slate-300">
 									Group name
@@ -259,16 +269,21 @@ export default async function TasksPage() {
 							<button className="rounded-xl bg-sky-500 px-5 py-3 font-semibold text-slate-950 hover:bg-sky-400">
 								Add Group
 							</button>
-						</div>
-					</form>
+							</div>
+						</form>
+					</CollapsibleSection>
 
-					<form
-						action={createDailyCheck}
-						className="mt-8 rounded-2xl border border-slate-800 bg-slate-900 p-6"
+					<CollapsibleSection
+						title="Add Daily Check"
+						summary="Create a yesterday-review question"
+						defaultOpen={false}
+						storageKey="tasks:add-daily-check"
 					>
-						<h2 className="text-xl font-bold">Add Daily Check</h2>
-
-						<p className="mt-2 text-sm text-slate-400">
+						<form
+							action={createDailyCheck}
+							className="rounded-2xl border border-slate-800 bg-slate-900 p-6"
+						>
+						<p className="text-sm text-slate-400">
 							Daily checks are outcome questions answered the next day, like
 							whether you stayed under a calorie limit or avoided late snacking.
 						</p>
@@ -301,16 +316,21 @@ export default async function TasksPage() {
 							<button className="rounded-xl bg-sky-500 px-5 py-3 font-semibold text-slate-950 hover:bg-sky-400">
 								Add Daily Check
 							</button>
-						</div>
-					</form>
+							</div>
+						</form>
+					</CollapsibleSection>
 
-					<form
-						action={createChallenge}
-						className="mt-8 rounded-2xl border border-slate-800 bg-slate-900 p-6"
+					<CollapsibleSection
+						title="Add Challenge"
+						summary="Create a multi-day rule with streak tracking"
+						defaultOpen={false}
+						storageKey="tasks:add-challenge"
 					>
-						<h2 className="text-xl font-bold">Add Challenge</h2>
-
-						<p className="mt-2 text-sm text-slate-400">
+						<form
+							action={createChallenge}
+							className="rounded-2xl border border-slate-800 bg-slate-900 p-6"
+						>
+						<p className="text-sm text-slate-400">
 							Challenges are multi-day rules that create daily review prompts and
 							track your streak.
 						</p>
@@ -373,12 +393,17 @@ export default async function TasksPage() {
 							<button className="rounded-xl bg-sky-500 px-5 py-3 font-semibold text-slate-950 hover:bg-sky-400">
 								Add Challenge
 							</button>
-						</div>
-					</form>
+							</div>
+						</form>
+					</CollapsibleSection>
 
-					<div className="mt-10">
-						<h2 className="mb-4 text-xl font-bold">Task Groups</h2>
-
+					<CollapsibleSection
+						title="Task Groups"
+						summary={`${groups.length} active`}
+						defaultOpen={false}
+						storageKey="tasks:groups"
+						className="mt-10"
+					>
 						{groups.length === 0 ? (
 							<div className="rounded-xl border border-slate-800 bg-slate-900 p-4 text-slate-400">
 								No task groups yet.
@@ -435,11 +460,14 @@ export default async function TasksPage() {
 								))}
 							</div>
 						)}
-					</div>
+					</CollapsibleSection>
 
-					<div className="mt-10">
-						<h2 className="mb-4 text-xl font-bold">Active Challenges</h2>
-
+					<CollapsibleSection
+						title="Active Challenges"
+						summary={`${challenges.length} active`}
+						storageKey="tasks:challenges"
+						className="mt-10"
+					>
 						{challenges.length === 0 ? (
 							<div className="rounded-xl border border-slate-800 bg-slate-900 p-4 text-slate-400">
 								No challenges yet. Add one above to start tracking a streak.
@@ -562,11 +590,15 @@ export default async function TasksPage() {
 								})}
 							</div>
 						)}
-					</div>
+					</CollapsibleSection>
 
-					<div className="mt-10">
-						<h2 className="mb-4 text-xl font-bold">Daily Checks</h2>
-
+					<CollapsibleSection
+						title="Daily Checks"
+						summary={`${dailyChecks.length} active`}
+						defaultOpen={false}
+						storageKey="tasks:daily-checks"
+						className="mt-10"
+					>
 						{dailyChecks.length === 0 ? (
 							<div className="rounded-xl border border-slate-800 bg-slate-900 p-4 text-slate-400">
 								No daily checks yet. Add one above to start reviewing yesterday.
@@ -626,11 +658,14 @@ export default async function TasksPage() {
 								))}
 							</div>
 						)}
-					</div>
+					</CollapsibleSection>
 
-					<div className="mt-10">
-						<h2 className="mb-4 text-xl font-bold">Active Tasks</h2>
-
+					<CollapsibleSection
+						title="Active Tasks"
+						summary={`${tasks.length} active`}
+						storageKey="tasks:active"
+						className="mt-10"
+					>
 						{tasks.length === 0 ? (
 							<div className="rounded-xl border border-slate-800 bg-slate-900 p-4 text-slate-400">
 								No active tasks yet. Add your first task above.
@@ -830,7 +865,7 @@ export default async function TasksPage() {
 								))}
 							</div>
 						)}
-					</div>
+					</CollapsibleSection>
 				</section>
 			</main>
 		</>
