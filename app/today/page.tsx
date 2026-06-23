@@ -24,6 +24,7 @@ import { CommitmentRecurrence, Prisma } from "@prisma/client";
 import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
 import { authOptions } from "@/lib/auth";
+import { getChallengeProgress, type ChallengeProgress } from "@/lib/challenges";
 import {
 	addAppDays,
 	formatAppDate,
@@ -379,6 +380,7 @@ export default async function TodayPage() {
 			sortOrder: "asc",
 		},
 		include: {
+			challenge: true,
 			results: {
 				where: {
 					targetDay: yesterday,
@@ -386,6 +388,21 @@ export default async function TodayPage() {
 				take: 1,
 			},
 		},
+	});
+	const eligibleDailyChecks = dailyChecks.filter((check) => {
+		if (!check.challenge) {
+			return true;
+		}
+
+		const challengeEndDay = addAppDays(
+			check.challenge.startDay,
+			check.challenge.durationDays - 1,
+		);
+
+		return (
+			yesterday.getTime() >= check.challenge.startDay.getTime() &&
+			yesterday.getTime() <= challengeEndDay.getTime()
+		);
 	});
 
 	const dailyReviewDismissal = await prisma.dailyReviewDismissal.findUnique({
@@ -396,6 +413,29 @@ export default async function TodayPage() {
 			},
 		},
 	});
+	const challenges = await prisma.challenge.findMany({
+		where: {
+			userId: session.user.id,
+			isActive: true,
+		},
+		orderBy: {
+			startDay: "asc",
+		},
+		include: {
+			dailyCheck: {
+				include: {
+					results: {
+						orderBy: {
+							targetDay: "desc",
+						},
+					},
+				},
+			},
+		},
+	});
+	const challengeProgress = challenges.map((challenge) =>
+		getChallengeProgress(challenge, today),
+	);
 
 	const activeTaskSession = await prisma.taskSession.findFirst({
 		where: {
@@ -516,13 +556,17 @@ export default async function TodayPage() {
 						targetDayKey={getAppDateKey(yesterday)}
 						targetDayLabel={formatAppDate(yesterday)}
 						wasDismissed={Boolean(dailyReviewDismissal)}
-						checks={dailyChecks.map((check) => ({
+						checks={eligibleDailyChecks.map((check) => ({
 							id: check.id,
 							title: check.title,
 							description: check.description,
 							result: check.results[0]?.status ?? null,
 						}))}
 					/>
+
+					{challengeProgress.length > 0 && (
+						<ChallengeStreakSummary challenges={challengeProgress} />
+					)}
 
 					{commitmentsToday.length > 0 && (
 						<StackSection title="Scheduled Today">
@@ -716,6 +760,91 @@ export default async function TodayPage() {
 				</section>
 			</main>
 		</>
+	);
+}
+
+function ChallengeStreakSummary({
+	challenges,
+}: {
+	challenges: ChallengeProgress[];
+}) {
+	return (
+		<section className="mt-6 rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-5">
+			<div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+				<div>
+					<p className="text-sm font-semibold uppercase tracking-wide text-emerald-300">
+						Challenge Streaks
+					</p>
+					<p className="mt-1 text-sm text-emerald-100/80">
+						Long-running rules tracked through yesterday reviews.
+					</p>
+				</div>
+			</div>
+
+			<div className="mt-4 grid gap-3">
+				{challenges.map((challenge) => {
+					const progressPercent = Math.min(
+						100,
+						Math.round(
+							(challenge.successfulDays / challenge.durationDays) * 100,
+						),
+					);
+
+					return (
+						<div
+							key={challenge.id}
+							className="rounded-xl border border-emerald-400/20 bg-slate-950/80 p-4"
+						>
+							<div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+								<div className="min-w-0">
+									<h3 className="break-words text-lg font-semibold text-white">
+										{challenge.title}
+									</h3>
+									<p className="mt-1 text-sm text-slate-400">
+										Day {challenge.daysElapsed} of {challenge.durationDays} ·{" "}
+										{challenge.daysRemaining} days remaining
+									</p>
+								</div>
+
+								<div className="shrink-0 rounded-xl bg-emerald-500/10 px-4 py-3 text-left sm:text-right">
+									<p className="text-xs uppercase tracking-wide text-emerald-200/70">
+										Current Streak
+									</p>
+									<p className="mt-1 text-2xl font-bold text-emerald-200">
+										{challenge.currentStreak} days
+									</p>
+								</div>
+							</div>
+
+							<div className="mt-4 h-2 overflow-hidden rounded-full bg-slate-800">
+								<div
+									className="h-full rounded-full bg-emerald-400"
+									style={{ width: `${progressPercent}%` }}
+								/>
+							</div>
+
+							<div className="mt-3 flex flex-wrap gap-2 text-xs">
+								<span className="rounded-full bg-slate-800 px-3 py-1 text-slate-300">
+									{challenge.successfulDays} successful days
+								</span>
+
+								{challenge.needsReview && (
+									<span className="rounded-full bg-yellow-500/10 px-3 py-1 font-medium text-yellow-200">
+										Review yesterday
+									</span>
+								)}
+
+								{challenge.isComplete && (
+									<span className="rounded-full bg-emerald-500/10 px-3 py-1 font-medium text-emerald-200">
+										Challenge complete
+									</span>
+								)}
+							</div>
+						</div>
+					);
+				})}
+			</div>
+		</section>
 	);
 }
 

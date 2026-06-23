@@ -32,6 +32,7 @@ model User {
   dailyChecks           DailyCheck[]
   dailyCheckResults     DailyCheckResult[]
   dailyReviewDismissals DailyReviewDismissal[]
+  challenges            Challenge[]
   dayStartOverride      DayStartOverride?
 
   createdAt DateTime @default(now())
@@ -323,11 +324,32 @@ model DailyCheck {
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   results DailyCheckResult[]
+  challenge Challenge?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([userId, isActive, sortOrder])
+}
+
+model Challenge {
+  id           String  @id @default(cuid())
+  title        String
+  description  String?
+  startDay     DateTime
+  durationDays Int
+  isActive     Boolean @default(true)
+
+  dailyCheckId String     @unique
+  dailyCheck   DailyCheck @relation(fields: [dailyCheckId], references: [id], onDelete: Cascade)
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId, isActive, startDay])
 }
 
 model DailyCheckResult {

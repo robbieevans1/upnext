@@ -8,6 +8,11 @@ import {
 	updateDailyCheck,
 } from "@/app/actions/daily-review";
 import {
+	createChallenge,
+	deleteChallenge,
+	updateChallenge,
+} from "@/app/actions/challenges";
+import {
 	addTaskSubtask,
 	createTask,
 	createTaskGroup,
@@ -21,6 +26,8 @@ import {
 import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
 import { authOptions } from "@/lib/auth";
+import { formatAppDate, getAppDateKey, getAppTodayDate } from "@/lib/app-date";
+import { getChallengeProgress } from "@/lib/challenges";
 
 // async function getDemoUser() {
 // 	return prisma.user.upsert({
@@ -87,11 +94,36 @@ export default async function TasksPage() {
 		where: {
 			userId: session.user.id,
 			isActive: true,
+			challenge: null,
 		},
 		orderBy: {
 			sortOrder: "asc",
 		},
 	});
+	const today = getAppTodayDate();
+	const challenges = await prisma.challenge.findMany({
+		where: {
+			userId: session.user.id,
+			isActive: true,
+		},
+		orderBy: {
+			startDay: "asc",
+		},
+		include: {
+			dailyCheck: {
+				include: {
+					results: {
+						orderBy: {
+							targetDay: "desc",
+						},
+					},
+				},
+			},
+		},
+	});
+	const challengeProgress = challenges.map((challenge) =>
+		getChallengeProgress(challenge, today),
+	);
 
 	return (
 		<>
@@ -272,6 +304,78 @@ export default async function TasksPage() {
 						</div>
 					</form>
 
+					<form
+						action={createChallenge}
+						className="mt-8 rounded-2xl border border-slate-800 bg-slate-900 p-6"
+					>
+						<h2 className="text-xl font-bold">Add Challenge</h2>
+
+						<p className="mt-2 text-sm text-slate-400">
+							Challenges are multi-day rules that create daily review prompts and
+							track your streak.
+						</p>
+
+						<div className="mt-5 space-y-4">
+							<div>
+								<label className="text-sm font-medium text-slate-300">
+									Challenge name
+								</label>
+
+								<input
+									name="title"
+									placeholder="Don't use social media"
+									className="mt-2 w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-white outline-none focus:border-sky-500"
+								/>
+							</div>
+
+							<div>
+								<label className="text-sm font-medium text-slate-300">
+									Rules or notes
+								</label>
+
+								<textarea
+									name="description"
+									placeholder="Define what counts, allowed exceptions, and why this matters."
+									className="mt-2 min-h-28 w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-white outline-none focus:border-sky-500"
+								/>
+							</div>
+
+							<div className="grid gap-4 sm:grid-cols-2">
+								<div>
+									<label className="text-sm font-medium text-slate-300">
+										Start date
+									</label>
+
+									<input
+										type="date"
+										name="startDay"
+										defaultValue={getAppDateKey(today)}
+										className="mt-2 w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-white outline-none focus:border-sky-500"
+									/>
+								</div>
+
+								<div>
+									<label className="text-sm font-medium text-slate-300">
+										Duration days
+									</label>
+
+									<input
+										type="number"
+										name="durationDays"
+										min="1"
+										max="3650"
+										defaultValue="90"
+										className="mt-2 w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-white outline-none focus:border-sky-500"
+									/>
+								</div>
+							</div>
+
+							<button className="rounded-xl bg-sky-500 px-5 py-3 font-semibold text-slate-950 hover:bg-sky-400">
+								Add Challenge
+							</button>
+						</div>
+					</form>
+
 					<div className="mt-10">
 						<h2 className="mb-4 text-xl font-bold">Task Groups</h2>
 
@@ -329,6 +433,133 @@ export default async function TasksPage() {
 										</div>
 									</div>
 								))}
+							</div>
+						)}
+					</div>
+
+					<div className="mt-10">
+						<h2 className="mb-4 text-xl font-bold">Active Challenges</h2>
+
+						{challenges.length === 0 ? (
+							<div className="rounded-xl border border-slate-800 bg-slate-900 p-4 text-slate-400">
+								No challenges yet. Add one above to start tracking a streak.
+							</div>
+						) : (
+							<div className="space-y-4">
+								{challenges.map((challenge, index) => {
+									const progress = challengeProgress[index];
+
+									return (
+										<div
+											key={challenge.id}
+											className="rounded-xl border border-slate-800 bg-slate-900 p-4"
+										>
+											<div className="mb-4 grid gap-3 sm:grid-cols-3">
+												<div className="rounded-xl bg-slate-950 p-3">
+													<p className="text-xs uppercase tracking-wide text-slate-500">
+														Current Streak
+													</p>
+													<p className="mt-1 text-2xl font-bold text-sky-300">
+														{progress.currentStreak} days
+													</p>
+												</div>
+
+												<div className="rounded-xl bg-slate-950 p-3">
+													<p className="text-xs uppercase tracking-wide text-slate-500">
+														Progress
+													</p>
+													<p className="mt-1 text-2xl font-bold text-white">
+														{progress.successfulDays}/{progress.durationDays}
+													</p>
+												</div>
+
+												<div className="rounded-xl bg-slate-950 p-3">
+													<p className="text-xs uppercase tracking-wide text-slate-500">
+														Ends
+													</p>
+													<p className="mt-1 text-lg font-semibold text-slate-200">
+														{formatAppDate(progress.endDay)}
+													</p>
+												</div>
+											</div>
+
+											<form action={updateChallenge} className="space-y-4">
+												<input
+													type="hidden"
+													name="challengeId"
+													value={challenge.id}
+												/>
+
+												<div>
+													<label className="text-sm font-medium text-slate-300">
+														Challenge name
+													</label>
+
+													<input
+														name="title"
+														defaultValue={challenge.title}
+														className="mt-2 w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-white outline-none focus:border-sky-500"
+													/>
+												</div>
+
+												<div>
+													<label className="text-sm font-medium text-slate-300">
+														Rules or notes
+													</label>
+
+													<textarea
+														name="description"
+														defaultValue={challenge.description ?? ""}
+														className="mt-2 min-h-28 w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-white outline-none focus:border-sky-500"
+													/>
+												</div>
+
+												<div className="grid gap-4 sm:grid-cols-2">
+													<div>
+														<label className="text-sm font-medium text-slate-300">
+															Start date
+														</label>
+
+														<input
+															type="date"
+															name="startDay"
+															defaultValue={getAppDateKey(challenge.startDay)}
+															className="mt-2 w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-white outline-none focus:border-sky-500"
+														/>
+													</div>
+
+													<div>
+														<label className="text-sm font-medium text-slate-300">
+															Duration days
+														</label>
+
+														<input
+															type="number"
+															name="durationDays"
+															min="1"
+															max="3650"
+															defaultValue={challenge.durationDays}
+															className="mt-2 w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-white outline-none focus:border-sky-500"
+														/>
+													</div>
+												</div>
+
+												<button className="rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-sky-400">
+													Save Challenge
+												</button>
+											</form>
+
+											<div className="mt-3">
+												<DeleteConfirmationForm
+													confirmAction={deleteChallenge.bind(null, challenge.id)}
+													triggerLabel="Archive Challenge"
+													itemLabel={`the challenge "${challenge.title}"`}
+													confirmLabel="Archive Challenge"
+												/>
+											</div>
+										</div>
+									);
+								})}
 							</div>
 						)}
 					</div>
