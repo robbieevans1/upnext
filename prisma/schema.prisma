@@ -33,6 +33,9 @@ model User {
   dailyCheckResults     DailyCheckResult[]
   dailyReviewDismissals DailyReviewDismissal[]
   challenges            Challenge[]
+  calorieEntries        CalorieEntry[]
+  weightEntries         WeightEntry[]
+  announcements         Announcement[]
   dayStartOverride      DayStartOverride?
 
   createdAt DateTime @default(now())
@@ -212,6 +215,56 @@ model DowntimeSession {
 
   @@index([userId, day])
   @@index([userId, stoppedAt])
+}
+
+model CalorieEntry {
+  id String @id @default(cuid())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  day      DateTime
+  calories Int
+  note     String?
+  loggedAt DateTime @default(now())
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId, day])
+  @@index([userId, loggedAt])
+}
+
+model WeightEntry {
+  id String @id @default(cuid())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  day       DateTime
+  weightLbs Float
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, day])
+  @@index([userId, day])
+}
+
+model Announcement {
+  id String @id @default(cuid())
+
+  title    String
+  targetAt DateTime
+  isActive Boolean  @default(true)
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId, isActive, targetAt])
 }
 
 model ActionItem {
