@@ -3,8 +3,11 @@
 	"version": "0.1.0",
 	"private": true,
 	"scripts": {
-		"dev": "next dev",
+		"dev": "env -u CODEX_CI next dev --turbopack",
+		"dev:clean": "rm -rf .next && env -u CODEX_CI next dev --turbopack",
+		"dev:webpack": "env -u CODEX_CI next dev --webpack",
 		"build": "prisma generate && next build",
+		"preview": "rm -rf .next && npm run build && next start",
 		"start": "next start",
 		"lint": "eslint",
 		"smoke:built": "node scripts/smoke-built-app.mjs",

@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { addAppDays } from "@/lib/app-date";
+import { addAppDays, getAppDateTimeFromKeys } from "@/lib/app-date";
 import { getUserEffectiveTodayDate } from "@/lib/effective-day";
 import { prisma } from "@/lib/prisma";
 import { requireUserId } from "@/lib/server-auth";
@@ -41,6 +41,24 @@ function getCalorieEntryDay(formData: FormData, today: Date) {
 	const targetDay = String(formData.get("targetDay") ?? "today");
 
 	return targetDay === "tomorrow" ? addAppDays(today, 1) : today;
+}
+
+function getFastingStartedAt(startDateKey?: string, startTimeKey?: string) {
+	const now = new Date();
+
+	if (!startDateKey || !startTimeKey) {
+		return now;
+	}
+
+	const requestedStartedAt = getAppDateTimeFromKeys(startDateKey, startTimeKey);
+
+	if (!requestedStartedAt || requestedStartedAt.getTime() > now.getTime()) {
+		return now;
+	}
+
+	const sevenDaysAgo = now.getTime() - 7 * 24 * 60 * 60 * 1000;
+
+	return requestedStartedAt.getTime() >= sevenDaysAgo ? requestedStartedAt : now;
 }
 
 export async function addCalorieEntry(formData: FormData) {
@@ -98,6 +116,50 @@ export async function saveWeightEntry(formData: FormData) {
 			userId,
 			day: effectiveDay.today,
 			weightLbs,
+		},
+	});
+
+	revalidateNutritionViews();
+}
+
+export async function startFastingSession(
+	startDateKey?: string,
+	startTimeKey?: string,
+) {
+	const userId = await requireUserId();
+	const startedAt = getFastingStartedAt(startDateKey, startTimeKey);
+
+	await prisma.$transaction([
+		prisma.fastingSession.updateMany({
+			where: {
+				userId,
+				endedAt: null,
+			},
+			data: {
+				endedAt: startedAt,
+			},
+		}),
+		prisma.fastingSession.create({
+			data: {
+				userId,
+				startedAt,
+			},
+		}),
+	]);
+
+	revalidateNutritionViews();
+}
+
+export async function endFastingSession() {
+	const userId = await requireUserId();
+
+	await prisma.fastingSession.updateMany({
+		where: {
+			userId,
+			endedAt: null,
+		},
+		data: {
+			endedAt: new Date(),
 		},
 	});
 
