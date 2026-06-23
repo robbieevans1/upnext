@@ -8,6 +8,7 @@ describe("generated Prisma Client", () => {
 		try {
 			expect(prisma.calorieEntry).toBeDefined();
 			expect(prisma.weightEntry).toBeDefined();
+			expect(prisma.fastingSession).toBeDefined();
 			expect(prisma.announcement).toBeDefined();
 		} finally {
 			await prisma.$disconnect();

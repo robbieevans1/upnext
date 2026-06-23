@@ -35,6 +35,7 @@ model User {
   challenges            Challenge[]
   calorieEntries        CalorieEntry[]
   weightEntries         WeightEntry[]
+  fastingSessions       FastingSession[]
   announcements         Announcement[]
   dayStartOverride      DayStartOverride?
 
@@ -249,6 +250,22 @@ model WeightEntry {
 
   @@unique([userId, day])
   @@index([userId, day])
+}
+
+model FastingSession {
+  id String @id @default(cuid())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  startedAt DateTime
+  endedAt   DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId, startedAt])
+  @@index([userId, endedAt])
 }
 
 model Announcement {

@@ -1,6 +1,13 @@
 import AppNav from "@/components/AppNav";
 import { addCalorieEntry, deleteCalorieEntry, saveWeightEntry } from "@/app/actions/nutrition";
-import { addAppDays, formatAppDate, formatAppTime } from "@/lib/app-date";
+import FastingTimer from "@/app/nutrition/FastingTimer";
+import {
+	addAppDays,
+	formatAppDate,
+	formatAppTime,
+	getAppDateKey,
+	getAppTimeKey,
+} from "@/lib/app-date";
 import { authOptions } from "@/lib/auth";
 import { getUserEffectiveTodayDate } from "@/lib/effective-day";
 import { prisma } from "@/lib/prisma";
@@ -10,8 +17,33 @@ import { connection } from "next/server";
 
 const RECENT_DAYS = 7;
 
+type FastingSessionSummary = {
+	startedAt: Date;
+	endedAt: Date | null;
+};
+
 function formatWeight(weightLbs: number) {
 	return `${weightLbs.toFixed(1)} lb`;
+}
+
+function getFastingDurationSeconds(
+	session: FastingSessionSummary,
+	now = new Date(),
+) {
+	const endTime = session.endedAt?.getTime() ?? now.getTime();
+
+	return Math.max(0, Math.floor((endTime - session.startedAt.getTime()) / 1000));
+}
+
+function formatFastingDuration(totalSeconds: number) {
+	const hours = Math.floor(totalSeconds / 3600);
+	const minutes = Math.floor((totalSeconds % 3600) / 60);
+
+	if (hours === 0) {
+		return `${minutes}m`;
+	}
+
+	return `${hours}h ${minutes}m`;
 }
 
 export default async function NutritionPage() {
@@ -34,6 +66,8 @@ export default async function NutritionPage() {
 		todayWeightEntry,
 		recentCalorieEntries,
 		recentWeights,
+		activeFast,
+		recentFasts,
 	] = await Promise.all([
 			prisma.calorieEntry.findMany({
 				where: {
@@ -85,6 +119,27 @@ export default async function NutritionPage() {
 					day: "asc",
 				},
 			}),
+			prisma.fastingSession.findFirst({
+				where: {
+					userId: session.user.id,
+					endedAt: null,
+				},
+				orderBy: {
+					startedAt: "desc",
+				},
+			}),
+			prisma.fastingSession.findMany({
+				where: {
+					userId: session.user.id,
+					endedAt: {
+						not: null,
+					},
+				},
+				orderBy: {
+					startedAt: "desc",
+				},
+				take: 5,
+			}),
 		]);
 
 	const totalCaloriesToday = calorieEntries.reduce(
@@ -120,12 +175,14 @@ export default async function NutritionPage() {
 					<p className="mb-2 text-sm font-medium text-sky-400">Track</p>
 
 					<h1 className="text-4xl font-bold tracking-tight">
-						Weight & Calories
+						Weight, Calories & Fasting
 					</h1>
 
 					<p className="mt-3 max-w-2xl text-slate-400">
 						Add calories as the day happens and save one daily weigh-in for the
-						current app day. Calories can also be logged one day ahead.
+						current app day. Calories can also be logged one day ahead, and
+						fasts can be started from an earlier time if you forget to press
+						start.
 					</p>
 
 					<div className="mt-8 grid gap-4 sm:grid-cols-4">
@@ -167,6 +224,22 @@ export default async function NutritionPage() {
 							</p>
 						</div>
 					</div>
+
+					<FastingTimer
+						activeStartedAt={activeFast?.startedAt.toISOString() ?? null}
+						activeStartedLabel={
+							activeFast
+								? `${formatAppDate(activeFast.startedAt)} at ${formatAppTime(activeFast.startedAt)}`
+								: null
+						}
+						defaultStartDateKey={getAppDateKey(new Date())}
+						defaultStartTimeKey={getAppTimeKey(new Date())}
+						lastFastLabel={
+							recentFasts[0]
+								? formatFastingDuration(getFastingDurationSeconds(recentFasts[0]))
+								: null
+						}
+					/>
 
 					<div className="mt-8 grid gap-6 lg:grid-cols-[1fr_1fr]">
 						<form
@@ -320,6 +393,35 @@ export default async function NutritionPage() {
 												Delete
 											</button>
 										</form>
+									</div>
+								))}
+							</div>
+						</section>
+					)}
+
+					{recentFasts.length > 0 && (
+						<section className="mt-8 rounded-2xl border border-slate-800 bg-slate-900 p-6">
+							<h2 className="text-xl font-bold">Recent Fasts</h2>
+
+							<div className="mt-4 space-y-3">
+								{recentFasts.map((fast) => (
+									<div
+										key={fast.id}
+										className="grid gap-3 rounded-xl border border-slate-800 bg-slate-950 p-4 text-sm sm:grid-cols-[1fr_1fr_auto] sm:items-center"
+									>
+										<p className="font-semibold text-slate-100">
+											{formatAppDate(fast.startedAt)} at{" "}
+											{formatAppTime(fast.startedAt)}
+										</p>
+										<p className="text-slate-400">
+											Ended{" "}
+											{fast.endedAt
+												? `${formatAppDate(fast.endedAt)} at ${formatAppTime(fast.endedAt)}`
+												: "in progress"}
+										</p>
+										<p className="font-semibold text-emerald-300">
+											{formatFastingDuration(getFastingDurationSeconds(fast))}
+										</p>
 									</div>
 								))}
 							</div>

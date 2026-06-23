@@ -2,9 +2,14 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { formDataFrom } from "./test-utils";
 
 const prisma = {
+	$transaction: vi.fn(),
 	calorieEntry: {
 		create: vi.fn(),
 		deleteMany: vi.fn(),
+	},
+	fastingSession: {
+		create: vi.fn(),
+		updateMany: vi.fn(),
 	},
 	weightEntry: {
 		upsert: vi.fn(),
@@ -26,7 +31,11 @@ vi.mock("@/lib/effective-day", () => ({ getUserEffectiveTodayDate }));
 
 describe("nutrition server actions", () => {
 	beforeEach(() => {
+		vi.useRealTimers();
 		vi.clearAllMocks();
+		prisma.$transaction.mockImplementation(async (operations) => operations);
+		prisma.fastingSession.create.mockImplementation((args) => args);
+		prisma.fastingSession.updateMany.mockImplementation((args) => args);
 		getServerSession.mockResolvedValue({
 			user: {
 				id: "user-1",
@@ -133,6 +142,95 @@ describe("nutrition server actions", () => {
 		await saveWeightEntry(formDataFrom({ weightLbs: "not-a-number" }));
 
 		expect(prisma.weightEntry.upsert).not.toHaveBeenCalled();
+	});
+
+	it("starts a fasting session after closing any active user fast", async () => {
+		vi.useFakeTimers();
+		vi.setSystemTime(new Date("2026-06-23T14:15:00.000Z"));
+		const { startFastingSession } = await import("@/app/actions/nutrition");
+
+		await startFastingSession();
+
+		expect(prisma.fastingSession.updateMany).toHaveBeenCalledWith({
+			where: {
+				userId: "user-1",
+				endedAt: null,
+			},
+			data: {
+				endedAt: new Date("2026-06-23T14:15:00.000Z"),
+			},
+		});
+		expect(prisma.fastingSession.create).toHaveBeenCalledWith({
+			data: {
+				userId: "user-1",
+				startedAt: new Date("2026-06-23T14:15:00.000Z"),
+			},
+		});
+		expect(prisma.$transaction).toHaveBeenCalledWith([
+			prisma.fastingSession.updateMany.mock.results[0]?.value,
+			prisma.fastingSession.create.mock.results[0]?.value,
+		]);
+		expect(revalidatePath).toHaveBeenCalledWith("/nutrition");
+		expect(revalidatePath).toHaveBeenCalledWith("/dashboard");
+	});
+
+	it("starts a fasting session from an earlier app time", async () => {
+		vi.useFakeTimers();
+		vi.setSystemTime(new Date("2026-06-23T20:00:00.000Z"));
+		const { startFastingSession } = await import("@/app/actions/nutrition");
+
+		await startFastingSession("2026-06-23", "14:00");
+
+		expect(prisma.fastingSession.updateMany).toHaveBeenCalledWith({
+			where: {
+				userId: "user-1",
+				endedAt: null,
+			},
+			data: {
+				endedAt: new Date("2026-06-23T18:00:00.000Z"),
+			},
+		});
+		expect(prisma.fastingSession.create).toHaveBeenCalledWith({
+			data: {
+				userId: "user-1",
+				startedAt: new Date("2026-06-23T18:00:00.000Z"),
+			},
+		});
+	});
+
+	it("does not start fasting sessions in the future", async () => {
+		vi.useFakeTimers();
+		vi.setSystemTime(new Date("2026-06-23T20:00:00.000Z"));
+		const { startFastingSession } = await import("@/app/actions/nutrition");
+
+		await startFastingSession("2026-06-23", "18:00");
+
+		expect(prisma.fastingSession.create).toHaveBeenCalledWith({
+			data: {
+				userId: "user-1",
+				startedAt: new Date("2026-06-23T20:00:00.000Z"),
+			},
+		});
+	});
+
+	it("ends only the active fasting session for the current user", async () => {
+		vi.useFakeTimers();
+		vi.setSystemTime(new Date("2026-06-23T18:30:00.000Z"));
+		const { endFastingSession } = await import("@/app/actions/nutrition");
+
+		await endFastingSession();
+
+		expect(prisma.fastingSession.updateMany).toHaveBeenCalledWith({
+			where: {
+				userId: "user-1",
+				endedAt: null,
+			},
+			data: {
+				endedAt: new Date("2026-06-23T18:30:00.000Z"),
+			},
+		});
+		expect(revalidatePath).toHaveBeenCalledWith("/nutrition");
+		expect(revalidatePath).toHaveBeenCalledWith("/dashboard");
 	});
 
 	it("redirects unauthenticated users before mutating nutrition data", async () => {
