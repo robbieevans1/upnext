@@ -1,5 +1,6 @@
 import AnnouncementCountdown from "@/components/AnnouncementCountdown";
 import { authOptions } from "@/lib/auth";
+import { getAnnouncementCountdown } from "@/lib/announcement-countdown";
 import { formatAppDate, formatAppTime } from "@/lib/app-date";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
@@ -46,6 +47,9 @@ export default async function AnnouncementBanner() {
 				<div className="shrink-0 rounded-xl border border-sky-400/30 bg-slate-950 px-4 py-2 text-sm text-sky-100">
 					<span className="font-semibold">
 						<AnnouncementCountdown
+							initialCountdown={getAnnouncementCountdown(
+								announcement.targetAt.toISOString(),
+							)}
 							targetAt={announcement.targetAt.toISOString()}
 						/>
 					</span>
