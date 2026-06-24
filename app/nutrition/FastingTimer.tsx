@@ -17,30 +17,40 @@ export default function FastingTimer({
 	activeStartedLabel,
 	defaultStartDateKey,
 	defaultStartTimeKey,
+	initialElapsedSeconds,
 	lastFastLabel,
 }: {
 	activeStartedAt: string | null;
 	activeStartedLabel: string | null;
 	defaultStartDateKey: string;
 	defaultStartTimeKey: string;
+	initialElapsedSeconds: number;
 	lastFastLabel: string | null;
 }) {
 	const router = useRouter();
 	const [isPending, startTransition] = useTransition();
-	const [now, setNow] = useState(() => Date.now());
+	const [clientNow, setClientNow] = useState<number | null>(null);
 
 	useEffect(() => {
+		if (!activeStartedAt) {
+			return;
+		}
+
 		const interval = window.setInterval(() => {
-			setNow(Date.now());
+			setClientNow(Date.now());
 		}, 1000);
 
 		return () => window.clearInterval(interval);
-	}, []);
+	}, [activeStartedAt]);
 
 	const elapsedSeconds = activeStartedAt
 		? Math.max(
 				0,
-				Math.floor((now - new Date(activeStartedAt).getTime()) / 1000),
+				clientNow === null
+					? initialElapsedSeconds
+					: Math.floor(
+							(clientNow - new Date(activeStartedAt).getTime()) / 1000,
+						),
 			)
 		: 0;
 

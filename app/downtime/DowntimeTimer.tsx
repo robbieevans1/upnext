@@ -27,6 +27,8 @@ type DowntimeTimerProps = {
 	activeSession: ActiveSession;
 	activeTaskSession: ActiveTaskSession;
 	categoryTotals: CategoryTotal[];
+	initialActiveElapsedSeconds: number;
+	initialActiveTaskElapsedSeconds: number;
 	totalSecondsToday: number;
 };
 
@@ -46,19 +48,25 @@ export default function DowntimeTimer({
 	activeSession,
 	activeTaskSession,
 	categoryTotals,
+	initialActiveElapsedSeconds,
+	initialActiveTaskElapsedSeconds,
 	totalSecondsToday,
 }: DowntimeTimerProps) {
 	const router = useRouter();
-	const [now, setNow] = useState(() => Date.now());
+	const [clientNow, setClientNow] = useState<number | null>(null);
 	const [isPending, startTransition] = useTransition();
 
 	useEffect(() => {
-		const interval = setInterval(() => {
-			setNow(Date.now());
+		if (!activeSession && !activeTaskSession) {
+			return;
+		}
+
+		const interval = window.setInterval(() => {
+			setClientNow(Date.now());
 		}, 1000);
 
-		return () => clearInterval(interval);
-	}, []);
+		return () => window.clearInterval(interval);
+	}, [activeSession, activeTaskSession]);
 
 	useEffect(() => {
 		let isMounted = true;
@@ -93,14 +101,19 @@ export default function DowntimeTimer({
 	}, [activeTaskSession, router]);
 
 	const activeElapsedSeconds = activeSession
-		? Math.floor(
-				(now - new Date(activeSession.startedAt).getTime()) / 1000,
-			)
+		? clientNow === null
+			? initialActiveElapsedSeconds
+			: Math.floor(
+					(clientNow - new Date(activeSession.startedAt).getTime()) / 1000,
+				)
 		: 0;
 	const activeTaskElapsedSeconds = activeTaskSession
-		? Math.floor(
-				(now - new Date(activeTaskSession.startedAt).getTime()) / 1000,
-			)
+		? clientNow === null
+			? initialActiveTaskElapsedSeconds
+			: Math.floor(
+					(clientNow - new Date(activeTaskSession.startedAt).getTime()) /
+						1000,
+				)
 		: 0;
 
 	const liveTotalSeconds = totalSecondsToday + activeElapsedSeconds;

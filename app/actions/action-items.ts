@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { getAppDateFromKey } from "@/lib/app-date";
+import { setFlashNotification } from "@/lib/flash-notifications";
 import { prisma } from "@/lib/prisma";
 import { requireUserId } from "@/lib/server-auth";
 
@@ -39,6 +40,7 @@ export async function createActionItem(formData: FormData) {
 		},
 	});
 
+	await setFlashNotification("Action item created.");
 	revalidateActionItemViews();
 }
 
@@ -65,6 +67,7 @@ export async function updateActionItem(formData: FormData) {
 		},
 	});
 
+	await setFlashNotification("Action item updated.");
 	revalidateActionItemViews();
 }
 
@@ -83,6 +86,7 @@ export async function completeActionItem(actionItemId: string) {
 		},
 	});
 
+	await setFlashNotification("Action item completed.");
 	revalidateActionItemViews();
 }
 
@@ -100,6 +104,7 @@ export async function reopenActionItem(actionItemId: string) {
 		},
 	});
 
+	await setFlashNotification("Action item reopened.");
 	revalidateActionItemViews();
 }
 
@@ -117,5 +122,6 @@ export async function cancelActionItem(actionItemId: string) {
 		},
 	});
 
+	await setFlashNotification("Action item canceled.");
 	revalidateActionItemViews();
 }

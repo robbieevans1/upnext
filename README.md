@@ -45,6 +45,7 @@ The app organizes recurring work into a daily stack. Mandatory tasks stay visibl
 - Demo seed script for local screenshots and realistic QA data
 - Public About page and public landing links
 - Responsive mobile navigation with a side menu
+- Short popup notifications after task, action item, commitment, and topic changes
 - Soft deletes for tasks and groups
 - CI checks for linting, types, tests, unused code, and production build
 

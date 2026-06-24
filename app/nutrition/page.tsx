@@ -189,7 +189,8 @@ export default async function NutritionPage({ searchParams }: NutritionPageProps
 				},
 				take: 5,
 			}),
-		]);
+	]);
+	const renderNow = new Date();
 
 	const totalCaloriesToday = calorieEntries.reduce(
 		(total, entry) => total + entry.calories,
@@ -394,6 +395,9 @@ export default async function NutritionPage({ searchParams }: NutritionPageProps
 						}
 						defaultStartDateKey={getAppDateKey(new Date())}
 						defaultStartTimeKey={getAppTimeKey(new Date())}
+						initialElapsedSeconds={
+							activeFast ? getFastingDurationSeconds(activeFast, renderNow) : 0
+						}
 						lastFastLabel={
 							recentFasts[0]
 								? formatFastingDuration(getFastingDurationSeconds(recentFasts[0]))

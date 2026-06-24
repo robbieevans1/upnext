@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { setFlashNotification } from "@/lib/flash-notifications";
 import { prisma } from "@/lib/prisma";
 import { requireUserId } from "@/lib/server-auth";
 
@@ -35,6 +36,7 @@ export async function createTopic(formData: FormData) {
 		},
 	});
 
+	await setFlashNotification("Topic created.");
 	revalidateTopicViews();
 }
 
@@ -53,6 +55,7 @@ export async function updateTopic(formData: FormData) {
 		data: fields,
 	});
 
+	await setFlashNotification("Topic updated.");
 	revalidateTopicDetail(topicId);
 }
 
@@ -70,6 +73,7 @@ export async function archiveTopic(topicId: string) {
 		},
 	});
 
+	await setFlashNotification("Topic archived.");
 	revalidateTopicDetail(topicId);
 }
 
@@ -87,5 +91,6 @@ export async function restoreTopic(topicId: string) {
 		},
 	});
 
+	await setFlashNotification("Topic restored.");
 	revalidateTopicDetail(topicId);
 }

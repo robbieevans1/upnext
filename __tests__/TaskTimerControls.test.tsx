@@ -84,13 +84,14 @@ describe("TaskTimerControls", () => {
 					taskId: "task-1",
 					startedAt,
 				}}
+				initialElapsedSeconds={30 * 60}
 				isCompleted
 				completeButtonClassName="complete"
 				startButtonClassName="start"
 			/>,
 		);
 
-		expect(screen.getByText(/^00:30:/)).toBeInTheDocument();
+		expect(screen.getByText("00:30:00")).toBeInTheDocument();
 
 		fireEvent.click(screen.getByRole("button", { name: "Stop" }));
 
@@ -98,5 +99,24 @@ describe("TaskTimerControls", () => {
 			expect(mocks.stopTaskTimer).toHaveBeenCalledWith("task-1");
 		});
 		expect(mocks.completeTask).not.toHaveBeenCalled();
+	});
+
+	it("renders a running task from the server-provided elapsed time", () => {
+		render(
+			<TaskTimerControls
+				taskId="task-1"
+				taskTitle="Read"
+				playbook={null}
+				activeTaskSession={{
+					taskId: "task-1",
+					startedAt: "2026-06-24T12:00:00.000Z",
+				}}
+				initialElapsedSeconds={23 * 60 + 53}
+				completeButtonClassName="complete"
+				startButtonClassName="start"
+			/>,
+		);
+
+		expect(screen.getByText("00:23:53")).toBeInTheDocument();
 	});
 });

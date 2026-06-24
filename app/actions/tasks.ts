@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { setFlashNotification } from "@/lib/flash-notifications";
 import { prisma } from "@/lib/prisma";
 import { requireUserId } from "@/lib/server-auth";
 import { getUserEffectiveTodayDate } from "@/lib/effective-day";
@@ -94,6 +95,7 @@ export async function createTaskGroup(formData: FormData) {
 		},
 	});
 
+	await setFlashNotification("Task group created.");
 	revalidateTaskViews();
 }
 
@@ -117,6 +119,7 @@ export async function updateTaskGroup(formData: FormData) {
 		},
 	});
 
+	await setFlashNotification("Task group updated.");
 	revalidateTaskViews();
 }
 
@@ -146,6 +149,7 @@ export async function deleteTaskGroup(groupId: string) {
 		}),
 	]);
 
+	await setFlashNotification("Task group deleted.");
 	revalidateTaskViews();
 }
 
@@ -194,6 +198,7 @@ export async function createTask(formData: FormData) {
 		},
 	});
 
+	await setFlashNotification("Task created.");
 	revalidateTaskViews();
 }
 
@@ -225,6 +230,7 @@ export async function updateTask(formData: FormData) {
 		},
 	});
 
+	await setFlashNotification("Task updated.");
 	revalidateTaskViews();
 }
 
@@ -246,6 +252,7 @@ export async function updateTaskPlaybook(formData: FormData) {
 		},
 	});
 
+	await setFlashNotification("Task playbook updated.");
 	revalidateTaskViews();
 }
 
@@ -330,6 +337,7 @@ export async function adjustCompletedTaskTime(formData: FormData) {
 			},
 		});
 
+		await setFlashNotification("Task time updated.");
 		revalidateTaskTimeViews();
 		return;
 	}
@@ -379,6 +387,7 @@ export async function adjustCompletedTaskTime(formData: FormData) {
 		await prisma.$transaction(operations);
 	}
 
+	await setFlashNotification("Task time updated.");
 	revalidateTaskTimeViews();
 }
 
@@ -396,6 +405,7 @@ export async function deleteTask(taskId: string) {
 		},
 	});
 
+	await setFlashNotification("Task deleted.");
 	revalidateTaskViews();
 }
 
@@ -437,6 +447,7 @@ export async function addTaskSubtask(formData: FormData) {
 		},
 	});
 
+	await setFlashNotification("Subtask added.");
 	revalidateTaskViews();
 }
 
@@ -459,6 +470,7 @@ export async function updateTaskSubtask(formData: FormData) {
 		},
 	});
 
+	await setFlashNotification("Subtask updated.");
 	revalidateTaskViews();
 }
 
@@ -476,6 +488,7 @@ export async function deleteTaskSubtask(subtaskId: string) {
 		},
 	});
 
+	await setFlashNotification("Subtask deleted.");
 	revalidateTaskViews();
 }
 
@@ -547,6 +560,7 @@ export async function completeSubtask(subtaskId: string) {
 		}),
 	]);
 
+	await setFlashNotification("Subtask completed.");
 	revalidateTaskViews();
 }
 
@@ -637,6 +651,7 @@ export async function completeTask(taskId: string) {
 		]);
 	}
 
+	await setFlashNotification("Task completed.");
 	revalidateTaskViews();
 	revalidatePath("/downtime");
 }
@@ -653,5 +668,6 @@ export async function undoTodayCompletion(taskId: string) {
 		},
 	});
 
+	await setFlashNotification("Task completion undone.");
 	revalidateTaskViews();
 }
