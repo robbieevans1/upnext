@@ -21,6 +21,8 @@ The app organizes recurring work into a daily stack. Mandatory tasks stay visibl
 - One-off action items for async errands or tasks outside the recurring stack
 - Scheduled commitments for events, appointments, errands, recurring obligations, and time-based plans
 - Weekly recurring commitments that can repeat on one day, weekdays, every day, or any selected set of days
+- Calendar page for browsing dated action items, commitments, recurring commitment occurrences, and announcements by month
+- Month navigation for reviewing past and future scheduled items
 - Daily Review checks for next-day self-audits like calorie limits, sleep, spending, and nutrition goals
 - Nutrition page for logging calories, daily weight, fasting sessions, and weight-change comparisons
 - Calorie entries can be logged for today or one app day ahead
@@ -175,6 +177,17 @@ Go to church every Sunday at 11 AM
 They can include a date, optional start and end time, location, description, and playbook. Commitments can also repeat weekly on one or more selected days. For example, a recurring `Go to church` commitment can appear in Today every Sunday, while a `Team standup` can repeat Monday-Friday and an `Evening shutdown` can repeat every day until the series is changed or canceled.
 
 Recurring commitment completions are stored per occurrence, so completing this Sunday's event does not complete the whole series.
+
+## Calendar
+
+The Calendar page gives a month-level view of dated items. It includes:
+
+- One-time commitments on their scheduled day
+- Weekly recurring commitment occurrences generated for each matching weekday in the selected month
+- Action items with due dates
+- Active announcements with future event dates
+
+The page has Previous, This Month, and Next controls for moving between months. Each day shows its dated items directly on the calendar grid, and a Month Agenda below the grid lists the same items in chronological order for easier scanning.
 
 ## Topics
 

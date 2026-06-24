@@ -46,6 +46,10 @@ describe("AppNav", () => {
 			"href",
 			"/commitments",
 		);
+		expect(screen.getByRole("link", { name: "Calendar" })).toHaveAttribute(
+			"href",
+			"/calendar",
+		);
 		expect(screen.getByRole("link", { name: "Time" })).toHaveAttribute(
 			"href",
 			"/downtime",
@@ -114,6 +118,10 @@ describe("AppNav", () => {
 		expect(
 			within(menu).getByRole("link", { name: "Schedule" }),
 		).toHaveAttribute("href", "/commitments");
+		expect(within(menu).getByRole("link", { name: "Calendar" })).toHaveAttribute(
+			"href",
+			"/calendar",
+		);
 		expect(within(menu).getByRole("link", { name: "History" })).toHaveAttribute(
 			"href",
 			"/history",
