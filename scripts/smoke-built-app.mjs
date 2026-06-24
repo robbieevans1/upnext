@@ -2,7 +2,14 @@ import { spawn } from "node:child_process";
 
 const port = process.env.SMOKE_PORT ?? "3100";
 const baseUrl = `http://127.0.0.1:${port}`;
-const routes = ["/", "/today", "/dashboard", "/nutrition", "/announcements"];
+const routes = [
+	"/",
+	"/today",
+	"/dashboard",
+	"/nutrition",
+	"/calendar",
+	"/announcements",
+];
 
 function wait(ms) {
 	return new Promise((resolve) => setTimeout(resolve, ms));

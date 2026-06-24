@@ -28,6 +28,10 @@ const navGroups = [
 				label: "Schedule",
 			},
 			{
+				href: "/calendar",
+				label: "Calendar",
+			},
+			{
 				href: "/topics",
 				label: "Topics",
 			},
