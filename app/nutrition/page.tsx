@@ -12,10 +12,17 @@ import { authOptions } from "@/lib/auth";
 import { getUserEffectiveTodayDate } from "@/lib/effective-day";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { connection } from "next/server";
 
 const RECENT_DAYS = 7;
+
+type NutritionPageProps = {
+	searchParams: Promise<{
+		compareDay?: string | string[];
+	}>;
+};
 
 type FastingSessionSummary = {
 	startedAt: Date;
@@ -24,6 +31,32 @@ type FastingSessionSummary = {
 
 function formatWeight(weightLbs: number) {
 	return `${weightLbs.toFixed(1)} lb`;
+}
+
+function formatWeightDelta(deltaLbs: number) {
+	const roundedDelta = Math.round(deltaLbs * 10) / 10;
+
+	if (roundedDelta === 0) {
+		return "No change";
+	}
+
+	return `${roundedDelta > 0 ? "+" : ""}${roundedDelta.toFixed(1)} lb`;
+}
+
+function getWeightDeltaTone(deltaLbs: number) {
+	if (deltaLbs > 0) {
+		return "text-rose-300";
+	}
+
+	if (deltaLbs < 0) {
+		return "text-emerald-300";
+	}
+
+	return "text-slate-300";
+}
+
+function getSingleSearchParam(value: string | string[] | undefined) {
+	return Array.isArray(value) ? value[0] : value;
 }
 
 function getFastingDurationSeconds(
@@ -46,8 +79,10 @@ function formatFastingDuration(totalSeconds: number) {
 	return `${hours}h ${minutes}m`;
 }
 
-export default async function NutritionPage() {
+export default async function NutritionPage({ searchParams }: NutritionPageProps) {
 	await connection();
+	const params = await searchParams;
+	const selectedCompareDayKey = getSingleSearchParam(params.compareDay);
 
 	const session = await getServerSession(authOptions);
 
@@ -59,6 +94,7 @@ export default async function NutritionPage() {
 	const today = effectiveDay.today;
 	const tomorrow = addAppDays(today, 1);
 	const recentStartDay = addAppDays(today, -(RECENT_DAYS - 1));
+	const weightComparisonStartDay = addAppDays(recentStartDay, -1);
 
 	const [
 		calorieEntries,
@@ -66,6 +102,7 @@ export default async function NutritionPage() {
 		todayWeightEntry,
 		recentCalorieEntries,
 		recentWeights,
+		compareWeightOptions,
 		activeFast,
 		recentFasts,
 	] = await Promise.all([
@@ -111,13 +148,25 @@ export default async function NutritionPage() {
 				where: {
 					userId: session.user.id,
 					day: {
-						gte: recentStartDay,
+						gte: weightComparisonStartDay,
 						lte: today,
 					},
 				},
 				orderBy: {
 					day: "asc",
 				},
+			}),
+			prisma.weightEntry.findMany({
+				where: {
+					userId: session.user.id,
+					day: {
+						lt: today,
+					},
+				},
+				orderBy: {
+					day: "desc",
+				},
+				take: 90,
 			}),
 			prisma.fastingSession.findFirst({
 				where: {
@@ -152,19 +201,33 @@ export default async function NutritionPage() {
 	);
 	const recentDays = Array.from({ length: RECENT_DAYS }, (_, index) => {
 		const day = addAppDays(recentStartDay, index);
+		const previousDay = addAppDays(day, -1);
 		const calories = recentCalorieEntries
 			.filter((entry) => entry.day.getTime() === day.getTime())
 			.reduce((total, entry) => total + entry.calories, 0);
 		const weight = recentWeights.find(
 			(entry) => entry.day.getTime() === day.getTime(),
 		);
+		const previousWeight = recentWeights.find(
+			(entry) => entry.day.getTime() === previousDay.getTime(),
+		);
+		const weightChange =
+			weight && previousWeight ? weight.weightLbs - previousWeight.weightLbs : null;
 
 		return {
 			day,
 			calories,
 			weight,
+			weightChange,
 		};
 	});
+	const selectedCompareWeight = compareWeightOptions.find(
+		(entry) => getAppDateKey(entry.day) === selectedCompareDayKey,
+	);
+	const comparisonDelta =
+		todayWeightEntry && selectedCompareWeight
+			? todayWeightEntry.weightLbs - selectedCompareWeight.weightLbs
+			: null;
 
 	return (
 		<>
@@ -224,6 +287,103 @@ export default async function NutritionPage() {
 							</p>
 						</div>
 					</div>
+
+					<section className="mt-8 rounded-2xl border border-slate-800 bg-slate-900 p-6">
+						<div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+							<div>
+								<h2 className="text-xl font-bold">Weight Comparison</h2>
+								<p className="mt-2 text-sm text-slate-400">
+									Choose a past weigh-in to compare against today.
+								</p>
+							</div>
+
+							<form className="flex flex-col gap-3 sm:flex-row sm:items-end">
+								<div>
+									<label
+										htmlFor="compareDay"
+										className="text-sm font-medium text-slate-300"
+									>
+										Compare to
+									</label>
+									<select
+										id="compareDay"
+										name="compareDay"
+										defaultValue={selectedCompareDayKey ?? ""}
+										className="mt-2 w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-white outline-none focus:border-sky-500 sm:w-56"
+									>
+										<option value="">Select a day</option>
+										{compareWeightOptions.map((entry) => (
+											<option
+												key={entry.id}
+												value={getAppDateKey(entry.day)}
+											>
+												{formatAppDate(entry.day)} - {formatWeight(entry.weightLbs)}
+											</option>
+										))}
+									</select>
+								</div>
+
+								<button className="rounded-xl bg-sky-500 px-5 py-3 font-semibold text-slate-950 hover:bg-sky-400">
+									Compare
+								</button>
+
+								{selectedCompareDayKey && (
+									<Link
+										href="/nutrition"
+										className="rounded-xl border border-slate-700 px-5 py-3 text-center font-semibold text-slate-200 hover:border-sky-400 hover:text-sky-200"
+									>
+										Clear
+									</Link>
+								)}
+							</form>
+						</div>
+
+						<div className="mt-5 rounded-xl border border-slate-800 bg-slate-950 p-4">
+							{!todayWeightEntry ? (
+								<p className="text-sm text-slate-400">
+									Save today&apos;s weight to compare it against a past day.
+								</p>
+							) : !selectedCompareDayKey ? (
+								<p className="text-sm text-slate-400">
+									Select a past day to see the difference from today&apos;s{" "}
+									{formatWeight(todayWeightEntry.weightLbs)}.
+								</p>
+							) : !selectedCompareWeight ? (
+								<p className="text-sm text-slate-400">
+									No saved weight was found for that past day.
+								</p>
+							) : comparisonDelta === null ? (
+								<p className="text-sm text-slate-400">
+									No comparison is available yet.
+								</p>
+							) : (
+								<div className="grid gap-3 text-sm sm:grid-cols-3">
+									<div>
+										<p className="text-slate-500">Today</p>
+										<p className="mt-1 font-semibold text-slate-100">
+											{formatWeight(todayWeightEntry.weightLbs)}
+										</p>
+									</div>
+									<div>
+										<p className="text-slate-500">
+											{formatAppDate(selectedCompareWeight.day)}
+										</p>
+										<p className="mt-1 font-semibold text-slate-100">
+											{formatWeight(selectedCompareWeight.weightLbs)}
+										</p>
+									</div>
+									<div>
+										<p className="text-slate-500">Difference</p>
+										<p
+											className={`mt-1 font-semibold ${getWeightDeltaTone(comparisonDelta)}`}
+										>
+											{formatWeightDelta(comparisonDelta)}
+										</p>
+									</div>
+								</div>
+							)}
+						</div>
+					</section>
 
 					<FastingTimer
 						activeStartedAt={activeFast?.startedAt.toISOString() ?? null}
@@ -435,7 +595,7 @@ export default async function NutritionPage() {
 							{recentDays.map((day) => (
 								<div
 									key={day.day.toISOString()}
-									className="grid gap-3 rounded-xl border border-slate-800 bg-slate-950 p-4 text-sm sm:grid-cols-3"
+									className="grid gap-3 rounded-xl border border-slate-800 bg-slate-950 p-4 text-sm sm:grid-cols-4"
 								>
 									<p className="font-semibold text-slate-100">
 										{formatAppDate(day.day)}
@@ -443,6 +603,17 @@ export default async function NutritionPage() {
 									<p className="text-slate-300">{day.calories} calories</p>
 									<p className="text-slate-400">
 										{day.weight ? formatWeight(day.weight.weightLbs) : "No weight"}
+									</p>
+									<p
+										className={
+											day.weightChange === null
+												? "text-slate-500"
+												: getWeightDeltaTone(day.weightChange)
+										}
+									>
+										{day.weightChange === null
+											? "No prior weight"
+											: formatWeightDelta(day.weightChange)}
 									</p>
 								</div>
 							))}

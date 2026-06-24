@@ -22,7 +22,12 @@ The app organizes recurring work into a daily stack. Mandatory tasks stay visibl
 - Scheduled commitments for events, appointments, errands, recurring obligations, and time-based plans
 - Weekly recurring commitments that can repeat on one day, weekdays, every day, or any selected set of days
 - Daily Review checks for next-day self-audits like calorie limits, sleep, spending, and nutrition goals
+- Nutrition page for logging calories, daily weight, fasting sessions, and weight-change comparisons
+- Calorie entries can be logged for today or one app day ahead
+- Weight history shows day-to-day fluctuation and comparison against selected past weigh-ins
+- Fasting timer with support for backdating the start time if the timer was started late
 - Complete Day flow for starting tomorrow's stack early without marking unfinished tasks complete
+- Announcement banners for future dated events with a live countdown
 - Dashboard with completion trends, task-time totals, downtime charts, scheduled load, daily review results, action item status, and playbook coverage
 - Completed Today section with same-day undo
 - Continue button for completed tasks that need additional focused time
@@ -191,6 +196,16 @@ Topics can be categorized, edited, archived, and restored. The Topics index stay
 
 The Tools section currently includes a persistent scratch counter. It is intentionally lightweight: the count is stored locally in the browser, survives navigation and app restarts, and stays there until Reset is pressed.
 
+## Nutrition and Fasting
+
+The Nutrition page tracks calorie intake, daily weigh-ins, and fasting sessions.
+
+Calories can be logged throughout the day with an optional note. If a user goes past midnight or wants to plan ahead, calories can also be logged one app day ahead.
+
+Daily weight is stored as one weigh-in per app day. The recent-day history shows calories, weight, and the day-to-day weight fluctuation when both the current day and previous day have saved weights. The Weight Comparison card lets the user choose a past weigh-in and compare it against today's saved weight.
+
+The fasting timer can be started and stopped from the Nutrition page. If the user forgets to start the timer, the start form supports choosing an earlier date and time, such as starting a fast from 2 PM even if the timer is started at 4 PM. Recent completed fasts show their start time, end time, and duration.
+
 ## Downtime Tracking
 
 The Time page tracks time spent away from improvement activities. A user can switch the active time-away timer between:
@@ -203,6 +218,10 @@ The Time page tracks time spent away from improvement activities. A user can swi
 The timer keeps running if the user navigates away. When a task timer starts, active downtime stops. When task time stops, Other time starts again by default. If an active timer crosses the app-day boundary, UpNext closes the previous day's session at Eastern midnight and starts a new session for the new day.
 
 This data is intended for future analytics around available free time, routines, and opportunities to adjust how time is spent.
+
+## Announcements
+
+Announcements let a signed-in user set a future event banner for the app. The banner appears globally, shows the event title, and includes a countdown to the event time. The countdown hydrates from the same server-rendered value and then updates in the browser, avoiding server/client time drift during initial render.
 
 ## Analytics Dashboard
 
@@ -244,6 +263,9 @@ The dashboard uses existing database records rather than separate analytics tabl
 - `TaskSubtask` stores active subtasks for recurring tasks.
 - `SubtaskCompletion` stores per-day subtask completion history.
 - `DowntimeSession` stores timed sleep, social, eating, and other sessions.
+- `CalorieEntry` stores calorie logs for today or one app day ahead.
+- `WeightEntry` stores one daily weigh-in per user and app day.
+- `FastingSession` stores fasting timer start and end timestamps.
 - `ActionItem` stores one-off async tasks with optional due dates, completion status, cancellation status, and playbook notes.
 - `Topic` stores reusable notes, reminders, current focus areas, and general playbooks.
 - `Commitment` stores date-based, time-based, and weekly recurring obligations with optional location, start/end times, completion status, cancellation status, and playbook notes.
@@ -252,6 +274,7 @@ The dashboard uses existing database records rather than separate analytics tabl
 - `DailyCheckResult` stores Yes, No, Skip, or Not sure answers against the reviewed app day.
 - `DailyReviewDismissal` stores when a user dismisses a day's review prompt.
 - `DayStartOverride` stores a temporary per-user effective-day override for starting tomorrow early.
+- `Announcement` stores active future event banners and countdown target times.
 
 ## Getting Started
 
@@ -285,6 +308,18 @@ Start the development server:
 
 ```bash
 npm run dev
+```
+
+If the local Next dev cache gets into a bad state, start from a clean cache:
+
+```bash
+npm run dev:clean
+```
+
+For a production-like local run that avoids the dev cache path entirely:
+
+```bash
+npm run preview
 ```
 
 Open:
@@ -363,6 +398,7 @@ The CI workflow runs on pull requests and pushes to `main`. It installs dependen
 - Knip unused-code check
 - Vitest test suite
 - Production build
+- Built-app smoke check
 
 ## Roadmap
 
