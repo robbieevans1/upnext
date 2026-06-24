@@ -123,6 +123,29 @@ export default async function DowntimePage() {
 								: null
 						}
 						categoryTotals={categoryTotals}
+						initialActiveElapsedSeconds={
+							activeSession
+								? Math.max(
+										0,
+										Math.floor(
+											(now.getTime() - activeSession.startedAt.getTime()) /
+												1000,
+										),
+									)
+								: 0
+						}
+						initialActiveTaskElapsedSeconds={
+							activeTaskSession
+								? Math.max(
+										0,
+										Math.floor(
+											(now.getTime() -
+												activeTaskSession.startedAt.getTime()) /
+												1000,
+										),
+									)
+								: 0
+						}
 						totalSecondsToday={totalSecondsToday}
 					/>
 				</section>

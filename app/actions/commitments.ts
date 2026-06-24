@@ -8,6 +8,7 @@ import {
 	parseWeekday,
 	parseWeekdays,
 } from "@/lib/commitments";
+import { setFlashNotification } from "@/lib/flash-notifications";
 import { prisma } from "@/lib/prisma";
 import { requireUserId } from "@/lib/server-auth";
 import { CommitmentRecurrence } from "@prisma/client";
@@ -102,6 +103,7 @@ export async function createCommitment(formData: FormData) {
 		},
 	});
 
+	await setFlashNotification("Commitment created.");
 	revalidateCommitmentViews();
 }
 
@@ -136,6 +138,7 @@ export async function updateCommitment(formData: FormData) {
 		},
 	});
 
+	await setFlashNotification("Commitment updated.");
 	revalidateCommitmentViews();
 }
 
@@ -154,6 +157,7 @@ export async function completeCommitment(commitmentId: string) {
 		},
 	});
 
+	await setFlashNotification("Commitment completed.");
 	revalidateCommitmentViews();
 }
 
@@ -207,6 +211,7 @@ export async function completeCommitmentOccurrence(
 		},
 	});
 
+	await setFlashNotification("Commitment occurrence completed.");
 	revalidateCommitmentViews();
 }
 
@@ -224,6 +229,7 @@ export async function reopenCommitment(commitmentId: string) {
 		},
 	});
 
+	await setFlashNotification("Commitment reopened.");
 	revalidateCommitmentViews();
 }
 
@@ -241,5 +247,6 @@ export async function cancelCommitment(commitmentId: string) {
 		},
 	});
 
+	await setFlashNotification("Commitment canceled.");
 	revalidateCommitmentViews();
 }

@@ -156,6 +156,23 @@ function getTaskTimeSeconds(task: TaskWithLastCompletion) {
 	}, 0);
 }
 
+function getInitialTaskTimerElapsedSeconds(
+	taskId: string,
+	activeTaskSession: { taskId: string; startedAt: string } | null,
+	now = new Date(),
+) {
+	if (activeTaskSession?.taskId !== taskId) {
+		return 0;
+	}
+
+	return Math.max(
+		0,
+		Math.floor(
+			(now.getTime() - new Date(activeTaskSession.startedAt).getTime()) / 1000,
+		),
+	);
+}
+
 function formatTaskTime(totalSeconds: number) {
 	if (totalSeconds <= 0) {
 		return "No time tracked";
@@ -723,6 +740,10 @@ export default async function TodayPage() {
 														taskTitle={task.title}
 														playbook={task.playbook}
 														activeTaskSession={activeTaskTimer}
+														initialElapsedSeconds={getInitialTaskTimerElapsedSeconds(
+															task.id,
+															activeTaskTimer,
+														)}
 														isCompleted
 														completeButtonClassName="rounded-lg border border-emerald-400/40 px-3 py-1.5 text-sm font-medium text-emerald-100 hover:bg-emerald-500/10 disabled:cursor-not-allowed disabled:opacity-60"
 														startButtonClassName="rounded-lg border border-emerald-400/40 px-3 py-1.5 text-sm font-medium text-emerald-100 hover:bg-emerald-500/10 disabled:cursor-not-allowed disabled:opacity-60"
@@ -1033,6 +1054,10 @@ function CurrentTaskCard({
 					taskTitle={task.title}
 					playbook={task.playbook}
 					activeTaskSession={activeTaskSession}
+					initialElapsedSeconds={getInitialTaskTimerElapsedSeconds(
+						task.id,
+						activeTaskSession,
+					)}
 					completeButtonClassName="rounded-xl bg-sky-500 px-5 py-3 font-semibold text-slate-950 hover:bg-sky-400 disabled:cursor-not-allowed disabled:opacity-60"
 					startButtonClassName="rounded-xl bg-sky-500 px-5 py-3 font-semibold text-slate-950 hover:bg-sky-400 disabled:cursor-not-allowed disabled:opacity-60"
 				/>
@@ -1134,6 +1159,10 @@ function TaskRow({
 					taskTitle={task.title}
 					playbook={task.playbook}
 					activeTaskSession={activeTaskSession}
+					initialElapsedSeconds={getInitialTaskTimerElapsedSeconds(
+						task.id,
+						activeTaskSession,
+					)}
 					completeButtonClassName="rounded-lg border border-slate-700 px-4 py-2 text-sm font-medium text-slate-200 hover:border-sky-500 hover:text-sky-400 disabled:cursor-not-allowed disabled:opacity-60"
 					startButtonClassName="rounded-lg border border-slate-700 px-4 py-2 text-sm font-medium text-slate-200 hover:border-sky-500 hover:text-sky-400 disabled:cursor-not-allowed disabled:opacity-60"
 				/>

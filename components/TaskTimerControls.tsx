@@ -17,6 +17,7 @@ type TaskTimerControlsProps = {
 		| null;
 	completeButtonClassName: string;
 	startButtonClassName: string;
+	initialElapsedSeconds?: number;
 	isCompleted?: boolean;
 };
 
@@ -39,25 +40,36 @@ export default function TaskTimerControls({
 	activeTaskSession,
 	completeButtonClassName,
 	startButtonClassName,
+	initialElapsedSeconds = 0,
 	isCompleted = false,
 }: TaskTimerControlsProps) {
 	const router = useRouter();
-	const [now, setNow] = useState(() => Date.now());
+	const [clientNow, setClientNow] = useState<number | null>(null);
 	const [isPending, startTransition] = useTransition();
 	const isThisTaskRunning = activeTaskSession?.taskId === taskId;
 	const isAnotherTaskRunning = Boolean(activeTaskSession && !isThisTaskRunning);
-	const elapsedSeconds =
+	const activeStartedAtMs =
 		isThisTaskRunning && activeTaskSession
-			? Math.floor((now - new Date(activeTaskSession.startedAt).getTime()) / 1000)
-			: 0;
+			? new Date(activeTaskSession.startedAt).getTime()
+			: null;
+	const elapsedSeconds =
+		activeStartedAtMs === null
+			? 0
+			: clientNow === null
+				? initialElapsedSeconds
+				: Math.floor((clientNow - activeStartedAtMs) / 1000);
 
 	useEffect(() => {
-		const interval = setInterval(() => {
-			setNow(Date.now());
+		if (activeStartedAtMs === null) {
+			return;
+		}
+
+		const interval = window.setInterval(() => {
+			setClientNow(Date.now());
 		}, 1000);
 
-		return () => clearInterval(interval);
-	}, []);
+		return () => window.clearInterval(interval);
+	}, [activeStartedAtMs]);
 
 	function handleStart() {
 		startTransition(async () => {
