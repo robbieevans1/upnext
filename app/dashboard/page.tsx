@@ -181,6 +181,10 @@ export default async function DashboardPage() {
 		1,
 		...analytics.groupCompletionTotals.map((group) => group.count),
 	);
+	const maxWeeklyTaskCompletions = Math.max(
+		1,
+		...analytics.weeklyTaskCompletionTotals.map((task) => task.count),
+	);
 	const maxCategorySeconds = Math.max(
 		1,
 		...analytics.downtimeCategoryTotals.map((category) => category.totalSeconds),
@@ -335,6 +339,34 @@ export default async function DashboardPage() {
 							) : (
 								<EmptyState>
 									Answer daily review checks to populate this panel.
+								</EmptyState>
+							)}
+						</Panel>
+
+						<Panel title="This Week By Task">
+							<div className="mb-4 rounded-xl border border-slate-800 bg-slate-950 p-4">
+								<p className="text-sm text-slate-400">Sunday through Saturday</p>
+								<p className="mt-1 font-semibold text-slate-100">
+									{formatAppDate(analytics.taskCompletionWeekStart)} to{" "}
+									{formatAppDate(today)}
+								</p>
+							</div>
+
+							{analytics.weeklyTaskCompletionTotals.length > 0 ? (
+								<div className="space-y-4">
+									{analytics.weeklyTaskCompletionTotals.map((task) => (
+										<HorizontalBar
+											key={task.title}
+											label={task.title}
+											value={`${task.count}`}
+											percent={(task.count / maxWeeklyTaskCompletions) * 100}
+											colorClass="bg-sky-400"
+										/>
+									))}
+								</div>
+							) : (
+								<EmptyState>
+									Complete tasks this week to populate this panel.
 								</EmptyState>
 							)}
 						</Panel>
@@ -585,7 +617,12 @@ function HorizontalBar({
 			<div className="h-3 overflow-hidden rounded-full bg-slate-950">
 				<div
 					className={`h-full rounded-full ${colorClass}`}
-					style={{ width: `${Math.max(4, Math.min(100, percent))}%` }}
+					style={{
+						width:
+							percent <= 0
+								? "0%"
+								: `${Math.max(4, Math.min(100, percent))}%`,
+					}}
 				/>
 			</div>
 		</div>
