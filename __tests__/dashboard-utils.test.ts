@@ -225,6 +225,19 @@ describe("dashboard analytics", () => {
 				count: 1,
 			},
 		]);
+		expect(analytics.taskCompletionWeekStart).toEqual(
+			new Date("2026-06-14T04:00:00.000Z"),
+		);
+		expect(analytics.weeklyTaskCompletionTotals).toEqual([
+			{
+				title: "Portfolio",
+				count: 2,
+			},
+			{
+				title: "Gym",
+				count: 1,
+			},
+		]);
 		expect(analytics.actionItemSummary).toEqual({
 			open: 1,
 			overdue: 1,
@@ -270,6 +283,94 @@ describe("dashboard analytics", () => {
 				no: 0,
 				skip: 1,
 				unsure: 0,
+			},
+		]);
+	});
+
+	it("resets weekly task completion totals on Sunday", () => {
+		const analytics = buildDashboardAnalytics({
+			today: new Date("2026-06-23T04:00:00.000Z"),
+			now: new Date("2026-06-23T15:00:00.000Z"),
+			days: 14,
+			tasks: [
+				{
+					id: "task-1",
+					title: "Weightlifting",
+					isActive: true,
+					isMandatory: false,
+					playbook: null,
+					group: null,
+					completions: [
+						{
+							completedOn: new Date("2026-06-20T04:00:00.000Z"),
+						},
+						{
+							completedOn: new Date("2026-06-21T04:00:00.000Z"),
+						},
+					],
+				},
+				{
+					id: "task-2",
+					title: "Cardio",
+					isActive: true,
+					isMandatory: false,
+					playbook: null,
+					group: null,
+					completions: [
+						{
+							completedOn: new Date("2026-06-21T04:00:00.000Z"),
+						},
+						{
+							completedOn: new Date("2026-06-22T04:00:00.000Z"),
+						},
+					],
+				},
+				{
+					id: "task-3",
+					title: "Mobility",
+					isActive: true,
+					isMandatory: false,
+					playbook: null,
+					group: null,
+					completions: [],
+				},
+				{
+					id: "task-4",
+					title: "Archived habit",
+					isActive: false,
+					isMandatory: false,
+					playbook: null,
+					group: null,
+					completions: [
+						{
+							completedOn: new Date("2026-06-21T04:00:00.000Z"),
+						},
+					],
+				},
+			],
+			taskSessions: [],
+			lifetimeTaskSessions: [],
+			downtimeSessions: [],
+			actionItems: [],
+			commitments: [],
+			dailyCheckResults: [],
+		});
+
+		expect(analytics.taskCompletionWeekStart).toEqual(
+			new Date("2026-06-21T04:00:00.000Z"),
+		);
+		expect(analytics.weeklyTaskCompletionTotals).toEqual([
+			{
+				title: "Cardio",
+				count: 2,
+			},
+			{
+				title: "Weightlifting",
+				count: 1,
+			},
+			{
+				title: "Mobility",
+				count: 0,
 			},
 		]);
 	});

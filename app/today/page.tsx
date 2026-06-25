@@ -27,6 +27,11 @@ import { redirect } from "next/navigation";
 import { authOptions } from "@/lib/auth";
 import { getChallengeProgress, type ChallengeProgress } from "@/lib/challenges";
 import {
+	buildWeeklyTaskCompletionTotals,
+	type WeeklyTaskCompletionTotal,
+	getTaskCompletionWeekStart,
+} from "@/lib/task-completion-week";
+import {
 	addAppDays,
 	formatAppDate,
 	formatAppTime,
@@ -222,6 +227,7 @@ export default async function TodayPage() {
 	const effectiveDay = await getUserEffectiveTodayDate(session.user.id);
 	const today = effectiveDay.today;
 	const yesterday = addAppDays(today, -1);
+	const taskCompletionWeekStart = getTaskCompletionWeekStart(today);
 	const todayDayOfWeek = getAppDayOfWeek(today);
 
 	const groups = await prisma.taskGroup.findMany({
@@ -281,6 +287,22 @@ export default async function TodayPage() {
 		where: {
 			userId: session.user.id,
 			completedOn: today,
+		},
+	});
+	const weeklyTaskCompletions = await prisma.taskCompletion.findMany({
+		where: {
+			userId: session.user.id,
+			completedOn: {
+				gte: taskCompletionWeekStart,
+				lte: today,
+			},
+			task: {
+				isActive: true,
+			},
+		},
+		select: {
+			taskId: true,
+			completedOn: true,
 		},
 	});
 
@@ -514,6 +536,11 @@ export default async function TodayPage() {
 	const totalRemainingTasks = remainingTasks.length;
 	const totalCompletedTasks = completedTodayTasks.length;
 	const totalTasksToday = totalRemainingTasks + totalCompletedTasks;
+	const weeklyTaskCompletionTotals = buildWeeklyTaskCompletionTotals({
+		tasks,
+		completions: weeklyTaskCompletions,
+		weekStart: taskCompletionWeekStart,
+	});
 
 	const progressPercent =
 		totalTasksToday === 0
@@ -527,8 +554,8 @@ export default async function TodayPage() {
 		<>
 			<AppNav />
 
-			<main className="min-h-screen bg-slate-950 px-6 py-10 text-white">
-				<section className="mx-auto max-w-2xl">
+			<main className="min-h-screen bg-slate-950 px-4 py-8 text-white sm:px-6 sm:py-10">
+				<section className="mx-auto max-w-6xl">
 					<div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
 						<div>
 							<p className="mb-2 text-sm font-medium text-sky-400">UpNext</p>
@@ -552,41 +579,9 @@ export default async function TodayPage() {
 						</div>
 					</div>
 
-					<div className="mt-6">
-						<div className="mb-2 flex items-center justify-between text-sm text-slate-400">
-							<span>{totalCompletedTasks} completed</span>
-							<span>{totalRemainingTasks} remaining</span>
-						</div>
-
-						<div className="h-3 overflow-hidden rounded-full bg-slate-800">
-							<div
-								className="h-full rounded-full bg-sky-500"
-								style={{ width: `${progressPercent}%` }}
-							/>
-						</div>
-
-						<p className="mt-2 text-sm text-slate-500">
-							{progressPercent}% done today
-						</p>
-					</div>
-
-					<DailyReviewPrompt
-						targetDayKey={getAppDateKey(yesterday)}
-						targetDayLabel={formatAppDate(yesterday)}
-						wasDismissed={Boolean(dailyReviewDismissal)}
-						checks={eligibleDailyChecks.map((check) => ({
-							id: check.id,
-							title: check.title,
-							description: check.description,
-							result: check.results[0]?.status ?? null,
-						}))}
-					/>
-
-					{challengeProgress.length > 0 && (
-						<ChallengeStreakSummary challenges={challengeProgress} />
-					)}
-
-					{commitmentsToday.length > 0 && (
+					<div className="mt-6 grid min-w-0 gap-6 lg:grid-cols-[minmax(0,1.35fr)_minmax(20rem,0.75fr)] lg:items-start">
+						<div className="order-last min-w-0 lg:order-first">
+							{commitmentsToday.length > 0 && (
 						<StackSection
 							title="Scheduled Today"
 							summary={`${commitmentsToday.length} scheduled`}
@@ -596,9 +591,9 @@ export default async function TodayPage() {
 								<CommitmentRow key={commitment.id} commitment={commitment} />
 							))}
 						</StackSection>
-					)}
+							)}
 
-					{currentTask ? (
+							{currentTask ? (
 						<CurrentTaskCard
 							task={currentTask}
 							today={today}
@@ -616,9 +611,9 @@ export default async function TodayPage() {
 								You completed everything in today&apos;s stack.
 							</p>
 						</div>
-					)}
+							)}
 
-					{actionItems.length > 0 && (
+							{actionItems.length > 0 && (
 						<StackSection
 							title="Action Items"
 							summary={`${actionItems.length} open`}
@@ -628,9 +623,9 @@ export default async function TodayPage() {
 								<ActionItemRow key={item.id} item={item} today={today} />
 							))}
 						</StackSection>
-					)}
+							)}
 
-					{mandatoryTasks.length > 0 && (
+							{mandatoryTasks.length > 0 && (
 						<StackSection
 							title="Mandatory"
 							summary={`${mandatoryTasks.length} remaining`}
@@ -646,9 +641,9 @@ export default async function TodayPage() {
 								/>
 							))}
 						</StackSection>
-					)}
+							)}
 
-					{groupedTasks.map(({ group, tasks }) => (
+							{groupedTasks.map(({ group, tasks }) => (
 						<StackSection
 							key={group.id}
 							title={group.name}
@@ -671,9 +666,9 @@ export default async function TodayPage() {
 								/>
 							))}
 						</StackSection>
-					))}
+							))}
 
-					{ungroupedTasks.length > 0 && (
+							{ungroupedTasks.length > 0 && (
 						<StackSection
 							title="Ungrouped"
 							summary={`${ungroupedTasks.length} remaining`}
@@ -689,15 +684,45 @@ export default async function TodayPage() {
 								/>
 							))}
 						</StackSection>
-					)}
+							)}
+						</div>
 
-					{completedTodayTasks.length > 0 && (
+						<aside className="order-first min-w-0 space-y-6 lg:order-last lg:sticky lg:top-6">
+							<TodayProgressCard
+								completedTasks={totalCompletedTasks}
+								remainingTasks={totalRemainingTasks}
+								progressPercent={progressPercent}
+							/>
+
+							<DailyReviewPrompt
+								targetDayKey={getAppDateKey(yesterday)}
+								targetDayLabel={formatAppDate(yesterday)}
+								wasDismissed={Boolean(dailyReviewDismissal)}
+								checks={eligibleDailyChecks.map((check) => ({
+									id: check.id,
+									title: check.title,
+									description: check.description,
+									result: check.results[0]?.status ?? null,
+								}))}
+							/>
+
+							{challengeProgress.length > 0 && (
+								<ChallengeStreakSummary challenges={challengeProgress} />
+							)}
+
+							<WeeklyTaskCompletionCard
+								totals={weeklyTaskCompletionTotals}
+								weekStart={taskCompletionWeekStart}
+								today={today}
+							/>
+
+							{completedTodayTasks.length > 0 && (
 						<CollapsibleSection
 							title="Completed Today"
 							summary={`${completedTodayTasks.length} completed`}
 							defaultOpen={false}
 							storageKey="today:completed"
-							className="mt-10 border-t border-slate-800 pt-6"
+									className="border-t border-slate-800 pt-6"
 						>
 							<div className="space-y-3">
 								{completedTodayTasks.map((task) => {
@@ -801,7 +826,9 @@ export default async function TodayPage() {
 								})}
 							</div>
 						</CollapsibleSection>
-					)}
+							)}
+						</aside>
+					</div>
 				</section>
 			</main>
 		</>
@@ -889,6 +916,91 @@ function ChallengeStreakSummary({
 					);
 				})}
 			</div>
+		</section>
+	);
+}
+
+function TodayProgressCard({
+	completedTasks,
+	remainingTasks,
+	progressPercent,
+}: {
+	completedTasks: number;
+	remainingTasks: number;
+	progressPercent: number;
+}) {
+	return (
+		<section className="rounded-2xl border border-slate-800 bg-slate-900 p-5">
+			<div className="mb-2 flex items-center justify-between gap-3 text-sm text-slate-400">
+				<span>{completedTasks} completed</span>
+				<span>{remainingTasks} remaining</span>
+			</div>
+
+			<div className="h-3 overflow-hidden rounded-full bg-slate-800">
+				<div
+					className="h-full rounded-full bg-sky-500"
+					style={{ width: `${progressPercent}%` }}
+				/>
+			</div>
+
+			<p className="mt-3 text-sm font-medium text-slate-300">
+				{progressPercent}% done today
+			</p>
+		</section>
+	);
+}
+
+function WeeklyTaskCompletionCard({
+	totals,
+	weekStart,
+	today,
+}: {
+	totals: WeeklyTaskCompletionTotal[];
+	weekStart: Date;
+	today: Date;
+}) {
+	const maxCompletions = Math.max(1, ...totals.map((task) => task.count));
+
+	return (
+		<section className="rounded-2xl border border-slate-800 bg-slate-900 p-5">
+			<div className="mb-4">
+				<h2 className="text-lg font-semibold text-slate-100">
+					This Week By Task
+				</h2>
+				<p className="mt-1 text-sm text-slate-500">
+					{formatAppDate(weekStart)} to {formatAppDate(today)}
+				</p>
+			</div>
+
+			{totals.length > 0 ? (
+				<div className="space-y-4">
+					{totals.map((task) => (
+						<div key={task.title} className="min-w-0">
+							<div className="mb-2 flex min-w-0 items-center justify-between gap-3 text-sm">
+								<span className="min-w-0 truncate font-medium text-slate-300">
+									{task.title}
+								</span>
+								<span className="shrink-0 text-slate-500">{task.count}</span>
+							</div>
+							<div className="h-3 overflow-hidden rounded-full bg-slate-950">
+								<div
+									className="h-full rounded-full bg-sky-400"
+									style={{
+										width:
+											task.count === 0
+												? "0%"
+												: `${Math.max(4, Math.min(100, (task.count / maxCompletions) * 100))}%`,
+									}}
+								/>
+							</div>
+						</div>
+					))}
+				</div>
+			) : (
+				<p className="rounded-xl border border-slate-800 bg-slate-950 p-4 text-sm text-slate-400">
+					Add active tasks to populate this graph.
+				</p>
+			)}
 		</section>
 	);
 }

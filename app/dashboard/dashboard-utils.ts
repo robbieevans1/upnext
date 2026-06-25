@@ -5,6 +5,10 @@ import {
 	getAppTodayDate,
 } from "@/lib/app-date";
 import { DOWNTIME_CATEGORIES } from "@/lib/downtime";
+import {
+	buildWeeklyTaskCompletionTotals,
+	getTaskCompletionWeekStart,
+} from "@/lib/task-completion-week";
 
 type DashboardTask = {
 	id: string;
@@ -151,6 +155,7 @@ export function buildDashboardAnalytics({
 	days = 14,
 }: DashboardAnalyticsInput) {
 	const startDay = addAppDays(today, -(days - 1));
+	const taskCompletionWeekStart = getTaskCompletionWeekStart(today);
 	const activeTasks = tasks.filter((task) => task.isActive);
 	const totalPossibleTaskCompletions = activeTasks.length * days;
 	const dayBuckets = Array.from({ length: days }, (_, index) => {
@@ -358,6 +363,17 @@ export function buildDashboardAnalytics({
 		dayBuckets,
 		completionRate,
 		totalCompletions,
+		taskCompletionWeekStart,
+		weeklyTaskCompletionTotals: buildWeeklyTaskCompletionTotals({
+			tasks,
+			completions: tasks.flatMap((task) =>
+				task.completions.map((completion) => ({
+					taskId: task.id,
+					completedOn: completion.completedOn,
+				})),
+			),
+			weekStart: taskCompletionWeekStart,
+		}),
 		totalTaskSeconds,
 		totalLifetimeTaskSeconds,
 		totalDowntimeSeconds,
