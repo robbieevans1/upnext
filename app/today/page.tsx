@@ -32,6 +32,11 @@ import {
 	getTaskCompletionWeekStart,
 } from "@/lib/task-completion-week";
 import {
+	buildTaskAverageTimeSummaries,
+	getTaskSessionDurationSeconds,
+	type TaskAverageTimeSummary,
+} from "@/lib/task-time-analytics";
+import {
 	addAppDays,
 	formatAppDate,
 	formatAppTime,
@@ -149,15 +154,7 @@ function getTaskTimeSeconds(task: TaskWithLastCompletion) {
 	const now = new Date();
 
 	return task.sessions.reduce((total, session) => {
-		const stoppedAt = session.stoppedAt ?? now;
-
-		return (
-			total +
-			Math.max(
-				0,
-				Math.floor((stoppedAt.getTime() - session.startedAt.getTime()) / 1000),
-			)
-		);
+		return total + getTaskSessionDurationSeconds(session, now);
 	}, 0);
 }
 
@@ -196,6 +193,14 @@ function formatTaskTime(totalSeconds: number) {
 	}
 
 	return `${hours}h ${String(minutes).padStart(2, "0")}m`;
+}
+
+function formatAverageTaskTime(summary: TaskAverageTimeSummary | undefined) {
+	if (!summary) {
+		return "No timed completions yet";
+	}
+
+	return `${formatTaskTime(summary.averageSeconds)} average`;
 }
 
 function sortStack(tasks: TaskWithLastCompletion[]) {
@@ -303,6 +308,38 @@ export default async function TodayPage() {
 		select: {
 			taskId: true,
 			completedOn: true,
+		},
+	});
+	const taskCompletionsForAverages = await prisma.taskCompletion.findMany({
+		where: {
+			userId: session.user.id,
+			completedOn: {
+				lt: today,
+			},
+			task: {
+				isActive: true,
+			},
+		},
+		select: {
+			taskId: true,
+			completedOn: true,
+		},
+	});
+	const taskSessionsForAverages = await prisma.taskSession.findMany({
+		where: {
+			userId: session.user.id,
+			day: {
+				lt: today,
+			},
+			task: {
+				isActive: true,
+			},
+		},
+		select: {
+			taskId: true,
+			day: true,
+			startedAt: true,
+			stoppedAt: true,
 		},
 	});
 
@@ -541,6 +578,21 @@ export default async function TodayPage() {
 		completions: weeklyTaskCompletions,
 		weekStart: taskCompletionWeekStart,
 	});
+	const taskAverageTimeSummaries = buildTaskAverageTimeSummaries({
+		completions: taskCompletionsForAverages,
+		sessions: taskSessionsForAverages,
+	});
+	const completedTaskActualSeconds = completedTodayTasks.reduce(
+		(total, task) => total + getTaskTimeSeconds(task),
+		0,
+	);
+	const completedTaskAverageSummaries = completedTodayTasks
+		.map((task) => taskAverageTimeSummaries.get(task.id))
+		.filter((summary): summary is TaskAverageTimeSummary => Boolean(summary));
+	const completedTaskAverageSeconds = completedTaskAverageSummaries.reduce(
+		(total, summary) => total + summary.averageSeconds,
+		0,
+	);
 
 	const progressPercent =
 		totalTasksToday === 0
@@ -594,11 +646,14 @@ export default async function TodayPage() {
 							)}
 
 							{currentTask ? (
-						<CurrentTaskCard
-							task={currentTask}
-							today={today}
-							activeTaskSession={activeTaskTimer}
-						/>
+							<CurrentTaskCard
+								task={currentTask}
+								today={today}
+								activeTaskSession={activeTaskTimer}
+								averageTimeSummary={taskAverageTimeSummaries.get(
+									currentTask.id,
+								)}
+							/>
 					) : (
 						<div className="mt-8 rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-6">
 							<p className="text-sm font-semibold uppercase tracking-wide text-emerald-400">
@@ -638,6 +693,7 @@ export default async function TodayPage() {
 									badge="Required"
 									today={today}
 									activeTaskSession={activeTaskTimer}
+									averageTimeSummary={taskAverageTimeSummaries.get(task.id)}
 								/>
 							))}
 						</StackSection>
@@ -663,6 +719,7 @@ export default async function TodayPage() {
 									badge={index === 0 ? "Up next" : "In stack"}
 									today={today}
 									activeTaskSession={activeTaskTimer}
+									averageTimeSummary={taskAverageTimeSummaries.get(task.id)}
 								/>
 							))}
 						</StackSection>
@@ -681,6 +738,7 @@ export default async function TodayPage() {
 									badge="Single task"
 									today={today}
 									activeTaskSession={activeTaskTimer}
+									averageTimeSummary={taskAverageTimeSummaries.get(task.id)}
 								/>
 							))}
 						</StackSection>
@@ -692,6 +750,11 @@ export default async function TodayPage() {
 								completedTasks={totalCompletedTasks}
 								remainingTasks={totalRemainingTasks}
 								progressPercent={progressPercent}
+								completedTaskActualSeconds={completedTaskActualSeconds}
+								completedTaskAverageSeconds={completedTaskAverageSeconds}
+								completedTaskAverageCount={
+									completedTaskAverageSummaries.length
+								}
 							/>
 
 							<DailyReviewPrompt
@@ -733,6 +796,8 @@ export default async function TodayPage() {
 									const taskTimeMinutes = Math.round(taskTimeSeconds / 60);
 									const isTaskRunning =
 										activeTaskTimer?.taskId === task.id;
+									const averageTimeSummary =
+										taskAverageTimeSummaries.get(task.id);
 
 									return (
 										<div
@@ -752,6 +817,10 @@ export default async function TodayPage() {
 
 													<p className="mt-2 break-words text-sm font-medium text-emerald-100">
 														Task time: {formatTaskTime(taskTimeSeconds)}
+													</p>
+													<p className="mt-1 break-words text-sm text-emerald-100/70">
+														Typical time:{" "}
+														{formatAverageTaskTime(averageTimeSummary)}
 													</p>
 												</div>
 
@@ -924,10 +993,16 @@ function TodayProgressCard({
 	completedTasks,
 	remainingTasks,
 	progressPercent,
+	completedTaskActualSeconds,
+	completedTaskAverageSeconds,
+	completedTaskAverageCount,
 }: {
 	completedTasks: number;
 	remainingTasks: number;
 	progressPercent: number;
+	completedTaskActualSeconds: number;
+	completedTaskAverageSeconds: number;
+	completedTaskAverageCount: number;
 }) {
 	return (
 		<section className="rounded-2xl border border-slate-800 bg-slate-900 p-5">
@@ -946,6 +1021,29 @@ function TodayProgressCard({
 			<p className="mt-3 text-sm font-medium text-slate-300">
 				{progressPercent}% done today
 			</p>
+
+			<div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
+				<div className="rounded-xl border border-slate-800 bg-slate-950 p-4">
+					<p className="text-sm text-slate-400">Completed task time</p>
+					<p className="mt-1 text-xl font-bold text-slate-100">
+						{formatTaskTime(completedTaskActualSeconds)}
+					</p>
+				</div>
+
+				<div className="rounded-xl border border-slate-800 bg-slate-950 p-4">
+					<p className="text-sm text-slate-400">Typical completed time</p>
+					<p className="mt-1 text-xl font-bold text-slate-100">
+						{completedTaskAverageCount > 0
+							? formatTaskTime(completedTaskAverageSeconds)
+							: "No averages yet"}
+					</p>
+					<p className="mt-1 text-xs text-slate-500">
+						{completedTaskAverageCount > 0
+							? `${completedTaskAverageCount} timed averages included`
+							: "Timed completions will populate this"}
+					</p>
+				</div>
+			</div>
 		</section>
 	);
 }
@@ -1120,6 +1218,7 @@ function CurrentTaskCard({
 	task,
 	today,
 	activeTaskSession,
+	averageTimeSummary,
 }: {
 	task: TaskWithLastCompletion;
 	today: Date;
@@ -1127,6 +1226,7 @@ function CurrentTaskCard({
 		taskId: string;
 		startedAt: string;
 	} | null;
+	averageTimeSummary?: TaskAverageTimeSummary;
 }) {
 	const lastCompleted = task.completions[0]?.completedOn;
 	const status = getTaskStatus(task, today);
@@ -1152,6 +1252,10 @@ function CurrentTaskCard({
 					<p className="mt-3 text-sm text-slate-500">
 						Last completed:{" "}
 						{lastCompleted ? formatAppDate(lastCompleted) : "Never"}
+					</p>
+
+					<p className="mt-2 text-sm text-slate-400">
+						Typical time: {formatAverageTaskTime(averageTimeSummary)}
 					</p>
 				</div>
 
@@ -1208,6 +1312,7 @@ function TaskRow({
 	badge,
 	today,
 	activeTaskSession,
+	averageTimeSummary,
 }: {
 	task: TaskWithLastCompletion;
 	badge: string;
@@ -1216,6 +1321,7 @@ function TaskRow({
 		taskId: string;
 		startedAt: string;
 	} | null;
+	averageTimeSummary?: TaskAverageTimeSummary;
 }) {
 	const lastCompleted = task.completions[0]?.completedOn;
 	const status = getTaskStatus(task, today);
@@ -1233,6 +1339,10 @@ function TaskRow({
 					<p className="mt-2 text-sm text-slate-500">
 						Last completed:{" "}
 						{lastCompleted ? formatAppDate(lastCompleted) : "Never"}
+					</p>
+
+					<p className="mt-2 text-sm text-slate-400">
+						Typical time: {formatAverageTaskTime(averageTimeSummary)}
 					</p>
 
 					<div className="mt-3 flex flex-wrap gap-2">
