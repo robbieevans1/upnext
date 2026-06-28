@@ -5,9 +5,12 @@ import {
 	formatTaskTime,
 	getDayHref,
 	getHistoryDayRange,
+	getHistoryWeekRange,
 	getSelectedDay,
+	getSelectedWeekStart,
 	getTaskSessionDurationSeconds,
 	getTaskTimeTotalsByTaskId,
+	getWeekHref,
 	sortCompletions,
 } from "@/app/history/history-utils";
 
@@ -87,6 +90,39 @@ describe("history utilities", () => {
 		);
 	});
 
+	it("builds weekly history links from the week start app-day key", () => {
+		expect(getWeekHref(new Date("2026-06-14T04:00:00.000Z"))).toBe(
+			"/history?view=week&week=2026-06-14",
+		);
+	});
+
+	it("selects Sunday as the history week start", () => {
+		vi.useFakeTimers();
+		vi.setSystemTime(new Date("2026-06-18T15:00:00.000Z"));
+
+		expect(getSelectedWeekStart("2026-06-18")).toEqual(
+			new Date("2026-06-14T04:00:00.000Z"),
+		);
+		expect(getSelectedWeekStart(["2026-06-22", "2026-06-15"])).toEqual(
+			new Date("2026-06-21T04:00:00.000Z"),
+		);
+		expect(getSelectedWeekStart("not-a-day")).toEqual(
+			new Date("2026-06-14T04:00:00.000Z"),
+		);
+		expect(getSelectedWeekStart(undefined)).toEqual(
+			new Date("2026-06-14T04:00:00.000Z"),
+		);
+
+		vi.useRealTimers();
+	});
+
+	it("builds the selected app-week query range from Sunday through Saturday", () => {
+		expect(getHistoryWeekRange(new Date("2026-06-14T04:00:00.000Z"))).toEqual({
+			start: new Date("2026-06-14T04:00:00.000Z"),
+			end: new Date("2026-06-21T04:00:00.000Z"),
+		});
+	});
+
 	it("selects a valid day from the query string and falls back to today", () => {
 		vi.useFakeTimers();
 		vi.setSystemTime(new Date("2026-06-18T15:00:00.000Z"));
@@ -103,6 +139,8 @@ describe("history utilities", () => {
 		expect(getSelectedDay(undefined)).toEqual(
 			new Date("2026-06-18T04:00:00.000Z"),
 		);
+
+		vi.useRealTimers();
 	});
 
 	it("sorts completed tasks by mandatory status, group, stack order, and title", () => {

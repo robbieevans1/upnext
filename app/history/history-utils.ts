@@ -4,6 +4,7 @@ import {
 	getAppDateKey,
 	getAppTodayDate,
 } from "@/lib/app-date";
+import { getTaskCompletionWeekStart } from "@/lib/task-completion-week";
 
 export type CompletionWithTask = {
 	id: string;
@@ -45,11 +46,31 @@ export function getDayHref(day: Date) {
 	return `/history?day=${getAppDateKey(day)}`;
 }
 
+export function getWeekHref(weekStart: Date) {
+	return `/history?view=week&week=${getAppDateKey(weekStart)}`;
+}
+
 export function getHistoryDayRange(day: Date) {
 	return {
 		start: day,
 		end: addAppDays(day, 1),
 	};
+}
+
+export function getHistoryWeekRange(weekStart: Date) {
+	return {
+		start: weekStart,
+		end: addAppDays(weekStart, 7),
+	};
+}
+
+export function getSelectedWeekStart(weekParam: string | string[] | undefined) {
+	const weekValue = Array.isArray(weekParam) ? weekParam[0] : weekParam;
+	const selectedDay = weekValue
+		? getAppDateFromKey(weekValue)
+		: getAppTodayDate();
+
+	return getTaskCompletionWeekStart(selectedDay ?? getAppTodayDate());
 }
 
 export function sortCompletions(completions: CompletionWithTask[]) {
