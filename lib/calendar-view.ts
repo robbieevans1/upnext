@@ -16,6 +16,11 @@ export type CalendarMonth = {
 	nextKey: string;
 };
 
+export type CalendarEntryToneInput = {
+	type: "Commitment" | "Action" | "Announcement";
+	statusLabel?: string;
+};
+
 function getMonthKey(year: number, month: number) {
 	const normalizedYear = year + Math.floor((month - 1) / 12);
 	const normalizedMonth = ((((month - 1) % 12) + 12) % 12) + 1;
@@ -114,4 +119,23 @@ export function getCalendarDateKey(date: Date) {
 
 export function formatCalendarDate(date: Date) {
 	return formatAppDate(date);
+}
+
+export function getCalendarEntryToneClass({
+	type,
+	statusLabel,
+}: CalendarEntryToneInput) {
+	if (type === "Commitment" && statusLabel === "Canceled") {
+		return "border-red-500/30 bg-red-500/10 text-red-100";
+	}
+
+	if (type === "Commitment") {
+		return "border-sky-500/30 bg-sky-500/10 text-sky-100";
+	}
+
+	if (type === "Action") {
+		return "border-amber-500/30 bg-amber-500/10 text-amber-100";
+	}
+
+	return "border-fuchsia-500/30 bg-fuchsia-500/10 text-fuchsia-100";
 }

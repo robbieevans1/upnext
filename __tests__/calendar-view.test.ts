@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
 	getCalendarDateKey,
+	getCalendarEntryToneClass,
 	getCalendarGridDays,
 	getCalendarMonth,
 	getWeeklyOccurrenceDays,
@@ -43,5 +44,21 @@ describe("calendar view helpers", () => {
 			"2026-06-26",
 			"2026-06-29",
 		]);
+	});
+
+	it("styles canceled commitment entries in red", () => {
+		expect(
+			getCalendarEntryToneClass({
+				type: "Commitment",
+				statusLabel: "Canceled",
+			}),
+		).toContain("bg-red-500/10");
+
+		expect(
+			getCalendarEntryToneClass({
+				type: "Commitment",
+				statusLabel: "Repeats",
+			}),
+		).toContain("bg-sky-500/10");
 	});
 });
