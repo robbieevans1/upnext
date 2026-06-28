@@ -1,7 +1,14 @@
 import AppNav from "@/components/AppNav";
+import TopicImageUploader from "@/components/TopicImageUploader";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { archiveTopic, restoreTopic, updateTopic } from "@/app/actions/topics";
+import {
+	archiveTopic,
+	deleteTopicImage,
+	restoreTopic,
+	updateTopic,
+	updateTopicImage,
+} from "@/app/actions/topics";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
@@ -22,6 +29,18 @@ export default async function TopicDetailPage({
 		where: {
 			id: topicId,
 			userId: session.user.id,
+		},
+		include: {
+			images: {
+				orderBy: [
+					{
+						sortOrder: "asc",
+					},
+					{
+						createdAt: "asc",
+					},
+				],
+			},
 		},
 	});
 
@@ -133,6 +152,75 @@ export default async function TopicDetailPage({
 							</button>
 						</div>
 					</form>
+
+					<section className="mx-auto max-w-5xl pb-12">
+						<TopicImageUploader topicId={topic.id} />
+
+						{topic.images.length === 0 ? (
+							<div className="mt-6 rounded-2xl border border-slate-800 bg-slate-900 p-6 text-sm text-slate-400">
+								No images yet.
+							</div>
+						) : (
+							<div className="mt-6 columns-1 gap-4 sm:columns-2 lg:columns-3">
+								{topic.images.map((image) => (
+									<article
+										key={image.id}
+										className="mb-4 break-inside-avoid overflow-hidden rounded-2xl border border-slate-800 bg-slate-900"
+									>
+										{/* eslint-disable-next-line @next/next/no-img-element -- Topic images come from user uploads with arbitrary external Blob URLs and unknown dimensions. */}
+										<img
+											src={image.url}
+											alt={image.altText || image.caption || topic.title}
+											className="w-full bg-slate-950 object-cover"
+											loading="lazy"
+										/>
+
+										<div className="space-y-3 p-4">
+											<form action={updateTopicImage} className="space-y-3">
+												<input
+													type="hidden"
+													name="imageId"
+													value={image.id}
+												/>
+
+												<label className="block text-sm font-medium text-slate-400">
+													Caption
+													<input
+														name="caption"
+														defaultValue={image.caption ?? ""}
+														placeholder="Optional caption"
+														className="mt-2 w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100 outline-none focus:border-sky-400"
+													/>
+												</label>
+
+												<label className="block text-sm font-medium text-slate-400">
+													Alt text
+													<input
+														name="altText"
+														defaultValue={image.altText ?? ""}
+														placeholder="Describe the image"
+														className="mt-2 w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100 outline-none focus:border-sky-400"
+													/>
+												</label>
+
+												<div className="flex flex-wrap gap-2">
+													<button className="rounded-xl border border-slate-700 px-3 py-2 text-sm font-semibold text-slate-200 hover:border-sky-400 hover:text-sky-300">
+														Save Image
+													</button>
+												</div>
+											</form>
+
+											<form action={deleteTopicImage.bind(null, image.id)}>
+												<button className="rounded-xl border border-red-500/40 px-3 py-2 text-sm font-semibold text-red-200 hover:bg-red-500/10">
+													Delete Image
+												</button>
+											</form>
+										</div>
+									</article>
+								))}
+							</div>
+						)}
+					</section>
 				</section>
 			</main>
 		</>

@@ -6,8 +6,14 @@ const prisma = {
 		create: vi.fn(),
 		updateMany: vi.fn(),
 	},
+	topicImage: {
+		findFirst: vi.fn(),
+		updateMany: vi.fn(),
+		deleteMany: vi.fn(),
+	},
 };
 
+const del = vi.fn();
 const getServerSession = vi.fn();
 const redirect = vi.fn((path: string) => {
 	throw new Error(`redirect:${path}`);
@@ -15,6 +21,7 @@ const redirect = vi.fn((path: string) => {
 const revalidatePath = vi.fn();
 
 vi.mock("@/lib/prisma", () => ({ prisma }));
+vi.mock("@vercel/blob", () => ({ del }));
 vi.mock("next-auth", () => ({ getServerSession }));
 vi.mock("next/navigation", () => ({ redirect }));
 vi.mock("next/cache", () => ({ revalidatePath }));
@@ -26,6 +33,10 @@ describe("topic server actions", () => {
 			user: {
 				id: "user-1",
 			},
+		});
+		prisma.topicImage.findFirst.mockResolvedValue({
+			topicId: "topic-1",
+			pathname: "topics/topic-1/image.jpg",
 		});
 	});
 
@@ -118,6 +129,54 @@ describe("topic server actions", () => {
 			},
 		});
 		expect(revalidatePath).toHaveBeenCalledWith("/topics");
+		expect(revalidatePath).toHaveBeenCalledWith("/topics/topic-1");
+	});
+
+	it("updates topic image metadata through current-user scoped writes", async () => {
+		const { updateTopicImage } = await import("@/app/actions/topics");
+
+		await updateTopicImage(
+			formDataFrom({
+				imageId: "image-1",
+				caption: "  Good posture  ",
+				altText: "  Standing tall  ",
+			}),
+		);
+
+		expect(prisma.topicImage.findFirst).toHaveBeenCalledWith({
+			where: {
+				id: "image-1",
+				userId: "user-1",
+			},
+			select: {
+				topicId: true,
+			},
+		});
+		expect(prisma.topicImage.updateMany).toHaveBeenCalledWith({
+			where: {
+				id: "image-1",
+				userId: "user-1",
+			},
+			data: {
+				caption: "Good posture",
+				altText: "Standing tall",
+			},
+		});
+		expect(revalidatePath).toHaveBeenCalledWith("/topics/topic-1");
+	});
+
+	it("deletes topic images from blob storage and the database", async () => {
+		const { deleteTopicImage } = await import("@/app/actions/topics");
+
+		await deleteTopicImage("image-1");
+
+		expect(del).toHaveBeenCalledWith("topics/topic-1/image.jpg");
+		expect(prisma.topicImage.deleteMany).toHaveBeenCalledWith({
+			where: {
+				id: "image-1",
+				userId: "user-1",
+			},
+		});
 		expect(revalidatePath).toHaveBeenCalledWith("/topics/topic-1");
 	});
 
