@@ -99,7 +99,6 @@ export function useTasks() {
 
 	const todayKey = getAppDateKey();
 
-	/* eslint-disable react-hooks/set-state-in-effect */
 	useEffect(() => {
 		const savedTasks = localStorage.getItem(TASKS_STORAGE_KEY);
 		const savedGroups = localStorage.getItem(GROUPS_STORAGE_KEY);
@@ -113,7 +112,6 @@ export function useTasks() {
 
 		setHasLoaded(true);
 	}, []);
-	/* eslint-enable react-hooks/set-state-in-effect */
 
 	useEffect(() => {
 		if (!hasLoaded) return;

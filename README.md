@@ -18,6 +18,7 @@ The app organizes recurring work into a daily stack. Mandatory tasks stay visibl
 - Highlighted Today playbook buttons when a task already has playbook notes
 - Topics page for reusable notes, reminders, current focus areas, and general playbooks
 - Full-page topic editor for long-form notes
+- Topic image montages with upload, paste, caption, alt text, and delete support
 - One-off action items for async errands or tasks outside the recurring stack
 - Scheduled commitments for events, appointments, errands, recurring obligations, and time-based plans
 - Weekly recurring commitments that can repeat on one day, weekdays, every day, or any selected set of days
@@ -204,7 +205,11 @@ Nutrition rules
 Sunday reset
 ```
 
-Topics can be categorized, edited, archived, and restored. The Topics index stays compact with clickable rows, while each topic opens into a full-page editor with a large notes surface for longer reusable playbooks or reference material. Topics are separate from task playbooks today, but they are designed so future task-topic badges can connect reusable topic notes to specific tasks.
+Topics can be categorized, edited, archived, and restored. The Topics index stays compact with clickable rows, while each topic opens into a full-page editor with a large notes surface for longer reusable playbooks or reference material.
+
+Topic pages also support image montages. Images can be selected from disk or pasted directly into the uploader, then saved with captions and alt text. Prisma stores image metadata and ownership, while Vercel Blob stores the image files. Deleting a topic removes its saved image metadata through cascading database relations.
+
+Topics are separate from task playbooks today, but they are designed so future task-topic badges can connect reusable topic notes to specific tasks.
 
 ## Tools
 
@@ -310,6 +315,7 @@ If `.env.example` is not present yet, create `.env` with:
 DATABASE_URL="postgresql://..."
 NEXTAUTH_SECRET="replace-me"
 NEXTAUTH_URL="http://localhost:3000"
+BLOB_READ_WRITE_TOKEN="vercel-blob-token-for-topic-images"
 ```
 
 Apply database migrations:

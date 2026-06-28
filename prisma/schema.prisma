@@ -29,6 +29,7 @@ model User {
   commitments           Commitment[]
   commitmentOccurrences CommitmentOccurrenceCompletion[]
   topics                Topic[]
+  topicImages           TopicImage[]
   dailyChecks           DailyCheck[]
   dailyCheckResults     DailyCheckResult[]
   dailyReviewDismissals DailyReviewDismissal[]
@@ -316,11 +317,35 @@ model Topic {
   userId String
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  images TopicImage[]
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([userId, isArchived, updatedAt])
   @@index([userId, category])
+}
+
+model TopicImage {
+  id String @id @default(cuid())
+
+  topicId String
+  topic   Topic  @relation(fields: [topicId], references: [id], onDelete: Cascade)
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  url       String
+  pathname  String
+  caption   String?
+  altText   String?
+  sortOrder Int     @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([topicId, sortOrder])
+  @@index([userId])
 }
 
 model Commitment {
