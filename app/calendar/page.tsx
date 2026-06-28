@@ -8,6 +8,7 @@ import {
 import { authOptions } from "@/lib/auth";
 import {
 	formatCalendarDate,
+	getCalendarEntryToneClass,
 	getCalendarDateKey,
 	getCalendarGridDays,
 	getCalendarMonth,
@@ -56,18 +57,6 @@ function sortEntries(entries: CalendarEntry[]) {
 
 		return a.title.localeCompare(b.title);
 	});
-}
-
-function getEntryTypeClass(type: CalendarEntry["type"]) {
-	if (type === "Commitment") {
-		return "border-sky-500/30 bg-sky-500/10 text-sky-100";
-	}
-
-	if (type === "Action") {
-		return "border-amber-500/30 bg-amber-500/10 text-amber-100";
-	}
-
-	return "border-fuchsia-500/30 bg-fuchsia-500/10 text-fuchsia-100";
 }
 
 export default async function CalendarPage({ searchParams }: CalendarPageProps) {
@@ -339,8 +328,8 @@ export default async function CalendarPage({ searchParams }: CalendarPageProps) 
 													<Link
 														key={entry.id}
 														href={entry.href}
-														className={`block rounded-lg border px-2 py-2 text-xs transition hover:border-sky-300 ${getEntryTypeClass(
-															entry.type,
+														className={`block rounded-lg border px-2 py-2 text-xs transition hover:border-sky-300 ${getCalendarEntryToneClass(
+															entry,
 														)}`}
 													>
 														<span className="block font-semibold leading-snug">
@@ -373,7 +362,9 @@ export default async function CalendarPage({ searchParams }: CalendarPageProps) 
 									<Link
 										key={`${entry.id}:agenda`}
 										href={entry.href}
-										className="grid gap-3 rounded-xl border border-slate-800 bg-slate-950 p-4 text-sm transition hover:border-sky-400 sm:grid-cols-[9rem_1fr_auto]"
+										className={`grid gap-3 rounded-xl border p-4 text-sm transition hover:border-sky-400 sm:grid-cols-[9rem_1fr_auto] ${getCalendarEntryToneClass(
+											entry,
+										)}`}
 									>
 										<p className="font-semibold text-slate-100">
 											{formatAppDate(entry.date)}
