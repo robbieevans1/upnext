@@ -18,6 +18,7 @@ type TaskTimerControlsProps = {
 	completeButtonClassName: string;
 	startButtonClassName: string;
 	initialElapsedSeconds?: number;
+	hasTrackedTime?: boolean;
 	isCompleted?: boolean;
 };
 
@@ -41,6 +42,7 @@ export default function TaskTimerControls({
 	completeButtonClassName,
 	startButtonClassName,
 	initialElapsedSeconds = 0,
+	hasTrackedTime = false,
 	isCompleted = false,
 }: TaskTimerControlsProps) {
 	const router = useRouter();
@@ -80,11 +82,14 @@ export default function TaskTimerControls({
 
 	function handleComplete() {
 		startTransition(async () => {
-			if (isCompleted) {
-				await stopTaskTimer(taskId);
-			} else {
-				await completeTask(taskId);
-			}
+			await completeTask(taskId);
+			router.refresh();
+		});
+	}
+
+	function handlePause() {
+		startTransition(async () => {
+			await stopTaskTimer(taskId);
 			router.refresh();
 		});
 	}
@@ -105,14 +110,27 @@ export default function TaskTimerControls({
 			)}
 
 			{isThisTaskRunning ? (
-				<button
-					type="button"
-					onClick={handleComplete}
-					disabled={isPending}
-					className={completeButtonClassName}
-				>
-					{isCompleted ? "Stop" : "Complete"}
-				</button>
+				<>
+					<button
+						type="button"
+						onClick={handlePause}
+						disabled={isPending}
+						className={startButtonClassName}
+					>
+						Pause
+					</button>
+
+					{!isCompleted && (
+						<button
+							type="button"
+							onClick={handleComplete}
+							disabled={isPending}
+							className={completeButtonClassName}
+						>
+							Complete
+						</button>
+					)}
+				</>
 			) : (
 				<button
 					type="button"
@@ -122,7 +140,7 @@ export default function TaskTimerControls({
 				>
 					{isAnotherTaskRunning
 						? "Timer Running"
-						: isCompleted
+						: isCompleted || hasTrackedTime
 							? "Continue"
 							: "Start"}
 				</button>

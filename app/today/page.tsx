@@ -834,6 +834,7 @@ export default async function TodayPage() {
 														taskTitle={task.title}
 														playbook={task.playbook}
 														activeTaskSession={activeTaskTimer}
+														hasTrackedTime={taskTimeSeconds > 0}
 														initialElapsedSeconds={getInitialTaskTimerElapsedSeconds(
 															task.id,
 															activeTaskTimer,
@@ -1270,6 +1271,7 @@ function CurrentTaskCard({
 					taskTitle={task.title}
 					playbook={task.playbook}
 					activeTaskSession={activeTaskSession}
+					hasTrackedTime={getTaskTimeSeconds(task) > 0}
 					initialElapsedSeconds={getInitialTaskTimerElapsedSeconds(
 						task.id,
 						activeTaskSession,
@@ -1381,6 +1383,7 @@ function TaskRow({
 					taskTitle={task.title}
 					playbook={task.playbook}
 					activeTaskSession={activeTaskSession}
+					hasTrackedTime={getTaskTimeSeconds(task) > 0}
 					initialElapsedSeconds={getInitialTaskTimerElapsedSeconds(
 						task.id,
 						activeTaskSession,
