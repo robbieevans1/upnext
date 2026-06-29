@@ -16,6 +16,7 @@
 # next.js
 /.next/
 /out/
+.upnext-dev.pid
 
 # production
 /build
