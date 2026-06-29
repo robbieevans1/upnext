@@ -3,10 +3,18 @@
 import { useEffect, useMemo, useState } from "react";
 
 const timerStorageKey = "upnext.tools.timer.state";
+const timerEntriesStorageKey = "upnext.tools.timer.entries";
 
 type TimerState = {
 	accumulatedSeconds: number;
 	startedAtMs: number | null;
+};
+
+type TimerEntry = {
+	id: string;
+	day: string;
+	seconds: number;
+	savedAtMs: number;
 };
 
 function getSafeTimerState(value: unknown): TimerState {
@@ -50,6 +58,56 @@ function getElapsedSeconds(state: TimerState, nowMs: number) {
 	return Math.max(0, state.accumulatedSeconds + runningSeconds);
 }
 
+function getLocalDayKey(date: Date) {
+	const year = date.getFullYear();
+	const month = String(date.getMonth() + 1).padStart(2, "0");
+	const day = String(date.getDate()).padStart(2, "0");
+
+	return `${year}-${month}-${day}`;
+}
+
+function getSafeTimerEntries(value: unknown): TimerEntry[] {
+	if (!Array.isArray(value)) {
+		return [];
+	}
+
+	return value
+		.map((entry): TimerEntry | null => {
+			if (
+				typeof entry !== "object" ||
+				entry === null ||
+				!("id" in entry) ||
+				!("day" in entry) ||
+				!("seconds" in entry) ||
+				!("savedAtMs" in entry)
+			) {
+				return null;
+			}
+
+			const seconds = Number(entry.seconds);
+			const savedAtMs = Number(entry.savedAtMs);
+
+			if (
+				typeof entry.id !== "string" ||
+				typeof entry.day !== "string" ||
+				!Number.isFinite(seconds) ||
+				seconds <= 0 ||
+				!Number.isFinite(savedAtMs) ||
+				savedAtMs <= 0
+			) {
+				return null;
+			}
+
+			return {
+				id: entry.id,
+				day: entry.day,
+				seconds: Math.floor(seconds),
+				savedAtMs: Math.floor(savedAtMs),
+			};
+		})
+		.filter((entry): entry is TimerEntry => entry !== null);
+}
+
 function formatDuration(totalSeconds: number) {
 	const safeSeconds = Math.max(0, Math.floor(totalSeconds));
 	const hours = Math.floor(safeSeconds / 3600);
@@ -69,6 +127,7 @@ export default function TimerTool() {
 	});
 	const [nowMs, setNowMs] = useState(() => Date.now());
 	const [adjustMinutes, setAdjustMinutes] = useState("5");
+	const [timerEntries, setTimerEntries] = useState<TimerEntry[]>([]);
 	const [hasLoadedSavedState, setHasLoadedSavedState] = useState(false);
 	const isRunning = timerState.startedAtMs !== null;
 	const elapsedSeconds = useMemo(
@@ -87,6 +146,16 @@ export default function TimerTool() {
 					setTimerState(getSafeTimerState(JSON.parse(savedValue)));
 				} catch {
 					window.localStorage.removeItem(timerStorageKey);
+				}
+			}
+
+			const savedEntries = window.localStorage.getItem(timerEntriesStorageKey);
+
+			if (savedEntries !== null) {
+				try {
+					setTimerEntries(getSafeTimerEntries(JSON.parse(savedEntries)));
+				} catch {
+					window.localStorage.removeItem(timerEntriesStorageKey);
 				}
 			}
 
@@ -113,7 +182,11 @@ export default function TimerTool() {
 		}
 
 		window.localStorage.setItem(timerStorageKey, JSON.stringify(timerState));
-	}, [timerState, hasLoadedSavedState]);
+		window.localStorage.setItem(
+			timerEntriesStorageKey,
+			JSON.stringify(timerEntries),
+		);
+	}, [timerState, timerEntries, hasLoadedSavedState]);
 
 	function startTimer() {
 		setTimerState((currentState) => {
@@ -155,6 +228,29 @@ export default function TimerTool() {
 			startedAtMs: null,
 		});
 		window.localStorage.removeItem(timerStorageKey);
+	}
+
+	function saveTimerEntry() {
+		const nextNowMs = Date.now();
+		const seconds = getElapsedSeconds(timerState, nextNowMs);
+
+		if (seconds <= 0) {
+			return;
+		}
+
+		const entry: TimerEntry = {
+			id: `${nextNowMs}-${Math.random().toString(36).slice(2)}`,
+			day: getLocalDayKey(new Date(nextNowMs)),
+			seconds,
+			savedAtMs: nextNowMs,
+		};
+
+		setNowMs(nextNowMs);
+		setTimerEntries((currentEntries) => [entry, ...currentEntries]);
+		setTimerState({
+			accumulatedSeconds: 0,
+			startedAtMs: null,
+		});
 	}
 
 	function adjustTimer(direction: 1 | -1) {
@@ -227,6 +323,14 @@ export default function TimerTool() {
 				>
 					Reset
 				</button>
+				<button
+					type="button"
+					onClick={saveTimerEntry}
+					disabled={elapsedSeconds <= 0}
+					className="rounded-lg border border-emerald-500/50 px-5 py-3 font-semibold text-emerald-200 transition hover:border-emerald-300 hover:text-emerald-100 disabled:cursor-not-allowed disabled:opacity-50"
+				>
+					Save time
+				</button>
 			</div>
 
 			<div className="mt-8 border-t border-slate-800 pt-6">
@@ -265,6 +369,46 @@ export default function TimerTool() {
 						</button>
 					</div>
 				</div>
+			</div>
+
+			<div className="mt-8 border-t border-slate-800 pt-6">
+				<div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+					<div>
+						<h2 className="text-lg font-semibold text-white">Saved entries</h2>
+						<p className="mt-1 text-sm text-slate-400">
+							Saved timer snapshots stay on this device.
+						</p>
+					</div>
+					<span className="w-fit rounded-full border border-slate-700 px-3 py-1 text-xs font-semibold text-slate-300">
+						{timerEntries.length} saved
+					</span>
+				</div>
+
+				{timerEntries.length === 0 ? (
+					<p className="mt-4 rounded-xl border border-dashed border-slate-700 px-4 py-5 text-sm text-slate-400">
+						No saved timer entries yet.
+					</p>
+				) : (
+					<ul className="mt-4 space-y-3">
+						{timerEntries.map((entry) => (
+							<li
+								key={entry.id}
+								className="flex flex-col gap-2 rounded-xl border border-slate-800 bg-slate-950/70 px-4 py-4 sm:flex-row sm:items-center sm:justify-between"
+							>
+								<div>
+									<p className="font-medium text-slate-100">{entry.day}</p>
+									<p className="mt-1 text-sm text-slate-500">
+										Saved timer entry
+									</p>
+								</div>
+
+								<span className="font-mono text-lg font-semibold tabular-nums text-sky-200">
+									{formatDuration(entry.seconds)}
+								</span>
+							</li>
+						))}
+					</ul>
+				)}
 			</div>
 		</section>
 	);

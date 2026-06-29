@@ -33,6 +33,8 @@ describe("TimerPage", () => {
 		expect(
 			screen.getByRole("button", { name: "Add minutes" }),
 		).toBeInTheDocument();
+		expect(screen.getByRole("button", { name: "Save time" })).toBeInTheDocument();
+		expect(screen.getByText("Saved entries")).toBeInTheDocument();
 	});
 
 	it("redirects unauthenticated users", async () => {
