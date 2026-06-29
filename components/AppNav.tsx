@@ -66,6 +66,10 @@ const navGroups = [
 				label: "Counter",
 			},
 			{
+				href: "/tools/timer",
+				label: "Timer",
+			},
+			{
 				href: "/announcements",
 				label: "Announcements",
 			},
