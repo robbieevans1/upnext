@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import TimerTool from "@/components/TimerTool";
 
 const timerStorageKey = "upnext.tools.timer.state";
+const timerEntriesStorageKey = "upnext.tools.timer.entries";
 
 describe("TimerTool", () => {
 	beforeEach(() => {
@@ -53,6 +54,56 @@ describe("TimerTool", () => {
 
 		expect(value).toHaveTextContent("00:00:00");
 		expect(screen.getByRole("button", { name: "Start" })).toBeInTheDocument();
+	});
+
+	it("saves the current time as a dated entry and resets the timer", async () => {
+		render(<TimerTool />);
+		await flushEffects();
+
+		expect(screen.getByRole("button", { name: "Save time" })).toBeDisabled();
+
+		fireEvent.click(screen.getByRole("button", { name: "Start" }));
+
+		act(() => {
+			vi.advanceTimersByTime(90_000);
+		});
+
+		fireEvent.click(screen.getByRole("button", { name: "Save time" }));
+		await flushEffects();
+
+		expect(screen.getByTestId("timer-value")).toHaveTextContent("00:00:00");
+		expect(screen.getByText("2026-06-29")).toBeInTheDocument();
+		expect(screen.getByText("00:01:30")).toBeInTheDocument();
+		expect(screen.getByText("1 saved")).toBeInTheDocument();
+		expect(JSON.parse(window.localStorage.getItem(timerEntriesStorageKey) ?? "[]"))
+			.toEqual([
+				expect.objectContaining({
+					day: "2026-06-29",
+					seconds: 90,
+					savedAtMs: new Date("2026-06-29T12:01:30.000Z").getTime(),
+				}),
+			]);
+	});
+
+	it("loads saved timer entries", async () => {
+		window.localStorage.setItem(
+			timerEntriesStorageKey,
+			JSON.stringify([
+				{
+					id: "entry-1",
+					day: "2026-06-28",
+					seconds: 3600,
+					savedAtMs: new Date("2026-06-28T23:00:00.000Z").getTime(),
+				},
+			]),
+		);
+
+		render(<TimerTool />);
+		await flushEffects();
+
+		expect(screen.getByText("2026-06-28")).toBeInTheDocument();
+		expect(screen.getByText("01:00:00")).toBeInTheDocument();
+		expect(screen.getByText("1 saved")).toBeInTheDocument();
 	});
 
 	it("loads a saved running timer and keeps counting", async () => {
