@@ -70,6 +70,10 @@ const navGroups = [
 				label: "Timer",
 			},
 			{
+				href: "/tools/pomodoro",
+				label: "Pomodoro",
+			},
+			{
 				href: "/announcements",
 				label: "Announcements",
 			},

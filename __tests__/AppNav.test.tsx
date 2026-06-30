@@ -70,6 +70,10 @@ describe("AppNav", () => {
 			"href",
 			"/tools/timer",
 		);
+		expect(screen.getByRole("link", { name: "Pomodoro" })).toHaveAttribute(
+			"href",
+			"/tools/pomodoro",
+		);
 		expect(screen.getByRole("link", { name: "Announcements" })).toHaveAttribute(
 			"href",
 			"/announcements",
@@ -137,6 +141,10 @@ describe("AppNav", () => {
 		expect(within(menu).getByRole("link", { name: "Timer" })).toHaveAttribute(
 			"href",
 			"/tools/timer",
+		);
+		expect(within(menu).getByRole("link", { name: "Pomodoro" })).toHaveAttribute(
+			"href",
+			"/tools/pomodoro",
 		);
 		expect(
 			within(menu).getByRole("link", { name: "Announcements" }),
