@@ -102,6 +102,30 @@ describe("PomodoroTool", () => {
 		expect(screen.getByTestId("pomodoro-value")).toHaveTextContent("25:00");
 	});
 
+	it("shows a dismissible alarm when the session ends", async () => {
+		render(<PomodoroTool />);
+		await flushEffects();
+
+		fireEvent.change(screen.getByLabelText("Work minutes"), {
+			target: {
+				value: "1",
+			},
+		});
+		fireEvent.click(screen.getByRole("button", { name: "Start" }));
+
+		act(() => {
+			vi.advanceTimersByTime(60_000);
+		});
+		await flushEffects();
+
+		expect(screen.getByText("Time is up.")).toBeInTheDocument();
+		expect(screen.getByTestId("pomodoro-value")).toHaveTextContent("00:00");
+
+		fireEvent.click(screen.getByRole("button", { name: "Stop alarm" }));
+
+		expect(screen.queryByText("Time is up.")).toBeNull();
+	});
+
 	it("loads a saved running pomodoro and keeps counting", async () => {
 		window.localStorage.setItem(
 			pomodoroStorageKey,

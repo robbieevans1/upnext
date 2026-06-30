@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 const pomodoroStorageKey = "upnext.tools.pomodoro.state";
 const DEFAULT_WORK_MINUTES = 25;
@@ -18,6 +18,11 @@ type PomodoroState = {
 	remainingSeconds: number;
 	endsAtMs: number | null;
 };
+
+type AudioWindow = Window &
+	typeof globalThis & {
+		webkitAudioContext?: typeof AudioContext;
+	};
 
 function clamp(value: number, min: number, max: number) {
 	if (!Number.isFinite(value)) {
@@ -113,12 +118,89 @@ export default function PomodoroTool() {
 	const [pomodoroState, setPomodoroState] =
 		useState<PomodoroState>(getDefaultState);
 	const [nowMs, setNowMs] = useState(() => Date.now());
+	const [isAlarmActive, setIsAlarmActive] = useState(false);
 	const [hasLoadedSavedState, setHasLoadedSavedState] = useState(false);
+	const audioContextRef = useRef<AudioContext | null>(null);
+	const alarmIntervalRef = useRef<number | null>(null);
 	const isRunning = pomodoroState.endsAtMs !== null;
 	const remainingSeconds = useMemo(
 		() => getRemainingSeconds(pomodoroState, nowMs),
 		[pomodoroState, nowMs],
 	);
+
+	const getAudioContext = useCallback(function getAudioContext() {
+		if (typeof window === "undefined") {
+			return null;
+		}
+
+		if (audioContextRef.current) {
+			return audioContextRef.current;
+		}
+
+		const AudioContextConstructor =
+			window.AudioContext ?? (window as AudioWindow).webkitAudioContext;
+
+		if (!AudioContextConstructor) {
+			return null;
+		}
+
+		audioContextRef.current = new AudioContextConstructor();
+
+		return audioContextRef.current;
+	}, []);
+
+	const primeAlarmAudio = useCallback(function primeAlarmAudio() {
+		const audioContext = getAudioContext();
+
+		if (audioContext?.state === "suspended") {
+			void audioContext.resume();
+		}
+	}, [getAudioContext]);
+
+	const playAlarmBeep = useCallback(function playAlarmBeep() {
+		const audioContext = getAudioContext();
+
+		if (!audioContext) {
+			return;
+		}
+
+		if (audioContext.state === "suspended") {
+			void audioContext.resume();
+		}
+
+		const oscillator = audioContext.createOscillator();
+		const gain = audioContext.createGain();
+		const startsAt = audioContext.currentTime;
+
+		oscillator.type = "sine";
+		oscillator.frequency.setValueAtTime(880, startsAt);
+		gain.gain.setValueAtTime(0.0001, startsAt);
+		gain.gain.exponentialRampToValueAtTime(0.2, startsAt + 0.02);
+		gain.gain.exponentialRampToValueAtTime(0.0001, startsAt + 0.25);
+		oscillator.connect(gain);
+		gain.connect(audioContext.destination);
+		oscillator.start(startsAt);
+		oscillator.stop(startsAt + 0.28);
+	}, [getAudioContext]);
+
+	const startAlarm = useCallback(function startAlarm() {
+		if (alarmIntervalRef.current !== null) {
+			return;
+		}
+
+		setIsAlarmActive(true);
+		playAlarmBeep();
+		alarmIntervalRef.current = window.setInterval(playAlarmBeep, 900);
+	}, [playAlarmBeep]);
+
+	const stopAlarm = useCallback(function stopAlarm() {
+		if (alarmIntervalRef.current !== null) {
+			window.clearInterval(alarmIntervalRef.current);
+			alarmIntervalRef.current = null;
+		}
+
+		setIsAlarmActive(false);
+	}, []);
 
 	useEffect(() => {
 		queueMicrotask(() => {
@@ -170,9 +252,18 @@ export default function PomodoroTool() {
 			remainingSeconds: 0,
 			endsAtMs: null,
 		}));
-	}, [isRunning, remainingSeconds]);
+		startAlarm();
+	}, [isRunning, remainingSeconds, startAlarm]);
+
+	useEffect(() => {
+		return () => {
+			stopAlarm();
+		};
+	}, [stopAlarm]);
 
 	function startTimer() {
+		stopAlarm();
+		primeAlarmAudio();
 		setPomodoroState((currentState) => {
 			if (currentState.endsAtMs !== null) {
 				return currentState;
@@ -215,6 +306,7 @@ export default function PomodoroTool() {
 	}
 
 	function resetTimer() {
+		stopAlarm();
 		setNowMs(Date.now());
 		setPomodoroState((currentState) => ({
 			...currentState,
@@ -228,6 +320,7 @@ export default function PomodoroTool() {
 	}
 
 	function switchMode(mode: PomodoroMode) {
+		stopAlarm();
 		setNowMs(Date.now());
 		setPomodoroState((currentState) => ({
 			...currentState,
@@ -242,6 +335,7 @@ export default function PomodoroTool() {
 	}
 
 	function updateWorkMinutes(value: string) {
+		stopAlarm();
 		const workMinutes = Math.round(clamp(Number(value), MIN_WORK_MINUTES, 180));
 		setNowMs(Date.now());
 		setPomodoroState((currentState) => ({
@@ -256,6 +350,7 @@ export default function PomodoroTool() {
 	}
 
 	function updateBreakMinutes(value: string) {
+		stopAlarm();
 		const breakMinutes = Math.round(
 			clamp(Number(value), MIN_BREAK_MINUTES, MAX_BREAK_MINUTES),
 		);
@@ -331,6 +426,24 @@ export default function PomodoroTool() {
 			<p className="mt-3 text-sm font-medium text-slate-300">
 				{pomodoroState.mode === "work" ? "Work session" : "Break session"}
 			</p>
+
+			{isAlarmActive && (
+				<div
+					role="status"
+					className="mt-5 rounded-xl border border-emerald-500/40 bg-emerald-500/10 p-4 text-emerald-100"
+				>
+					<div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+						<p className="font-semibold">Time is up.</p>
+						<button
+							type="button"
+							onClick={stopAlarm}
+							className="w-fit rounded-lg border border-emerald-400/50 px-4 py-2 text-sm font-semibold text-emerald-100 transition hover:border-emerald-200"
+						>
+							Stop alarm
+						</button>
+					</div>
+				</div>
+			)}
 
 			<div className="mt-6 grid gap-4 sm:grid-cols-2">
 				<label className="block">
