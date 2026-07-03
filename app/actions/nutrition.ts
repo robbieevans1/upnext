@@ -122,6 +122,25 @@ export async function saveWeightEntry(formData: FormData) {
 	revalidateNutritionViews();
 }
 
+export async function saveStartingWeight(formData: FormData) {
+	const userId = await requireUserId();
+	const weightLbs = getWeightLbs(formData);
+
+	if (!weightLbs) return;
+
+	await prisma.user.update({
+		where: {
+			id: userId,
+		},
+		data: {
+			startingWeightLbs: weightLbs,
+			startingWeightSetAt: new Date(),
+		},
+	});
+
+	revalidateNutritionViews();
+}
+
 export async function startFastingSession(
 	startDateKey?: string,
 	startTimeKey?: string,

@@ -11,6 +11,9 @@ const prisma = {
 		create: vi.fn(),
 		updateMany: vi.fn(),
 	},
+	user: {
+		update: vi.fn(),
+	},
 	weightEntry: {
 		upsert: vi.fn(),
 	},
@@ -142,6 +145,35 @@ describe("nutrition server actions", () => {
 		await saveWeightEntry(formDataFrom({ weightLbs: "not-a-number" }));
 
 		expect(prisma.weightEntry.upsert).not.toHaveBeenCalled();
+	});
+
+	it("saves a starting weight for the current user", async () => {
+		vi.useFakeTimers();
+		vi.setSystemTime(new Date("2026-06-23T14:15:00.000Z"));
+		const { saveStartingWeight } = await import("@/app/actions/nutrition");
+
+		await saveStartingWeight(formDataFrom({ weightLbs: "205.44" }));
+
+		expect(prisma.user.update).toHaveBeenCalledWith({
+			where: {
+				id: "user-1",
+			},
+			data: {
+				startingWeightLbs: 205.4,
+				startingWeightSetAt: new Date("2026-06-23T14:15:00.000Z"),
+			},
+		});
+		expect(revalidatePath).toHaveBeenCalledWith("/nutrition");
+		expect(revalidatePath).toHaveBeenCalledWith("/dashboard");
+	});
+
+	it("ignores invalid starting weight entries", async () => {
+		const { saveStartingWeight } = await import("@/app/actions/nutrition");
+
+		await saveStartingWeight(formDataFrom({ weightLbs: "0" }));
+		await saveStartingWeight(formDataFrom({ weightLbs: "not-a-number" }));
+
+		expect(prisma.user.update).not.toHaveBeenCalled();
 	});
 
 	it("starts a fasting session after closing any active user fast", async () => {
