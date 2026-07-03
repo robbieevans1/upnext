@@ -25,7 +25,7 @@ const navGroups = [
 			},
 			{
 				href: "/commitments",
-				label: "Schedule",
+				label: "Commitments",
 			},
 			{
 				href: "/calendar",
