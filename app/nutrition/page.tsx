@@ -1,5 +1,10 @@
 import AppNav from "@/components/AppNav";
-import { addCalorieEntry, deleteCalorieEntry, saveWeightEntry } from "@/app/actions/nutrition";
+import {
+	addCalorieEntry,
+	deleteCalorieEntry,
+	saveStartingWeight,
+	saveWeightEntry,
+} from "@/app/actions/nutrition";
 import FastingTimer from "@/app/nutrition/FastingTimer";
 import {
 	addAppDays,
@@ -97,6 +102,7 @@ export default async function NutritionPage({ searchParams }: NutritionPageProps
 	const weightComparisonStartDay = addAppDays(recentStartDay, -1);
 
 	const [
+		userWeightBaseline,
 		calorieEntries,
 		tomorrowCalorieEntries,
 		todayWeightEntry,
@@ -106,6 +112,15 @@ export default async function NutritionPage({ searchParams }: NutritionPageProps
 		activeFast,
 		recentFasts,
 	] = await Promise.all([
+			prisma.user.findUnique({
+				where: {
+					id: session.user.id,
+				},
+				select: {
+					startingWeightLbs: true,
+					startingWeightSetAt: true,
+				},
+			}),
 			prisma.calorieEntry.findMany({
 				where: {
 					userId: session.user.id,
@@ -229,6 +244,10 @@ export default async function NutritionPage({ searchParams }: NutritionPageProps
 		todayWeightEntry && selectedCompareWeight
 			? todayWeightEntry.weightLbs - selectedCompareWeight.weightLbs
 			: null;
+	const startingWeightDelta =
+		todayWeightEntry && userWeightBaseline?.startingWeightLbs
+			? todayWeightEntry.weightLbs - userWeightBaseline.startingWeightLbs
+			: null;
 
 	return (
 		<>
@@ -294,7 +313,8 @@ export default async function NutritionPage({ searchParams }: NutritionPageProps
 							<div>
 								<h2 className="text-xl font-bold">Weight Comparison</h2>
 								<p className="mt-2 text-sm text-slate-400">
-									Choose a past weigh-in to compare against today.
+									Choose a past weigh-in or use your starting weight to compare
+									against today.
 								</p>
 							</div>
 
@@ -342,7 +362,8 @@ export default async function NutritionPage({ searchParams }: NutritionPageProps
 						<div className="mt-5 rounded-xl border border-slate-800 bg-slate-950 p-4">
 							{!todayWeightEntry ? (
 								<p className="text-sm text-slate-400">
-									Save today&apos;s weight to compare it against a past day.
+									Save today&apos;s weight to compare it against a past day or
+									your starting weight.
 								</p>
 							) : !selectedCompareDayKey ? (
 								<p className="text-sm text-slate-400">
@@ -384,6 +405,69 @@ export default async function NutritionPage({ searchParams }: NutritionPageProps
 								</div>
 							)}
 						</div>
+
+						<div className="mt-4 rounded-xl border border-slate-800 bg-slate-950 p-4">
+							<div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+								<div>
+									<h3 className="font-semibold text-slate-100">
+										Starting weight comparison
+									</h3>
+									<p className="mt-1 text-sm text-slate-500">
+										Use this baseline to track total change from where you
+										started.
+									</p>
+								</div>
+
+								{userWeightBaseline?.startingWeightLbs && (
+									<span className="w-fit rounded-full border border-slate-700 px-3 py-1 text-xs font-semibold text-slate-300">
+										{formatWeight(userWeightBaseline.startingWeightLbs)}
+									</span>
+								)}
+							</div>
+
+							{!userWeightBaseline?.startingWeightLbs ? (
+								<p className="mt-4 text-sm text-slate-400">
+									Set a starting weight below to compare today against it.
+								</p>
+							) : !todayWeightEntry ? (
+								<p className="mt-4 text-sm text-slate-400">
+									Save today&apos;s weight to see your change from starting
+									weight.
+								</p>
+							) : startingWeightDelta === null ? (
+								<p className="mt-4 text-sm text-slate-400">
+									No starting comparison is available yet.
+								</p>
+							) : (
+								<div className="mt-4 grid gap-3 text-sm sm:grid-cols-3">
+									<div>
+										<p className="text-slate-500">Today</p>
+										<p className="mt-1 font-semibold text-slate-100">
+											{formatWeight(todayWeightEntry.weightLbs)}
+										</p>
+									</div>
+									<div>
+										<p className="text-slate-500">Starting weight</p>
+										<p className="mt-1 font-semibold text-slate-100">
+											{formatWeight(userWeightBaseline.startingWeightLbs)}
+										</p>
+										{userWeightBaseline.startingWeightSetAt && (
+											<p className="mt-1 text-xs text-slate-500">
+												Set {formatAppDate(userWeightBaseline.startingWeightSetAt)}
+											</p>
+										)}
+									</div>
+									<div>
+										<p className="text-slate-500">Difference</p>
+										<p
+											className={`mt-1 font-semibold ${getWeightDeltaTone(startingWeightDelta)}`}
+										>
+											{formatWeightDelta(startingWeightDelta)}
+										</p>
+									</div>
+								</div>
+							)}
+						</div>
 					</section>
 
 					<FastingTimer
@@ -405,7 +489,7 @@ export default async function NutritionPage({ searchParams }: NutritionPageProps
 						}
 					/>
 
-					<div className="mt-8 grid gap-6 lg:grid-cols-[1fr_1fr]">
+					<div className="mt-8 grid gap-6 lg:grid-cols-3">
 						<form
 							action={addCalorieEntry}
 							className="rounded-2xl border border-slate-800 bg-slate-900 p-6"
@@ -490,6 +574,40 @@ export default async function NutritionPage({ searchParams }: NutritionPageProps
 
 								<button className="rounded-xl bg-sky-500 px-5 py-3 font-semibold text-slate-950 hover:bg-sky-400">
 									Save Weight
+								</button>
+							</div>
+						</form>
+
+						<form
+							action={saveStartingWeight}
+							className="rounded-2xl border border-slate-800 bg-slate-900 p-6"
+						>
+							<h2 className="text-xl font-bold">Starting Weight</h2>
+
+							<p className="mt-2 text-sm text-slate-400">
+								Set your baseline for total weight change.
+							</p>
+
+							<div className="mt-5 space-y-4">
+								<div>
+									<label className="text-sm font-medium text-slate-300">
+										Starting weight in pounds
+									</label>
+
+									<input
+										type="number"
+										name="weightLbs"
+										min="1"
+										max="1000"
+										step="0.1"
+										defaultValue={userWeightBaseline?.startingWeightLbs ?? ""}
+										placeholder="205.0"
+										className="mt-2 w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-white outline-none focus:border-sky-500"
+									/>
+								</div>
+
+								<button className="rounded-xl bg-sky-500 px-5 py-3 font-semibold text-slate-950 hover:bg-sky-400">
+									Save Starting Weight
 								</button>
 							</div>
 						</form>

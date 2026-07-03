@@ -1,0 +1,2 @@
+ALTER TABLE "User" ADD COLUMN "startingWeightLbs" DOUBLE PRECISION;
+ALTER TABLE "User" ADD COLUMN "startingWeightSetAt" TIMESTAMP(3);
