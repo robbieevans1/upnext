@@ -53,6 +53,7 @@ type DashboardDailyCheckResult = {
 	targetDay: Date;
 	dailyCheck: {
 		title: string;
+		isActive?: boolean;
 	};
 };
 
@@ -312,12 +313,18 @@ export function buildDashboardAnalytics({
 		...commitments.map((commitment) => commitment.playbook),
 	];
 	const playbookCount = playbookEligibleItems.filter(hasPlaybook).length;
+	const activeDailyCheckResults = dailyCheckResults.filter(
+		(result) => result.dailyCheck.isActive !== false,
+	);
 	const dailyReviewSummary = {
-		total: dailyCheckResults.length,
-		yes: dailyCheckResults.filter((result) => result.status === "YES").length,
-		no: dailyCheckResults.filter((result) => result.status === "NO").length,
-		skip: dailyCheckResults.filter((result) => result.status === "SKIP").length,
-		unsure: dailyCheckResults.filter((result) => result.status === "UNSURE")
+		total: activeDailyCheckResults.length,
+		yes: activeDailyCheckResults.filter((result) => result.status === "YES")
+			.length,
+		no: activeDailyCheckResults.filter((result) => result.status === "NO")
+			.length,
+		skip: activeDailyCheckResults.filter((result) => result.status === "SKIP")
+			.length,
+		unsure: activeDailyCheckResults.filter((result) => result.status === "UNSURE")
 			.length,
 	};
 	const dailyReviewAnswered =
@@ -337,7 +344,7 @@ export function buildDashboardAnalytics({
 		}
 	>();
 
-	for (const result of dailyCheckResults) {
+	for (const result of activeDailyCheckResults) {
 		const total = dailyCheckTotals.get(result.dailyCheck.title) ?? {
 			title: result.dailyCheck.title,
 			yes: 0,
