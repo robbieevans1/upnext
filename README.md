@@ -6,49 +6,13 @@ The app organizes recurring work into a daily stack. Mandatory tasks stay visibl
 
 ## Features
 
-- Email and password sign up / login
-- Daily task stack for the signed-in user
-- Mandatory tasks that stay prioritized until completed
-- Task groups for rotating recurring work
-- Task timers that start focused work sessions from task cards
-- Continue tracking time on a completed task without undoing completion
-- Subtasks that can be completed independently and move down the task card
-- Task playbooks for tips, steps, mindset cues, and mistakes to avoid
-- Large editable playbook modal available from task cards and task management
-- Highlighted Today playbook buttons when a task already has playbook notes
-- Topics page for reusable notes, reminders, current focus areas, and general playbooks
-- Full-page topic editor for long-form notes
-- Topic image montages with upload, paste, caption, alt text, and delete support
-- One-off action items for async errands or tasks outside the recurring stack
-- Scheduled commitments for events, appointments, errands, recurring obligations, and time-based plans
-- Weekly recurring commitments that can repeat on one day, weekdays, every day, or any selected set of days
-- Calendar page for browsing dated action items, commitments, recurring commitment occurrences, and announcements by month
-- Month navigation for reviewing past and future scheduled items
-- Daily Review checks for next-day self-audits like calorie limits, sleep, spending, and nutrition goals
-- Nutrition page for logging calories, daily weight, fasting sessions, and weight-change comparisons
-- Calorie entries can be logged for today or one app day ahead
-- Weight history shows day-to-day fluctuation and comparison against selected past weigh-ins
-- Fasting timer with support for backdating the start time if the timer was started late
-- Complete Day flow for starting tomorrow's stack early without marking unfinished tasks complete
-- Announcement banners for future dated events with a live countdown
-- Dashboard with completion trends, task-time totals, downtime charts, scheduled load, daily review results, action item status, and playbook coverage
-- Completed Today section with same-day undo
-- Continue button for completed tasks that need additional focused time
-- History page for browsing completed tasks by day
-- Daily review results stored against the day being reviewed, not the day the answer was entered
-- Recent completed-day shortcuts with app-day aggregation
-- Eastern-time app day handling for daily rollover
-- Task completion history stored for analytics
-- Downtime timer for sleep, social, eating, and other time
-- Downtime sessions continue running after leaving the page
-- Active downtime sessions split cleanly at Eastern midnight
-- Tools section with a persistent scratch counter
-- Demo seed script for local screenshots and realistic QA data
-- Public About page and public landing links
-- Responsive mobile navigation with a side menu
-- Short popup notifications after task, action item, commitment, and topic changes
-- Soft deletes for tasks and groups
-- CI checks for linting, types, tests, unused code, and production build
+- **Task stack:** mandatory tasks, rotating groups, subtasks, task timers, completed-task continuation, playbooks, collapsible Today sections, and the Complete Day early-start flow.
+- **Planning:** one-off action items, scheduled and recurring commitments, monthly calendar, future announcement banners, and responsive navigation.
+- **Review and history:** day and week history views, recent day shortcuts, Daily Review checks, Eastern-time app-day grouping, and soft-delete-aware reporting.
+- **Time and health:** downtime tracking, flexible timer, Pomodoro timer, scratch counter, calorie logging, daily weight, starting-weight baseline, fasting sessions, and weight comparisons.
+- **Notes:** reusable Topics, full-page topic editor, and topic image montages with upload, paste, captions, alt text, and delete support.
+- **Analytics:** dashboard charts for completions, task time, downtime, scheduled load, action items, Daily Review outcomes, playbook coverage, and weekly task totals.
+- **App basics:** email/password auth, public About page, toast notifications, demo seed data, PostgreSQL persistence, and CI checks for linting, types, tests, unused code, and production build.
 
 ## How It Works
 
@@ -94,6 +58,8 @@ Portfolio project
 
 Subtasks can be checked off one by one and move toward the bottom of the task card. Completing every subtask is not required before completing the parent task, which keeps the workflow flexible for real days.
 
+On Today, task cards with subtasks can collapse their subtask list so large tasks do not take over the whole page. The card still shows subtask progress while collapsed.
+
 ## Task Playbooks
 
 Task descriptions stay short and card-facing. Playbooks are separate notes for how to perform a task well.
@@ -123,7 +89,7 @@ This does not complete unfinished tasks. It only changes the user's effective ap
 
 ## Completion History
 
-The History page lets users review completed tasks by day. It includes:
+The History page lets users review completed work by day or week. The day view includes:
 
 - Previous Day and Next Day navigation
 - A Today shortcut
@@ -131,6 +97,8 @@ The History page lets users review completed tasks by day. It includes:
 - Sorted completed task cards for the selected day
 - App-day aggregation for older completion timestamps
 - Daily Review results for the selected day
+
+The week view summarizes completed tasks from Sunday through Saturday, matching the weekly task-completion card on Today. Active tasks created after the selected week are not backfilled into old weeks as zero-count rows, while tasks that existed during that week or were completed during that week remain visible.
 
 History uses the same Eastern-time app-day logic as Today, so task completions are grouped by the day the app considers active rather than by the server's raw UTC date.
 
@@ -213,7 +181,11 @@ Topics are separate from task playbooks today, but they are designed so future t
 
 ## Tools
 
-The Tools section currently includes a persistent scratch counter. It is intentionally lightweight: the count is stored locally in the browser, survives navigation and app restarts, and stays there until Reset is pressed.
+The Tools section includes lightweight timers and utilities that do not need to be tied to recurring tasks:
+
+- A persistent scratch counter stored locally in the browser until Reset is pressed.
+- A flexible timer that can start, pause, continue, reset, manually add or remove time, save entries for the day, and show Sunday-through-Saturday weekly totals.
+- A Pomodoro timer with adjustable work length, 5-10 minute break options, and an alarm when an interval ends.
 
 ## Nutrition and Fasting
 
@@ -221,7 +193,7 @@ The Nutrition page tracks calorie intake, daily weigh-ins, and fasting sessions.
 
 Calories can be logged throughout the day with an optional note. If a user goes past midnight or wants to plan ahead, calories can also be logged one app day ahead.
 
-Daily weight is stored as one weigh-in per app day. The recent-day history shows calories, weight, and the day-to-day weight fluctuation when both the current day and previous day have saved weights. The Weight Comparison card lets the user choose a past weigh-in and compare it against today's saved weight.
+Daily weight is stored as one weigh-in per app day. The recent-day history shows calories, weight, and the day-to-day weight fluctuation when both the current day and previous day have saved weights. The Weight Comparison card lets the user choose a past weigh-in and compare it against today's saved weight. Users can also set a starting weight baseline to compare current progress against the original starting point.
 
 The fasting timer can be started and stopped from the Nutrition page. If the user forgets to start the timer, the start form supports choosing an earlier date and time, such as starting a fast from 2 PM even if the timer is started at 4 PM. Recent completed fasts show their start time, end time, and duration.
 
@@ -248,6 +220,7 @@ The Dashboard page summarizes recent app activity across the last 14 app days. I
 
 - Task completion rate
 - Daily completion trend
+- Current Sunday-through-Saturday task completion totals, including active tasks with zero completions
 - Focused task time by task
 - Completion breakdown by task area or group
 - Downtime logged by day and category
@@ -257,11 +230,11 @@ The Dashboard page summarizes recent app activity across the last 14 app days. I
 - Playbook coverage across tasks, action items, and commitments
 - Most completed tasks
 
-The dashboard uses existing database records rather than separate analytics tables, so it updates as tasks are completed, downtime sessions are logged, action items are resolved, and commitments are created or completed.
+The dashboard uses existing database records rather than separate analytics tables, so it updates as tasks are completed, downtime sessions are logged, action items are resolved, and commitments are created or completed. Deleted Daily Review checks are excluded from review graphs so old inactive prompts do not continue appearing in dashboard analytics.
 
 ## Tech Stack
 
-- Next.js 16 App Router
+- Next.js 15 App Router
 - React 19
 - TypeScript
 - Tailwind CSS
@@ -274,7 +247,7 @@ The dashboard uses existing database records rather than separate analytics tabl
 
 ## Data Models
 
-- `User` stores account data.
+- `User` stores account data and optional starting-weight baseline settings.
 - `TaskGroup` stores related task groups.
 - `Task` stores recurring tasks, mandatory status, group membership, stack order, and optional playbook notes.
 - `TaskCompletion` stores per-day task completion history.
@@ -287,9 +260,11 @@ The dashboard uses existing database records rather than separate analytics tabl
 - `FastingSession` stores fasting timer start and end timestamps.
 - `ActionItem` stores one-off async tasks with optional due dates, completion status, cancellation status, and playbook notes.
 - `Topic` stores reusable notes, reminders, current focus areas, and general playbooks.
+- `TopicImage` stores topic image metadata, ownership, captions, alt text, and Blob pathnames.
 - `Commitment` stores date-based, time-based, and weekly recurring obligations with optional location, start/end times, completion status, cancellation status, and playbook notes.
 - `CommitmentOccurrenceCompletion` stores per-day completions for recurring commitment instances.
 - `DailyCheck` stores active next-day outcome prompts for a user.
+- `Challenge` stores fixed-duration streak-style Daily Review goals.
 - `DailyCheckResult` stores Yes, No, Skip, or Not sure answers against the reviewed app day.
 - `DailyReviewDismissal` stores when a user dismisses a day's review prompt.
 - `DayStartOverride` stores a temporary per-user effective-day override for starting tomorrow early.
@@ -453,7 +428,7 @@ The CI workflow runs on pull requests and pushes to `main`. It installs dependen
 
 ![Action Items](public/readme/actions.png)
 
-### Schedule and Commitments
+### Commitments
 
 ![Schedule and Commitments](public/readme/commitments.png)
 

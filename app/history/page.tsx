@@ -138,12 +138,30 @@ async function getWeeklyTaskCompletionTotals(
 		prisma.task.findMany({
 			where: {
 				userId,
-				isActive: true,
+				OR: [
+					{
+						isActive: true,
+						createdAt: {
+							lt: weekRange.end,
+						},
+					},
+					{
+						completions: {
+							some: {
+								completedOn: {
+									gte: weekRange.start,
+									lt: weekRange.end,
+								},
+							},
+						},
+					},
+				],
 			},
 			select: {
 				id: true,
 				title: true,
 				isActive: true,
+				createdAt: true,
 			},
 			orderBy: {
 				title: "asc",
@@ -155,9 +173,6 @@ async function getWeeklyTaskCompletionTotals(
 				completedOn: {
 					gte: weekRange.start,
 					lt: weekRange.end,
-				},
-				task: {
-					isActive: true,
 				},
 			},
 			select: {
@@ -171,6 +186,8 @@ async function getWeeklyTaskCompletionTotals(
 		tasks,
 		completions,
 		weekStart,
+		weekEnd: weekRange.end,
+		includeInactiveCompletedTasks: true,
 	});
 }
 
