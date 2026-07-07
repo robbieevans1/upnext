@@ -66,6 +66,20 @@ function getLocalDayKey(date: Date) {
 	return `${year}-${month}-${day}`;
 }
 
+function getWeekRange(date: Date) {
+	const start = new Date(date);
+	start.setHours(0, 0, 0, 0);
+	start.setDate(start.getDate() - start.getDay());
+
+	const end = new Date(start);
+	end.setDate(start.getDate() + 6);
+
+	return {
+		startKey: getLocalDayKey(start),
+		endKey: getLocalDayKey(end),
+	};
+}
+
 function getSafeTimerEntries(value: unknown): TimerEntry[] {
 	if (!Array.isArray(value)) {
 		return [];
@@ -134,6 +148,22 @@ export default function TimerTool() {
 		() => getElapsedSeconds(timerState, nowMs),
 		[timerState, nowMs],
 	);
+	const weekRange = useMemo(() => getWeekRange(new Date(nowMs)), [nowMs]);
+	const weeklySavedSeconds = useMemo(
+		() =>
+			timerEntries.reduce((totalSeconds, entry) => {
+				if (
+					entry.day < weekRange.startKey ||
+					entry.day > weekRange.endKey
+				) {
+					return totalSeconds;
+				}
+
+				return totalSeconds + entry.seconds;
+			}, 0),
+		[timerEntries, weekRange],
+	);
+	const weeklyTotalSeconds = weeklySavedSeconds + elapsedSeconds;
 	const primaryButtonLabel =
 		timerState.accumulatedSeconds > 0 || elapsedSeconds > 0 ? "Continue" : "Start";
 
@@ -295,6 +325,29 @@ export default function TimerTool() {
 				className="mt-6 break-words font-mono text-5xl font-bold tabular-nums text-white sm:text-7xl"
 			>
 				{formatDuration(elapsedSeconds)}
+			</div>
+
+			<div className="mt-6 rounded-xl border border-slate-800 bg-slate-950/70 px-4 py-4">
+				<div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+					<div>
+						<h2 className="text-sm font-semibold uppercase tracking-wide text-sky-400">
+							This week
+						</h2>
+						<p className="mt-1 text-sm text-slate-400">
+							Sunday through Saturday, {weekRange.startKey} to{" "}
+							{weekRange.endKey}
+						</p>
+					</div>
+
+					<div className="sm:text-right">
+						<p className="font-mono text-2xl font-bold tabular-nums text-white">
+							{formatDuration(weeklyTotalSeconds)}
+						</p>
+						<p className="mt-1 text-xs font-semibold uppercase tracking-wide text-slate-500">
+							Total worked
+						</p>
+					</div>
+				</div>
 			</div>
 
 			<div className="mt-6 flex flex-wrap gap-3">
