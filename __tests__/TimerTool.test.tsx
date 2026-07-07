@@ -73,7 +73,7 @@ describe("TimerTool", () => {
 
 		expect(screen.getByTestId("timer-value")).toHaveTextContent("00:00:00");
 		expect(screen.getByText("2026-06-29")).toBeInTheDocument();
-		expect(screen.getByText("00:01:30")).toBeInTheDocument();
+		expect(screen.getAllByText("00:01:30")).toHaveLength(2);
 		expect(screen.getByText("1 saved")).toBeInTheDocument();
 		expect(JSON.parse(window.localStorage.getItem(timerEntriesStorageKey) ?? "[]"))
 			.toEqual([
@@ -102,8 +102,55 @@ describe("TimerTool", () => {
 		await flushEffects();
 
 		expect(screen.getByText("2026-06-28")).toBeInTheDocument();
-		expect(screen.getByText("01:00:00")).toBeInTheDocument();
+		expect(screen.getAllByText("01:00:00")).toHaveLength(2);
 		expect(screen.getByText("1 saved")).toBeInTheDocument();
+	});
+
+	it("shows the current Sunday through Saturday weekly total", async () => {
+		window.localStorage.setItem(
+			timerEntriesStorageKey,
+			JSON.stringify([
+				{
+					id: "entry-current-sunday",
+					day: "2026-06-28",
+					seconds: 3600,
+					savedAtMs: new Date("2026-06-28T15:00:00.000Z").getTime(),
+				},
+				{
+					id: "entry-current-monday",
+					day: "2026-06-29",
+					seconds: 1800,
+					savedAtMs: new Date("2026-06-29T15:00:00.000Z").getTime(),
+				},
+				{
+					id: "entry-previous-week",
+					day: "2026-06-27",
+					seconds: 7200,
+					savedAtMs: new Date("2026-06-27T15:00:00.000Z").getTime(),
+				},
+				{
+					id: "entry-next-week",
+					day: "2026-07-05",
+					seconds: 7200,
+					savedAtMs: new Date("2026-07-05T15:00:00.000Z").getTime(),
+				},
+			]),
+		);
+
+		render(<TimerTool />);
+		await flushEffects();
+
+		expect(
+			screen.getByText("Sunday through Saturday, 2026-06-28 to 2026-07-04"),
+		).toBeInTheDocument();
+		expect(screen.getByText("01:30:00")).toBeInTheDocument();
+
+		fireEvent.click(screen.getByRole("button", { name: "Start" }));
+		act(() => {
+			vi.advanceTimersByTime(30_000);
+		});
+
+		expect(screen.getByText("01:30:30")).toBeInTheDocument();
 	});
 
 	it("loads a saved running timer and keeps counting", async () => {
