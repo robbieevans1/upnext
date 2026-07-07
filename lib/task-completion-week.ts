@@ -20,14 +20,25 @@ export function buildWeeklyTaskCompletionTotals({
 	tasks,
 	completions,
 	weekStart,
+	weekEnd,
+	includeInactiveCompletedTasks = false,
 }: {
-	tasks: { id: string; title: string; isActive: boolean }[];
+	tasks: { id: string; title: string; isActive: boolean; createdAt?: Date }[];
 	completions: { taskId: string; completedOn: Date }[];
 	weekStart: Date;
+	weekEnd?: Date;
+	includeInactiveCompletedTasks?: boolean;
 }): WeeklyTaskCompletionTotal[] {
+	const tasksById = new Map(tasks.map((task) => [task.id, task]));
 	const totalsByTaskId = new Map(
 		tasks
-			.filter((task) => task.isActive)
+			.filter((task) => {
+				if (!task.isActive) {
+					return false;
+				}
+
+				return !weekEnd || !task.createdAt || task.createdAt < weekEnd;
+			})
 			.map((task) => [
 				task.id,
 				{
@@ -42,10 +53,20 @@ export function buildWeeklyTaskCompletionTotals({
 			continue;
 		}
 
-		const total = totalsByTaskId.get(completion.taskId);
+		const existingTotal = totalsByTaskId.get(completion.taskId);
 
-		if (total) {
-			total.count += 1;
+		if (existingTotal) {
+			existingTotal.count += 1;
+			continue;
+		}
+
+		const task = tasksById.get(completion.taskId);
+
+		if (task && (includeInactiveCompletedTasks || task.isActive)) {
+			totalsByTaskId.set(completion.taskId, {
+				title: task.title,
+				count: 1,
+			});
 		}
 	}
 
