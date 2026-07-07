@@ -183,6 +183,14 @@ describe("dashboard analytics", () => {
 						title: "Avoided late-night snacking?",
 					},
 				},
+				{
+					status: "YES",
+					targetDay: new Date("2026-06-16T04:00:00.000Z"),
+					dailyCheck: {
+						title: "Deleted daily check",
+						isActive: false,
+					},
+				},
 			],
 		});
 

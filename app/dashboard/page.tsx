@@ -144,6 +144,9 @@ export default async function DashboardPage() {
 					gte: startDay,
 					lt: tomorrow,
 				},
+				dailyCheck: {
+					isActive: true,
+				},
 			},
 			select: {
 				status: true,
@@ -151,6 +154,7 @@ export default async function DashboardPage() {
 				dailyCheck: {
 					select: {
 						title: true,
+						isActive: true,
 					},
 				},
 			},
