@@ -4,6 +4,7 @@ import CompleteDayButton from "@/components/CompleteDayButton";
 import DailyReviewPrompt from "@/components/DailyReviewPrompt";
 import TaskPlaybookButton from "@/components/TaskPlaybookButton";
 import TaskTimerControls from "@/components/TaskTimerControls";
+import TodaySubtaskChecklist from "@/components/TodaySubtaskChecklist";
 import { completeActionItem } from "@/app/actions/action-items";
 import {
 	completeCommitment,
@@ -11,7 +12,6 @@ import {
 } from "@/app/actions/commitments";
 import {
 	adjustCompletedTaskTime,
-	completeSubtask,
 	undoTodayCompletion,
 } from "@/app/actions/tasks";
 import {
@@ -1404,51 +1404,12 @@ function SubtaskChecklist({ task }: { task: TaskWithLastCompletion }) {
 	}
 
 	return (
-		<div className="mt-5 border-t border-slate-800 pt-4">
-			<h5 className="text-sm font-semibold text-slate-200">Subtasks</h5>
-
-			<div className="mt-3 space-y-2">
-				{task.subtasks.map((subtask) => {
-					const isComplete = subtask.completions.length > 0;
-
-					return (
-						<div
-							key={subtask.id}
-							className="flex flex-col gap-2 rounded-lg border border-slate-800 bg-slate-950/70 px-3 py-2 sm:flex-row sm:items-center sm:justify-between"
-						>
-							<div className="flex min-w-0 items-center gap-2">
-								<span
-									className={`h-2.5 w-2.5 shrink-0 rounded-full ${
-										isComplete ? "bg-emerald-400" : "bg-slate-600"
-									}`}
-								/>
-
-								<span
-									className={`text-sm ${
-										isComplete
-											? "text-slate-500 line-through"
-											: "text-slate-200"
-									}`}
-								>
-									{subtask.title}
-								</span>
-							</div>
-
-							{isComplete ? (
-								<span className="self-start rounded-full bg-emerald-500/10 px-3 py-1 text-xs font-medium text-emerald-300 sm:self-auto">
-									Done
-								</span>
-							) : (
-								<form action={completeSubtask.bind(null, subtask.id)}>
-									<button className="rounded-lg border border-slate-700 px-3 py-1.5 text-sm font-medium text-slate-200 hover:border-sky-500 hover:text-sky-400">
-										Complete
-									</button>
-								</form>
-							)}
-						</div>
-					);
-				})}
-			</div>
-		</div>
+		<TodaySubtaskChecklist
+			subtasks={task.subtasks.map((subtask) => ({
+				id: subtask.id,
+				title: subtask.title,
+				isComplete: subtask.completions.length > 0,
+			}))}
+		/>
 	);
 }
