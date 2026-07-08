@@ -1,10 +1,7 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
-import {
-	dismissDailyReview,
-	saveDailyReview,
-} from "@/app/actions/daily-review";
+import { saveDailyReview } from "@/app/actions/daily-review";
 import { useRouter } from "next/navigation";
 
 type DailyReviewStatus = "YES" | "NO" | "SKIP" | "UNSURE";
@@ -20,7 +17,6 @@ type DailyReviewPromptProps = {
 	targetDayKey: string;
 	targetDayLabel: string;
 	checks: DailyReviewCheck[];
-	wasDismissed: boolean;
 };
 
 const statusOptions: {
@@ -64,12 +60,11 @@ export default function DailyReviewPrompt({
 	targetDayKey,
 	targetDayLabel,
 	checks,
-	wasDismissed,
 }: DailyReviewPromptProps) {
 	const router = useRouter();
 	const [isPending, startTransition] = useTransition();
 	const hasUnanswered = checks.some((check) => !check.result);
-	const [isOpen, setIsOpen] = useState(checks.length > 0 && hasUnanswered && !wasDismissed);
+	const [isOpen, setIsOpen] = useState(checks.length > 0 && hasUnanswered);
 	const [selectedStatuses, setSelectedStatuses] = useState(() =>
 		Object.fromEntries(
 			checks
@@ -85,10 +80,6 @@ export default function DailyReviewPrompt({
 
 	function handleDismiss() {
 		setIsOpen(false);
-		startTransition(async () => {
-			await dismissDailyReview(targetDayKey);
-			router.refresh();
-		});
 	}
 
 	function handleSubmit(formData: FormData) {

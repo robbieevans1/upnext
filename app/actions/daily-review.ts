@@ -140,28 +140,3 @@ export async function saveDailyReview(formData: FormData) {
 
 	revalidateDailyReviewViews();
 }
-
-export async function dismissDailyReview(targetDayKey: string) {
-	const userId = await requireUserId();
-	const targetDay = getAppDateFromKey(targetDayKey);
-
-	if (!targetDay) return;
-
-	await prisma.dailyReviewDismissal.upsert({
-		where: {
-			userId_targetDay: {
-				userId,
-				targetDay,
-			},
-		},
-		update: {
-			dismissedAt: new Date(),
-		},
-		create: {
-			userId,
-			targetDay,
-		},
-	});
-
-	revalidatePath("/today");
-}
