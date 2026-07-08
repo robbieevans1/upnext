@@ -12,9 +12,6 @@ const prisma = {
 	dailyCheckResult: {
 		upsert: vi.fn((args) => args),
 	},
-	dailyReviewDismissal: {
-		upsert: vi.fn(),
-	},
 };
 
 const getServerSession = vi.fn();
@@ -174,29 +171,6 @@ describe("daily review server actions", () => {
 				},
 			},
 		]);
-	});
-
-	it("dismisses a daily review for the selected app day", async () => {
-		const { dismissDailyReview } = await import("@/app/actions/daily-review");
-
-		await dismissDailyReview("2026-06-18");
-
-		expect(prisma.dailyReviewDismissal.upsert).toHaveBeenCalledWith({
-			where: {
-				userId_targetDay: {
-					userId: "user-1",
-					targetDay: new Date("2026-06-18T04:00:00.000Z"),
-				},
-			},
-			update: {
-				dismissedAt: expect.any(Date),
-			},
-			create: {
-				userId: "user-1",
-				targetDay: new Date("2026-06-18T04:00:00.000Z"),
-			},
-		});
-		expect(revalidatePath).toHaveBeenCalledWith("/today");
 	});
 
 	it("redirects unauthenticated users before mutating daily checks", async () => {

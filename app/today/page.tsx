@@ -482,14 +482,6 @@ export default async function TodayPage() {
 		);
 	});
 
-	const dailyReviewDismissal = await prisma.dailyReviewDismissal.findUnique({
-		where: {
-			userId_targetDay: {
-				userId: session.user.id,
-				targetDay: yesterday,
-			},
-		},
-	});
 	const challenges = await prisma.challenge.findMany({
 		where: {
 			userId: session.user.id,
@@ -760,7 +752,6 @@ export default async function TodayPage() {
 							<DailyReviewPrompt
 								targetDayKey={getAppDateKey(yesterday)}
 								targetDayLabel={formatAppDate(yesterday)}
-								wasDismissed={Boolean(dailyReviewDismissal)}
 								checks={eligibleDailyChecks.map((check) => ({
 									id: check.id,
 									title: check.title,

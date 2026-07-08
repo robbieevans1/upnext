@@ -1,15 +1,13 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import DailyReviewPrompt from "@/components/DailyReviewPrompt";
 
 const mocks = vi.hoisted(() => ({
-	dismissDailyReview: vi.fn(),
 	refresh: vi.fn(),
 	saveDailyReview: vi.fn(),
 }));
 
 vi.mock("@/app/actions/daily-review", () => ({
-	dismissDailyReview: mocks.dismissDailyReview,
 	saveDailyReview: mocks.saveDailyReview,
 }));
 
@@ -29,7 +27,6 @@ describe("DailyReviewPrompt", () => {
 			<DailyReviewPrompt
 				targetDayKey="2026-06-18"
 				targetDayLabel="6/18/2026"
-				wasDismissed={false}
 				checks={[
 					{
 						id: "check-1",
@@ -47,12 +44,11 @@ describe("DailyReviewPrompt", () => {
 		expect(screen.getByText("1 of 1 checks still need an answer.")).toBeInTheDocument();
 	});
 
-	it("dismisses the prompt without saving answers", async () => {
-		render(
+	it("closes the prompt for the current page session without saving answers", () => {
+		const { unmount } = render(
 			<DailyReviewPrompt
 				targetDayKey="2026-06-18"
 				targetDayLabel="6/18/2026"
-				wasDismissed={false}
 				checks={[
 					{
 						id: "check-1",
@@ -66,10 +62,30 @@ describe("DailyReviewPrompt", () => {
 
 		fireEvent.click(screen.getByRole("button", { name: "Do Later" }));
 
-		await waitFor(() => {
-			expect(mocks.dismissDailyReview).toHaveBeenCalledWith("2026-06-18");
-		});
+		expect(screen.queryByRole("dialog", { name: "Yesterday Review" })).toBeNull();
 		expect(mocks.saveDailyReview).not.toHaveBeenCalled();
+		expect(mocks.refresh).not.toHaveBeenCalled();
+
+		unmount();
+
+		render(
+			<DailyReviewPrompt
+				targetDayKey="2026-06-18"
+				targetDayLabel="6/18/2026"
+				checks={[
+					{
+						id: "check-1",
+						title: "Was below calorie limit?",
+						description: null,
+						result: null,
+					},
+				]}
+			/>,
+		);
+
+		expect(
+			screen.getByRole("dialog", { name: "Yesterday Review" }),
+		).toBeInTheDocument();
 	});
 
 	it("can be reopened to update answered checks", () => {
@@ -77,7 +93,6 @@ describe("DailyReviewPrompt", () => {
 			<DailyReviewPrompt
 				targetDayKey="2026-06-18"
 				targetDayLabel="6/18/2026"
-				wasDismissed={false}
 				checks={[
 					{
 						id: "check-1",
