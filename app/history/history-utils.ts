@@ -50,6 +50,10 @@ export function getWeekHref(weekStart: Date) {
 	return `/history?view=week&week=${getAppDateKey(weekStart)}`;
 }
 
+export function getTotalHref() {
+	return "/history?view=total";
+}
+
 export function getHistoryDayRange(day: Date) {
 	return {
 		start: day,

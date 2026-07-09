@@ -49,9 +49,10 @@ async function cleanNextOutput() {
 	await fs.mkdir(nextDir, { recursive: true });
 }
 
-function run(command, args) {
+function run(command, args, options = {}) {
 	return new Promise((resolve, reject) => {
 		const child = spawn(command, args, {
+			env: options.env ? { ...process.env, ...options.env } : process.env,
 			stdio: "inherit",
 			shell: process.platform === "win32",
 		});
@@ -110,7 +111,11 @@ async function runBuild() {
 	await ensureNoDevServer();
 	await cleanNextOutput();
 	await run("prisma", ["generate"]);
-	await run("next", ["build"]);
+	await run("next", ["build"], {
+		env: {
+			NEXT_PRIVATE_BUILD_WORKER: "0",
+		},
+	});
 }
 
 if (mode === "dev") {

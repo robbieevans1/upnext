@@ -15,6 +15,7 @@ import {
 	getSelectedDay,
 	getSelectedWeekStart,
 	getTaskTimeTotalsByTaskId,
+	getTotalHref,
 	getWeekHref,
 	RecentCompletionDay,
 	sortCompletions,
@@ -23,7 +24,9 @@ import {
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import {
+	buildTotalTaskCompletionTotals,
 	buildWeeklyTaskCompletionTotals,
+	type TaskCompletionTotal,
 	type WeeklyTaskCompletionTotal,
 } from "@/lib/task-completion-week";
 import { getServerSession } from "next-auth";
@@ -191,6 +194,44 @@ async function getWeeklyTaskCompletionTotals(
 	});
 }
 
+async function getTotalTaskCompletionTotals(
+	userId: string,
+): Promise<TaskCompletionTotal[]> {
+	const [tasks, completions] = await Promise.all([
+		prisma.task.findMany({
+			where: {
+				userId,
+				isActive: true,
+			},
+			select: {
+				id: true,
+				title: true,
+				isActive: true,
+			},
+			orderBy: {
+				title: "asc",
+			},
+		}),
+		prisma.taskCompletion.findMany({
+			where: {
+				userId,
+				task: {
+					isActive: true,
+				},
+			},
+			select: {
+				taskId: true,
+				completedOn: true,
+			},
+		}),
+	]);
+
+	return buildTotalTaskCompletionTotals({
+		tasks,
+		completions,
+	});
+}
+
 async function getDailyCheckResultsForDay(
 	userId: string,
 	day: Date,
@@ -239,6 +280,7 @@ export default async function HistoryPage({ searchParams }: HistoryPageProps) {
 	const canGoNextWeek = nextWeekStart.getTime() <= currentWeekStart.getTime();
 	const viewParam = Array.isArray(params.view) ? params.view[0] : params.view;
 	const isWeekView = viewParam === "week";
+	const isTotalView = viewParam === "total";
 	const previousDay = addAppDays(selectedDay, -1);
 	const nextDay = addAppDays(selectedDay, 1);
 	const canGoNext = nextDay.getTime() <= today.getTime();
@@ -249,12 +291,14 @@ export default async function HistoryPage({ searchParams }: HistoryPageProps) {
 		dailyCheckResults,
 		taskSessions,
 		weeklyTaskCompletionTotals,
+		totalTaskCompletionTotals,
 	] = await Promise.all([
 		getCompletionsForDay(session.user.id, selectedDay),
 		getRecentCompletionDays(session.user.id),
 		getDailyCheckResultsForDay(session.user.id, selectedDay),
 		getTaskSessionsForDay(session.user.id, selectedDay),
 		getWeeklyTaskCompletionTotals(session.user.id, selectedWeekStart),
+		getTotalTaskCompletionTotals(session.user.id),
 	]);
 
 	const sortedCompletions = sortCompletions(completions);
@@ -276,8 +320,8 @@ export default async function HistoryPage({ searchParams }: HistoryPageProps) {
 							</h1>
 
 							<p className="mt-3 max-w-2xl text-slate-400">
-								Review completed tasks by app day. Use the day controls to move
-								backward and forward through your completion history.
+								Review completed tasks by app day, week, or all-time current
+								task totals.
 							</p>
 						</div>
 
@@ -293,7 +337,7 @@ export default async function HistoryPage({ searchParams }: HistoryPageProps) {
 						<Link
 							href={getDayHref(selectedDay)}
 							className={
-								isWeekView
+								isWeekView || isTotalView
 									? "flex-1 rounded-xl px-4 py-2 text-center text-sm font-semibold text-slate-400 transition hover:text-sky-300"
 									: "flex-1 rounded-xl bg-sky-500 px-4 py-2 text-center text-sm font-semibold text-slate-950"
 							}
@@ -311,9 +355,51 @@ export default async function HistoryPage({ searchParams }: HistoryPageProps) {
 						>
 							Week
 						</Link>
+
+						<Link
+							href={getTotalHref()}
+							className={
+								isTotalView
+									? "flex-1 rounded-xl bg-sky-500 px-4 py-2 text-center text-sm font-semibold text-slate-950"
+									: "flex-1 rounded-xl px-4 py-2 text-center text-sm font-semibold text-slate-400 transition hover:text-sky-300"
+							}
+						>
+							Total
+						</Link>
 					</div>
 
-					{isWeekView ? (
+					{isTotalView ? (
+						<>
+							<div className="mt-8 rounded-2xl border border-slate-800 bg-slate-900 p-5">
+								<div className="text-center">
+									<p className="text-sm font-medium text-slate-400">
+										All-time current task totals
+									</p>
+
+									<h2 className="mt-1 text-2xl font-bold">
+										Total Completions
+									</h2>
+
+									<p className="mt-1 text-sm text-slate-500">
+										{totalTaskCompletionTotals.reduce(
+											(total, task) => total + task.count,
+											0,
+										)}{" "}
+										completed across active tasks
+									</p>
+								</div>
+							</div>
+
+							<TaskCompletionTotalsCard
+								totals={totalTaskCompletionTotals}
+								title="Completed By Task"
+								description="Only current undeleted tasks are included."
+								emptyText="Add active tasks to populate total history."
+								showRegularDuration
+								today={today}
+							/>
+						</>
+					) : isWeekView ? (
 						<>
 							<div className="mt-8 rounded-2xl border border-slate-800 bg-slate-900 p-5">
 								<div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -350,7 +436,12 @@ export default async function HistoryPage({ searchParams }: HistoryPageProps) {
 								</div>
 							</div>
 
-							<WeeklyHistoryCard totals={weeklyTaskCompletionTotals} />
+							<TaskCompletionTotalsCard
+								totals={weeklyTaskCompletionTotals}
+								title="Completed By Task"
+								description="Active tasks are included even when the count is zero."
+								emptyText="Add active tasks to populate weekly history."
+							/>
 						</>
 					) : (
 						<>
@@ -538,10 +629,20 @@ export default async function HistoryPage({ searchParams }: HistoryPageProps) {
 	);
 }
 
-function WeeklyHistoryCard({
+function TaskCompletionTotalsCard({
 	totals,
+	title,
+	description,
+	emptyText,
+	showRegularDuration = false,
+	today,
 }: {
-	totals: WeeklyTaskCompletionTotal[];
+	totals: (TaskCompletionTotal | WeeklyTaskCompletionTotal)[];
+	title: string;
+	description: string;
+	emptyText: string;
+	showRegularDuration?: boolean;
+	today?: Date;
 }) {
 	const maxCompletions = Math.max(1, ...totals.map((task) => task.count));
 
@@ -549,11 +650,9 @@ function WeeklyHistoryCard({
 		<section className="mt-8 rounded-2xl border border-slate-800 bg-slate-900 p-5">
 			<div className="mb-4">
 				<h2 className="text-lg font-semibold text-slate-100">
-					Completed By Task
+					{title}
 				</h2>
-				<p className="mt-1 text-sm text-slate-500">
-					Active tasks are included even when the count is zero.
-				</p>
+				<p className="mt-1 text-sm text-slate-500">{description}</p>
 			</div>
 
 			{totals.length > 0 ? (
@@ -561,9 +660,16 @@ function WeeklyHistoryCard({
 					{totals.map((task) => (
 						<div key={task.title} className="min-w-0">
 							<div className="mb-2 flex min-w-0 items-center justify-between gap-3 text-sm">
-								<span className="min-w-0 truncate font-medium text-slate-300">
-									{task.title}
-								</span>
+								<div className="min-w-0">
+									<span className="block min-w-0 truncate font-medium text-slate-300">
+										{task.title}
+									</span>
+									{showRegularDuration && (
+										<span className="mt-1 block text-xs text-slate-500">
+											{getTaskRegularDurationText(task, today)}
+										</span>
+									)}
+								</div>
 								<span className="shrink-0 text-slate-500">{task.count}</span>
 							</div>
 							<div className="h-3 overflow-hidden rounded-full bg-slate-950">
@@ -582,11 +688,57 @@ function WeeklyHistoryCard({
 				</div>
 			) : (
 				<p className="rounded-xl border border-slate-800 bg-slate-950 p-4 text-sm text-slate-400">
-					Add active tasks to populate weekly history.
+					{emptyText}
 				</p>
 			)}
 		</section>
 	);
+}
+
+function getTaskRegularDurationText(
+	task: TaskCompletionTotal | WeeklyTaskCompletionTotal,
+	today: Date | undefined,
+) {
+	if (!("firstCompletedOn" in task) || !task.firstCompletedOn || !today) {
+		return "Not completed yet.";
+	}
+
+	return `First completed ${formatAppDate(task.firstCompletedOn)} · Done regularly for ${formatRegularDuration(task.firstCompletedOn, today)}`;
+}
+
+function formatRegularDuration(startDay: Date, endDay: Date) {
+	const millisecondsPerDay = 24 * 60 * 60 * 1000;
+	const days = Math.max(
+		1,
+		Math.floor((endDay.getTime() - startDay.getTime()) / millisecondsPerDay) + 1,
+	);
+
+	if (days < 7) {
+		return `${days} ${days === 1 ? "day" : "days"}`;
+	}
+
+	if (days < 60) {
+		const weeks = Math.floor(days / 7);
+
+		return `${weeks} ${weeks === 1 ? "week" : "weeks"}`;
+	}
+
+	if (days < 365) {
+		const months = Math.floor(days / 30);
+
+		return `${months} ${months === 1 ? "month" : "months"}`;
+	}
+
+	const years = Math.floor(days / 365);
+	const remainingMonths = Math.floor((days % 365) / 30);
+
+	if (remainingMonths === 0) {
+		return `${years} ${years === 1 ? "year" : "years"}`;
+	}
+
+	return `${years} ${years === 1 ? "year" : "years"}, ${remainingMonths} ${
+		remainingMonths === 1 ? "month" : "months"
+	}`;
 }
 
 function formatDailyCheckStatus(status: string) {
