@@ -10,6 +10,7 @@ import {
 	getSelectedWeekStart,
 	getTaskSessionDurationSeconds,
 	getTaskTimeTotalsByTaskId,
+	getTotalHref,
 	getWeekHref,
 	sortCompletions,
 } from "@/app/history/history-utils";
@@ -94,6 +95,10 @@ describe("history utilities", () => {
 		expect(getWeekHref(new Date("2026-06-14T04:00:00.000Z"))).toBe(
 			"/history?view=week&week=2026-06-14",
 		);
+	});
+
+	it("builds the total history link", () => {
+		expect(getTotalHref()).toBe("/history?view=total");
 	});
 
 	it("selects Sunday as the history week start", () => {

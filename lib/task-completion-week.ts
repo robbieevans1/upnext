@@ -5,6 +5,12 @@ export type WeeklyTaskCompletionTotal = {
 	count: number;
 };
 
+export type TaskCompletionTotal = {
+	title: string;
+	count: number;
+	firstCompletedOn: Date | null;
+};
+
 export function getTaskCompletionWeekStart(today: Date) {
 	let weekStart = today;
 
@@ -67,6 +73,46 @@ export function buildWeeklyTaskCompletionTotals({
 				title: task.title,
 				count: 1,
 			});
+		}
+	}
+
+	return Array.from(totalsByTaskId.values()).sort(
+		(a, b) => b.count - a.count || a.title.localeCompare(b.title),
+	);
+}
+
+export function buildTotalTaskCompletionTotals({
+	tasks,
+	completions,
+}: {
+	tasks: { id: string; title: string; isActive: boolean }[];
+	completions: { taskId: string; completedOn: Date }[];
+}): TaskCompletionTotal[] {
+	const totalsByTaskId = new Map<string, TaskCompletionTotal>(
+		tasks
+			.filter((task) => task.isActive)
+			.map((task) => [
+				task.id,
+				{
+					title: task.title,
+					count: 0,
+					firstCompletedOn: null,
+				},
+			]),
+	);
+
+	for (const completion of completions) {
+		const total = totalsByTaskId.get(completion.taskId);
+
+		if (total) {
+			total.count += 1;
+
+			if (
+				!total.firstCompletedOn ||
+				completion.completedOn.getTime() < total.firstCompletedOn.getTime()
+			) {
+				total.firstCompletedOn = completion.completedOn;
+			}
 		}
 	}
 
