@@ -5,36 +5,83 @@ import Link from "next/link";
 
 const featureSections = [
 	{
-		title: "Daily stack and task rotation",
-		body: "UpNext organizes recurring tasks into a focused daily stack. Mandatory tasks stay prominent, neglected tasks become harder to ignore, and grouped tasks rotate after completion so each area gets attention over time.",
+		title: "Daily stack, timers, and subtasks",
+		body: "UpNext organizes recurring work into a daily stack. Mandatory tasks stay visible, grouped tasks rotate after completion, subtasks can collapse when they get long, and task timers record focused work without forcing every subtask to be finished first.",
 	},
 	{
-		title: "Task timers with continue tracking",
-		body: "Start a timer when you begin a task, complete it when you finish, and continue a completed task later if you decide to spend more time on it. Multiple sessions roll into the same task-time total for analytics.",
+		title: "Playbooks and reusable notes",
+		body: "Tasks, action items, and commitments can include playbook notes for tips, mindset cues, and mistakes to avoid. Topics provide a separate space for reusable long-form notes, general playbooks, current focus areas, and image montages.",
 	},
 	{
-		title: "Subtasks without rigid blocking",
-		body: "Tasks can include subtasks for step-by-step execution. Subtasks can be checked off and move down the list, but they do not block completion of the parent task when the day calls for flexibility.",
+		title: "Planning beyond recurring tasks",
+		body: "Action items handle one-off async errands, while commitments cover scheduled events, appointments, and recurring obligations. The calendar brings dated action items, commitments, recurring occurrences, and announcements into a monthly view.",
 	},
 	{
-		title: "Playbooks for better execution",
-		body: "Tasks, action items, and commitments can include playbook notes: reminders, tips, mindset cues, or common mistakes to avoid before doing the work.",
+		title: "Daily review and challenges",
+		body: "Daily Review checks capture outcomes that can only be judged after the day ends, such as nutrition, spending, sleep, or streak goals. Yesterday's review reopens each fresh session until unanswered checks are completed.",
 	},
 	{
-		title: "Action items and commitments",
-		body: "Use action items for one-off async work and commitments for scheduled events, errands, appointments, and time-based obligations that should appear in the daily flow.",
+		title: "Time, nutrition, and recovery tracking",
+		body: "Track time away for sleep, social, eating, and other life needs. Nutrition tools log calories, daily weight, starting-weight progress, and fasting sessions, including backdated fasting starts when the timer was started late.",
 	},
 	{
-		title: "Time away tracking",
-		body: "Track sleep, social time, eating, and other time away from improvement activities. When no task timer is running, Other time can run automatically so the day has a more complete time picture.",
+		title: "History and analytics",
+		body: "History can be reviewed by day or by Sunday-through-Saturday weeks. The dashboard summarizes completions, task time, lifetime task totals, downtime, commitment load, action item status, Daily Review outcomes, and playbook coverage.",
 	},
 	{
-		title: "History by day",
-		body: "The history view lets you review what was completed on previous days and move through daily records without relying on memory alone.",
+		title: "Tools for loose tracking",
+		body: "The Tools area includes a persistent counter, a flexible timer with manual time adjustments and weekly totals, and a Pomodoro timer with adjustable work and break lengths plus an alarm.",
 	},
 	{
-		title: "Analytics dashboard",
-		body: "The dashboard summarizes task completions, task time, downtime, scheduled load, action item status, playbook coverage, and other signals that help reveal patterns in how time is actually spent.",
+		title: "Flexible app-day handling",
+		body: "UpNext uses Eastern-time app days, supports starting tomorrow's stack early with confirmation, and keeps timers and analytics aligned across daily rollover so unusual schedules still make sense.",
+	},
+];
+
+const capabilityGroups = [
+	{
+		title: "Plan",
+		items: [
+			"Recurring task stack",
+			"Mandatory and grouped tasks",
+			"Subtasks",
+			"Action items",
+			"Recurring commitments",
+			"Monthly calendar",
+		],
+	},
+	{
+		title: "Perform",
+		items: [
+			"Task timers",
+			"Completed-task continuation",
+			"Editable playbooks",
+			"Topics",
+			"Topic images",
+			"Toast confirmations",
+		],
+	},
+	{
+		title: "Reflect",
+		items: [
+			"Daily Review checks",
+			"Challenge streaks",
+			"Day and week history",
+			"Dashboard charts",
+			"Task-time analytics",
+			"Soft-delete-aware reporting",
+		],
+	},
+	{
+		title: "Track",
+		items: [
+			"Downtime categories",
+			"Calories",
+			"Weight baseline",
+			"Fasting timer",
+			"Flexible timer",
+			"Pomodoro and counter",
+		],
 	},
 ];
 
@@ -55,18 +102,36 @@ export default async function AboutPage() {
 
 					<p className="mt-5 text-lg leading-8 text-slate-300">
 						UpNext is a productivity app that organizes recurring tasks into a
-						daily stack, tracks the time spent doing them, and gives you a
-						clearer picture of the life time around them. Instead of showing
-						every task as equally important, UpNext helps you focus on the next
-						best thing to do.
+						daily stack, tracks the time spent doing them, and connects the
+						rest of the day around that work: commitments, errands, notes,
+						health habits, downtime, and review prompts. Instead of showing
+						every item as equally important, UpNext helps you focus on the next
+						best thing to do and understand what actually happened afterward.
 					</p>
 
 					<p className="mt-5 text-lg leading-8 text-slate-300">
 						There is only so much time in a single day, and sometimes we are not
 						able to finish everything we planned. UpNext is designed for that
-						reality. It helps make sure important tasks do not get ignored,
+						reality. It helps make sure important work, one-off obligations,
+						daily outcomes, and reusable execution notes do not get ignored,
 						forgotten, or repeatedly pushed aside.
 					</p>
+
+					<div className="mt-10 grid gap-4 rounded-2xl border border-slate-800 bg-slate-900 p-6 sm:grid-cols-2">
+						{capabilityGroups.map((group) => (
+							<div key={group.title}>
+								<h2 className="text-sm font-semibold uppercase tracking-wide text-sky-300">
+									{group.title}
+								</h2>
+
+								<ul className="mt-3 space-y-2 text-sm text-slate-300">
+									{group.items.map((item) => (
+										<li key={item}>{item}</li>
+									))}
+								</ul>
+							</div>
+						))}
+					</div>
 
 					<div className="mt-10 grid gap-5">
 						{featureSections.map((feature) => (

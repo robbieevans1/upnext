@@ -39,10 +39,12 @@ describe("AboutPage", () => {
 			"/signup",
 		);
 		expect(screen.queryByRole("button", { name: "Log out" })).toBeNull();
-		expect(screen.getByText("Task timers with continue tracking")).toBeInTheDocument();
-		expect(screen.getByText("Subtasks without rigid blocking")).toBeInTheDocument();
-		expect(screen.getByText("Time away tracking")).toBeInTheDocument();
-		expect(screen.getByText("Analytics dashboard")).toBeInTheDocument();
+		expect(screen.getByText("Daily stack, timers, and subtasks")).toBeInTheDocument();
+		expect(screen.getByText("Playbooks and reusable notes")).toBeInTheDocument();
+		expect(screen.getByText("Daily review and challenges")).toBeInTheDocument();
+		expect(screen.getByText("Time, nutrition, and recovery tracking")).toBeInTheDocument();
+		expect(screen.getByText("Flexible timer")).toBeInTheDocument();
+		expect(screen.getByText("Monthly calendar")).toBeInTheDocument();
 	});
 
 	it("uses app navigation and app links when logged in", async () => {
