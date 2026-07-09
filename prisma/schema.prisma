@@ -38,6 +38,7 @@ model User {
   weightEntries         WeightEntry[]
   fastingSessions       FastingSession[]
   announcements         Announcement[]
+  weeklyReviews         WeeklyReview[]
   dayStartOverride      DayStartOverride?
 
   startingWeightLbs   Float?
@@ -497,4 +498,27 @@ model DayStartOverride {
   updatedAt DateTime @updatedAt
 
   @@index([expiresAt])
+}
+
+model WeeklyReview {
+  id String @id @default(cuid())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  weekStart DateTime
+
+  movedForward  String?
+  busyNotUseful String?
+  moreNextWeek  String?
+  lessNextWeek  String?
+  taskChanges   String?
+  routineAligned String?
+
+  completedAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@unique([userId, weekStart])
+  @@index([userId, completedAt])
 }

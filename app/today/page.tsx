@@ -23,6 +23,7 @@ import { prisma } from "@/lib/prisma";
 import { CommitmentRecurrence, Prisma } from "@prisma/client";
 
 import { getServerSession } from "next-auth";
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { authOptions } from "@/lib/auth";
 import { getChallengeProgress, type ChallengeProgress } from "@/lib/challenges";
@@ -31,6 +32,7 @@ import {
 	type WeeklyTaskCompletionTotal,
 	getTaskCompletionWeekStart,
 } from "@/lib/task-completion-week";
+import { getWeekHref } from "@/app/history/history-utils";
 import {
 	buildTaskAverageTimeSummaries,
 	getTaskSessionDurationSeconds,
@@ -45,6 +47,7 @@ import {
 } from "@/lib/app-date";
 import { getUserEffectiveTodayDate } from "@/lib/effective-day";
 import { connection } from "next/server";
+import { isWeeklyReviewEnabledForWeek } from "@/lib/weekly-review";
 
 type TaskWithLastCompletion = Prisma.TaskGetPayload<{
 	include: {
@@ -233,6 +236,8 @@ export default async function TodayPage() {
 	const today = effectiveDay.today;
 	const yesterday = addAppDays(today, -1);
 	const taskCompletionWeekStart = getTaskCompletionWeekStart(today);
+	const previousWeekStart = addAppDays(taskCompletionWeekStart, -7);
+	const previousWeekEnd = addAppDays(taskCompletionWeekStart, -1);
 	const todayDayOfWeek = getAppDayOfWeek(today);
 
 	const groups = await prisma.taskGroup.findMany({
@@ -506,6 +511,23 @@ export default async function TodayPage() {
 		getChallengeProgress(challenge, today),
 	);
 
+	const previousWeeklyReview = isWeeklyReviewEnabledForWeek(previousWeekStart)
+		? await prisma.weeklyReview.findUnique({
+				where: {
+					userId_weekStart: {
+						userId: session.user.id,
+						weekStart: previousWeekStart,
+					},
+				},
+				select: {
+					completedAt: true,
+				},
+			})
+		: null;
+	const shouldPromptWeeklyReview =
+		isWeeklyReviewEnabledForWeek(previousWeekStart) &&
+		!previousWeeklyReview?.completedAt;
+
 	const activeTaskSession = await prisma.taskSession.findFirst({
 		where: {
 			userId: session.user.id,
@@ -759,6 +781,13 @@ export default async function TodayPage() {
 									result: check.results[0]?.status ?? null,
 								}))}
 							/>
+
+							{shouldPromptWeeklyReview && (
+								<WeeklyReviewPromptCard
+									weekStart={previousWeekStart}
+									weekEnd={previousWeekEnd}
+								/>
+							)}
 
 							{challengeProgress.length > 0 && (
 								<ChallengeStreakSummary challenges={challengeProgress} />
@@ -1036,6 +1065,35 @@ function TodayProgressCard({
 					</p>
 				</div>
 			</div>
+		</section>
+	);
+}
+
+function WeeklyReviewPromptCard({
+	weekStart,
+	weekEnd,
+}: {
+	weekStart: Date;
+	weekEnd: Date;
+}) {
+	return (
+		<section className="rounded-2xl border border-sky-500/30 bg-sky-500/10 p-5">
+			<p className="text-sm font-semibold uppercase tracking-wide text-sky-300">
+				Weekly Review
+			</p>
+			<h2 className="mt-2 text-lg font-bold text-slate-100">
+				Review last week
+			</h2>
+			<p className="mt-2 text-sm leading-6 text-slate-300">
+				Ask whether what you repeatedly did from {formatAppDate(weekStart)} to{" "}
+				{formatAppDate(weekEnd)} is actually moving you toward your goals.
+			</p>
+			<Link
+				href={getWeekHref(weekStart)}
+				className="mt-4 inline-flex rounded-xl bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 transition hover:bg-sky-400"
+			>
+				Start Weekly Review
+			</Link>
 		</section>
 	);
 }
