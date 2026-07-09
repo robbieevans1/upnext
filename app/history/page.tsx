@@ -1,4 +1,5 @@
 import AppNav from "@/components/AppNav";
+import { saveWeeklyReview } from "@/app/actions/weekly-review";
 import {
 	addAppDays,
 	formatAppDate,
@@ -14,6 +15,7 @@ import {
 	getHistoryWeekRange,
 	getSelectedDay,
 	getSelectedWeekStart,
+	getTaskSessionDurationSeconds,
 	getTaskTimeTotalsByTaskId,
 	getTotalHref,
 	getWeekHref,
@@ -33,6 +35,11 @@ import { getServerSession } from "next-auth";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { connection } from "next/server";
+import {
+	getWeeklyReviewLaunchWeekStart,
+	isWeeklyReviewEnabledForWeek,
+} from "@/lib/weekly-review";
+import type { ReactNode } from "react";
 
 type DailyCheckResultForHistory = {
 	id: string;
@@ -41,6 +48,44 @@ type DailyCheckResultForHistory = {
 		title: string;
 		description: string | null;
 	};
+};
+
+type WeeklyReviewForHistory = {
+	movedForward: string | null;
+	busyNotUseful: string | null;
+	moreNextWeek: string | null;
+	lessNextWeek: string | null;
+	taskChanges: string | null;
+	routineAligned: string | null;
+	completedAt: Date | null;
+};
+
+type WeeklyEvidence = {
+	taskTimeTotals: {
+		title: string;
+		totalSeconds: number;
+	}[];
+	downtimeTotals: {
+		category: string;
+		totalSeconds: number;
+	}[];
+	commitmentSummary: {
+		scheduled: number;
+		completed: number;
+		canceled: number;
+		recurringCompleted: number;
+	};
+	dailyReviewSummary: {
+		yes: number;
+		no: number;
+		skip: number;
+		unsure: number;
+	};
+	challengeSummaries: {
+		title: string;
+		successfulDays: number;
+		reviewedDays: number;
+	}[];
 };
 
 type HistoryPageProps = {
@@ -232,6 +277,215 @@ async function getTotalTaskCompletionTotals(
 	});
 }
 
+async function getWeeklyReviewForHistory(
+	userId: string,
+	weekStart: Date,
+): Promise<WeeklyReviewForHistory | null> {
+	return prisma.weeklyReview.findUnique({
+		where: {
+			userId_weekStart: {
+				userId,
+				weekStart,
+			},
+		},
+		select: {
+			movedForward: true,
+			busyNotUseful: true,
+			moreNextWeek: true,
+			lessNextWeek: true,
+			taskChanges: true,
+			routineAligned: true,
+			completedAt: true,
+		},
+	});
+}
+
+async function getWeeklyEvidence(
+	userId: string,
+	weekStart: Date,
+): Promise<WeeklyEvidence> {
+	const weekRange = getHistoryWeekRange(weekStart);
+	const [
+		taskSessions,
+		downtimeSessions,
+		commitments,
+		recurringCommitmentCompletions,
+		dailyCheckResults,
+		challenges,
+	] = await Promise.all([
+		prisma.taskSession.findMany({
+			where: {
+				userId,
+				day: {
+					gte: weekRange.start,
+					lt: weekRange.end,
+				},
+				task: {
+					isActive: true,
+				},
+			},
+			select: {
+				taskId: true,
+				startedAt: true,
+				stoppedAt: true,
+				task: {
+					select: {
+						title: true,
+					},
+				},
+			},
+		}),
+		prisma.downtimeSession.findMany({
+			where: {
+				userId,
+				day: {
+					gte: weekRange.start,
+					lt: weekRange.end,
+				},
+			},
+			select: {
+				category: true,
+				startedAt: true,
+				stoppedAt: true,
+			},
+		}),
+		prisma.commitment.findMany({
+			where: {
+				userId,
+				day: {
+					gte: weekRange.start,
+					lt: weekRange.end,
+				},
+			},
+			select: {
+				completedAt: true,
+				canceledAt: true,
+			},
+		}),
+		prisma.commitmentOccurrenceCompletion.findMany({
+			where: {
+				userId,
+				occurrenceDay: {
+					gte: weekRange.start,
+					lt: weekRange.end,
+				},
+			},
+			select: {
+				id: true,
+			},
+		}),
+		prisma.dailyCheckResult.findMany({
+			where: {
+				userId,
+				targetDay: {
+					gte: weekRange.start,
+					lt: weekRange.end,
+				},
+				dailyCheck: {
+					isActive: true,
+				},
+			},
+			select: {
+				status: true,
+			},
+		}),
+		prisma.challenge.findMany({
+			where: {
+				userId,
+				isActive: true,
+				startDay: {
+					lt: weekRange.end,
+				},
+			},
+			select: {
+				title: true,
+				dailyCheck: {
+					select: {
+						results: {
+							where: {
+								targetDay: {
+									gte: weekRange.start,
+									lt: weekRange.end,
+								},
+							},
+							select: {
+								status: true,
+							},
+						},
+					},
+				},
+			},
+		}),
+	]);
+
+	const taskTimeByTaskId = new Map<
+		string,
+		{
+			title: string;
+			totalSeconds: number;
+		}
+	>();
+
+	for (const session of taskSessions) {
+		const existingTotal = taskTimeByTaskId.get(session.taskId) ?? {
+			title: session.task.title,
+			totalSeconds: 0,
+		};
+		existingTotal.totalSeconds += getTaskSessionDurationSeconds(session);
+		taskTimeByTaskId.set(session.taskId, existingTotal);
+	}
+
+	const downtimeByCategory = new Map<string, number>();
+	for (const session of downtimeSessions) {
+		downtimeByCategory.set(
+			session.category,
+			(downtimeByCategory.get(session.category) ?? 0) +
+				getTaskSessionDurationSeconds(session),
+		);
+	}
+
+	return {
+		taskTimeTotals: Array.from(taskTimeByTaskId.values())
+			.filter((task) => task.totalSeconds > 0)
+			.sort(
+				(a, b) =>
+					b.totalSeconds - a.totalSeconds || a.title.localeCompare(b.title),
+			),
+		downtimeTotals: Array.from(downtimeByCategory.entries())
+			.map(([category, totalSeconds]) => ({
+				category,
+				totalSeconds,
+			}))
+			.sort(
+				(a, b) =>
+					b.totalSeconds - a.totalSeconds ||
+					a.category.localeCompare(b.category),
+			),
+		commitmentSummary: {
+			scheduled: commitments.length,
+			completed: commitments.filter((commitment) => commitment.completedAt).length,
+			canceled: commitments.filter((commitment) => commitment.canceledAt).length,
+			recurringCompleted: recurringCommitmentCompletions.length,
+		},
+		dailyReviewSummary: {
+			yes: dailyCheckResults.filter((result) => result.status === "YES").length,
+			no: dailyCheckResults.filter((result) => result.status === "NO").length,
+			skip: dailyCheckResults.filter((result) => result.status === "SKIP").length,
+			unsure: dailyCheckResults.filter((result) => result.status === "UNSURE")
+				.length,
+		},
+		challengeSummaries: challenges
+			.map((challenge) => ({
+				title: challenge.title,
+				successfulDays: challenge.dailyCheck.results.filter(
+					(result) => result.status === "YES",
+				).length,
+				reviewedDays: challenge.dailyCheck.results.length,
+			}))
+			.filter((challenge) => challenge.reviewedDays > 0),
+	};
+}
+
 async function getDailyCheckResultsForDay(
 	userId: string,
 	day: Date,
@@ -292,6 +546,8 @@ export default async function HistoryPage({ searchParams }: HistoryPageProps) {
 		taskSessions,
 		weeklyTaskCompletionTotals,
 		totalTaskCompletionTotals,
+		weeklyReview,
+		weeklyEvidence,
 	] = await Promise.all([
 		getCompletionsForDay(session.user.id, selectedDay),
 		getRecentCompletionDays(session.user.id),
@@ -299,6 +555,8 @@ export default async function HistoryPage({ searchParams }: HistoryPageProps) {
 		getTaskSessionsForDay(session.user.id, selectedDay),
 		getWeeklyTaskCompletionTotals(session.user.id, selectedWeekStart),
 		getTotalTaskCompletionTotals(session.user.id),
+		getWeeklyReviewForHistory(session.user.id, selectedWeekStart),
+		getWeeklyEvidence(session.user.id, selectedWeekStart),
 	]);
 
 	const sortedCompletions = sortCompletions(completions);
@@ -441,6 +699,17 @@ export default async function HistoryPage({ searchParams }: HistoryPageProps) {
 								title="Completed By Task"
 								description="Active tasks are included even when the count is zero."
 								emptyText="Add active tasks to populate weekly history."
+							/>
+
+							<WeeklyEvidenceSection
+								totals={weeklyTaskCompletionTotals}
+								evidence={weeklyEvidence}
+							/>
+
+							<WeeklyReviewSection
+								weekStart={selectedWeekStart}
+								weekEnd={selectedWeekEnd}
+								review={weeklyReview}
 							/>
 						</>
 					) : (
@@ -693,6 +962,285 @@ function TaskCompletionTotalsCard({
 			)}
 		</section>
 	);
+}
+
+function WeeklyEvidenceSection({
+	totals,
+	evidence,
+}: {
+	totals: WeeklyTaskCompletionTotal[];
+	evidence: WeeklyEvidence;
+}) {
+	const completedTasks = totals.filter((task) => task.count > 0);
+	const untouchedTasks = totals.filter((task) => task.count === 0);
+	const mostRepeatedTasks = completedTasks.slice(0, 3);
+
+	return (
+		<section className="mt-8 rounded-2xl border border-slate-800 bg-slate-900 p-5">
+			<div className="mb-5">
+				<h2 className="text-lg font-semibold text-slate-100">
+					Weekly Evidence
+				</h2>
+				<p className="mt-1 text-sm text-slate-500">
+					Use what happened this week to decide whether the routine is moving
+					you forward.
+				</p>
+			</div>
+
+			<div className="grid gap-4 md:grid-cols-2">
+				<EvidenceCard title="Tasks completed this week">
+					{completedTasks.length > 0 ? (
+						<EvidenceList
+							items={completedTasks.map((task) => `${task.title}: ${task.count}`)}
+						/>
+					) : (
+						<EmptyEvidence>No tasks completed this week.</EmptyEvidence>
+					)}
+				</EvidenceCard>
+
+				<EvidenceCard title="Tasks untouched this week">
+					{untouchedTasks.length > 0 ? (
+						<EvidenceList items={untouchedTasks.map((task) => task.title)} />
+					) : (
+						<EmptyEvidence>Every current task was completed at least once.</EmptyEvidence>
+					)}
+				</EvidenceCard>
+
+				<EvidenceCard title="Focused task time">
+					{evidence.taskTimeTotals.length > 0 ? (
+						<EvidenceList
+							items={evidence.taskTimeTotals.map(
+								(task) => `${task.title}: ${formatTaskTime(task.totalSeconds)}`,
+							)}
+						/>
+					) : (
+						<EmptyEvidence>No task time tracked this week.</EmptyEvidence>
+					)}
+				</EvidenceCard>
+
+				<EvidenceCard title="Downtime totals">
+					{evidence.downtimeTotals.length > 0 ? (
+						<EvidenceList
+							items={evidence.downtimeTotals.map(
+								(total) =>
+									`${formatEvidenceLabel(total.category)}: ${formatTaskTime(
+										total.totalSeconds,
+									)}`,
+							)}
+						/>
+					) : (
+						<EmptyEvidence>No downtime tracked this week.</EmptyEvidence>
+					)}
+				</EvidenceCard>
+
+				<EvidenceCard title="Commitments">
+					<EvidenceList
+						items={[
+							`${evidence.commitmentSummary.scheduled} dated commitments`,
+							`${evidence.commitmentSummary.completed} completed`,
+							`${evidence.commitmentSummary.canceled} canceled`,
+							`${evidence.commitmentSummary.recurringCompleted} recurring occurrences completed`,
+						]}
+					/>
+				</EvidenceCard>
+
+				<EvidenceCard title="Daily Review outcomes">
+					<EvidenceList
+						items={[
+							`${evidence.dailyReviewSummary.yes} yes`,
+							`${evidence.dailyReviewSummary.no} no`,
+							`${evidence.dailyReviewSummary.skip} skipped`,
+							`${evidence.dailyReviewSummary.unsure} not sure`,
+						]}
+					/>
+				</EvidenceCard>
+
+				<EvidenceCard title="Most repeated tasks">
+					{mostRepeatedTasks.length > 0 ? (
+						<EvidenceList
+							items={mostRepeatedTasks.map(
+								(task) => `${task.title}: ${task.count}`,
+							)}
+						/>
+					) : (
+						<EmptyEvidence>No repeated tasks this week.</EmptyEvidence>
+					)}
+				</EvidenceCard>
+
+				<EvidenceCard title="Challenges and direction">
+					{evidence.challengeSummaries.length > 0 ? (
+						<EvidenceList
+							items={evidence.challengeSummaries.map(
+								(challenge) =>
+									`${challenge.title}: ${challenge.successfulDays}/${challenge.reviewedDays} successful review days`,
+							)}
+						/>
+					) : (
+						<EmptyEvidence>
+							No challenge review results landed in this week.
+						</EmptyEvidence>
+					)}
+					<p className="mt-3 text-xs text-slate-500">
+						Use the busy-but-not-useful answer below to call out high-time work
+						that did not feel valuable.
+					</p>
+				</EvidenceCard>
+			</div>
+		</section>
+	);
+}
+
+function WeeklyReviewSection({
+	weekStart,
+	weekEnd,
+	review,
+}: {
+	weekStart: Date;
+	weekEnd: Date;
+	review: WeeklyReviewForHistory | null;
+}) {
+	if (!isWeeklyReviewEnabledForWeek(weekStart)) {
+		return (
+			<section className="mt-8 rounded-2xl border border-slate-800 bg-slate-900 p-5">
+				<h2 className="text-lg font-semibold text-slate-100">
+					Weekly Review
+				</h2>
+				<p className="mt-2 text-sm text-slate-400">
+					Weekly Review starts with the week of{" "}
+					{formatAppDate(getWeeklyReviewLaunchWeekStart())}
+					. Older weeks stay available for history, but they will not ask for
+					retroactive reflection.
+				</p>
+			</section>
+		);
+	}
+
+	return (
+		<section className="mt-8 rounded-2xl border border-sky-500/30 bg-sky-500/10 p-5">
+			<div className="mb-5">
+				<p className="text-sm font-semibold uppercase tracking-wide text-sky-300">
+					Weekly Review
+				</p>
+				<h2 className="mt-1 text-2xl font-bold text-slate-100">
+					{formatAppDate(weekStart)} to {formatAppDate(weekEnd)}
+				</h2>
+				<p className="mt-2 text-sm text-slate-300">
+					{review?.completedAt
+						? `Completed ${formatAppDate(review.completedAt)}`
+						: "Save a draft while thinking, or complete the review when the week is settled."}
+				</p>
+			</div>
+
+			<form action={saveWeeklyReview} className="space-y-4">
+				<input type="hidden" name="weekStart" value={getAppDateKey(weekStart)} />
+
+				<WeeklyReviewTextarea
+					name="movedForward"
+					label="What moved me forward this week?"
+					defaultValue={review?.movedForward}
+				/>
+				<WeeklyReviewTextarea
+					name="busyNotUseful"
+					label="What felt busy but not useful?"
+					defaultValue={review?.busyNotUseful}
+				/>
+				<WeeklyReviewTextarea
+					name="moreNextWeek"
+					label="What should I do more of next week?"
+					defaultValue={review?.moreNextWeek}
+				/>
+				<WeeklyReviewTextarea
+					name="lessNextWeek"
+					label="What should I do less of next week?"
+					defaultValue={review?.lessNextWeek}
+				/>
+				<WeeklyReviewTextarea
+					name="taskChanges"
+					label="Is there a task I should add, remove, pause, or change?"
+					defaultValue={review?.taskChanges}
+				/>
+				<WeeklyReviewTextarea
+					name="routineAligned"
+					label="Did my current routine match my actual goals?"
+					defaultValue={review?.routineAligned}
+				/>
+
+				<div className="flex flex-wrap justify-end gap-3">
+					<button
+						type="submit"
+						name="intent"
+						value="draft"
+						className="rounded-xl border border-slate-600 px-4 py-2 font-semibold text-slate-100 transition hover:border-sky-400 hover:text-sky-300"
+					>
+						Save Draft
+					</button>
+					<button
+						type="submit"
+						name="intent"
+						value="complete"
+						className="rounded-xl bg-sky-500 px-4 py-2 font-semibold text-slate-950 transition hover:bg-sky-400"
+					>
+						Complete Review
+					</button>
+				</div>
+			</form>
+		</section>
+	);
+}
+
+function WeeklyReviewTextarea({
+	name,
+	label,
+	defaultValue,
+}: {
+	name: string;
+	label: string;
+	defaultValue: string | null | undefined;
+}) {
+	return (
+		<label className="block">
+			<span className="text-sm font-semibold text-slate-100">{label}</span>
+			<textarea
+				name={name}
+				defaultValue={defaultValue ?? ""}
+				rows={4}
+				className="mt-2 w-full resize-y rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-sm text-slate-100 outline-none transition placeholder:text-slate-600 focus:border-sky-400"
+			/>
+		</label>
+	);
+}
+
+function EvidenceCard({
+	title,
+	children,
+}: {
+	title: string;
+	children: ReactNode;
+}) {
+	return (
+		<div className="rounded-xl border border-slate-800 bg-slate-950 p-4">
+			<h3 className="font-semibold text-slate-100">{title}</h3>
+			<div className="mt-3">{children}</div>
+		</div>
+	);
+}
+
+function EvidenceList({ items }: { items: string[] }) {
+	return (
+		<ul className="space-y-2 text-sm text-slate-300">
+			{items.map((item) => (
+				<li key={item}>{item}</li>
+			))}
+		</ul>
+	);
+}
+
+function EmptyEvidence({ children }: { children: ReactNode }) {
+	return <p className="text-sm text-slate-500">{children}</p>;
+}
+
+function formatEvidenceLabel(value: string) {
+	return value.charAt(0).toUpperCase() + value.slice(1).toLowerCase();
 }
 
 function getTaskRegularDurationText(
