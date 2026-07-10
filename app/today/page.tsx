@@ -432,16 +432,6 @@ export default async function TodayPage() {
 			userId: session.user.id,
 			completedAt: null,
 			canceledAt: null,
-			OR: [
-				{
-					dueOn: null,
-				},
-				{
-					dueOn: {
-						lte: today,
-					},
-				},
-			],
 		},
 		orderBy: [
 			{

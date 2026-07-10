@@ -7,6 +7,9 @@ const mocks = vi.hoisted(() => ({
 	redirect: vi.fn((path: string) => {
 		throw new Error(`redirect:${path}`);
 	}),
+	useRouter: vi.fn(() => ({
+		refresh: vi.fn(),
+	})),
 	connection: vi.fn(),
 	getUserEffectiveTodayDate: vi.fn(),
 	prisma: {
@@ -43,7 +46,10 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock("@/lib/prisma", () => ({ prisma: mocks.prisma }));
 vi.mock("next-auth", () => ({ getServerSession: mocks.getServerSession }));
-vi.mock("next/navigation", () => ({ redirect: mocks.redirect }));
+vi.mock("next/navigation", () => ({
+	redirect: mocks.redirect,
+	useRouter: mocks.useRouter,
+}));
 vi.mock("next/server", () => ({ connection: mocks.connection }));
 vi.mock("next-auth/react", () => ({ signOut: vi.fn() }));
 vi.mock("@/lib/effective-day", () => ({
@@ -55,7 +61,7 @@ vi.mock("@/components/CompleteDayButton", () => ({
 }));
 vi.mock("@/components/DailyReviewPrompt", () => ({ default: () => null }));
 
-describe("TodayPage weekly review prompt", () => {
+describe("TodayPage", () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
 		mocks.getServerSession.mockResolvedValue({
@@ -125,5 +131,48 @@ describe("TodayPage weekly review prompt", () => {
 
 		expect(screen.queryByRole("heading", { name: "Review last week" })).toBeNull();
 		expect(mocks.prisma.weeklyReview.findUnique).not.toHaveBeenCalled();
+	});
+
+	it("shows open action items before their due date", async () => {
+		mocks.prisma.actionItem.findMany.mockResolvedValue([
+			{
+				id: "action-1",
+				title: "Schedule dentist",
+				description: "Call before the appointment week fills up.",
+				playbook: null,
+				dueOn: new Date("2026-07-20T04:00:00.000Z"),
+				completedAt: null,
+				canceledAt: null,
+				userId: "user-1",
+				createdAt: new Date("2026-07-10T12:00:00.000Z"),
+				updatedAt: new Date("2026-07-10T12:00:00.000Z"),
+			},
+		]);
+
+		render(await TodayPage());
+
+		expect(
+			screen.getByRole("button", { name: /Action Items\s*1 open/i }),
+		).toBeInTheDocument();
+		expect(screen.getByText("Schedule dentist")).toBeInTheDocument();
+		expect(
+			screen.getByText("Call before the appointment week fills up."),
+		).toBeInTheDocument();
+		expect(screen.getByText("Due 7/20/2026")).toBeInTheDocument();
+		expect(mocks.prisma.actionItem.findMany).toHaveBeenCalledWith({
+			where: {
+				userId: "user-1",
+				completedAt: null,
+				canceledAt: null,
+			},
+			orderBy: [
+				{
+					dueOn: "asc",
+				},
+				{
+					createdAt: "asc",
+				},
+			],
+		});
 	});
 });
