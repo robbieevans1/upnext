@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import TodayPage from "@/app/today/page";
 
@@ -93,7 +93,16 @@ describe("TodayPage", () => {
 		expect(
 			screen.getByText(/what you repeatedly did from 7\/5\/2026 to 7\/11\/2026/i),
 		).toBeInTheDocument();
-		expect(screen.getByRole("link", { name: "Start Weekly Review" })).toHaveAttribute(
+		expect(screen.queryByRole("dialog", { name: "Weekly Review" })).toBeNull();
+
+		fireEvent.click(screen.getByRole("button", { name: "Start Weekly Review" }));
+
+		const dialog = screen.getByRole("dialog", { name: "Weekly Review" });
+
+		expect(
+			within(dialog).getByText(/the review lives in history/i),
+		).toBeInTheDocument();
+		expect(within(dialog).getByRole("link", { name: "Go to Weekly Review" })).toHaveAttribute(
 			"href",
 			"/history?view=week&week=2026-07-05",
 		);

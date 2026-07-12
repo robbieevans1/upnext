@@ -5,6 +5,7 @@ import DailyReviewPrompt from "@/components/DailyReviewPrompt";
 import TaskPlaybookButton from "@/components/TaskPlaybookButton";
 import TaskTimerControls from "@/components/TaskTimerControls";
 import TodaySubtaskChecklist from "@/components/TodaySubtaskChecklist";
+import WeeklyReviewPrompt from "@/components/WeeklyReviewPrompt";
 import { completeActionItem } from "@/app/actions/action-items";
 import {
 	completeCommitment,
@@ -23,7 +24,6 @@ import { prisma } from "@/lib/prisma";
 import { CommitmentRecurrence, Prisma } from "@prisma/client";
 
 import { getServerSession } from "next-auth";
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { authOptions } from "@/lib/auth";
 import { getChallengeProgress, type ChallengeProgress } from "@/lib/challenges";
@@ -773,9 +773,10 @@ export default async function TodayPage() {
 							/>
 
 							{shouldPromptWeeklyReview && (
-								<WeeklyReviewPromptCard
-									weekStart={previousWeekStart}
-									weekEnd={previousWeekEnd}
+								<WeeklyReviewPrompt
+									weekStartLabel={formatAppDate(previousWeekStart)}
+									weekEndLabel={formatAppDate(previousWeekEnd)}
+									reviewHref={getWeekHref(previousWeekStart)}
 								/>
 							)}
 
@@ -1055,35 +1056,6 @@ function TodayProgressCard({
 					</p>
 				</div>
 			</div>
-		</section>
-	);
-}
-
-function WeeklyReviewPromptCard({
-	weekStart,
-	weekEnd,
-}: {
-	weekStart: Date;
-	weekEnd: Date;
-}) {
-	return (
-		<section className="rounded-2xl border border-sky-500/30 bg-sky-500/10 p-5">
-			<p className="text-sm font-semibold uppercase tracking-wide text-sky-300">
-				Weekly Review
-			</p>
-			<h2 className="mt-2 text-lg font-bold text-slate-100">
-				Review last week
-			</h2>
-			<p className="mt-2 text-sm leading-6 text-slate-300">
-				Ask whether what you repeatedly did from {formatAppDate(weekStart)} to{" "}
-				{formatAppDate(weekEnd)} is actually moving you toward your goals.
-			</p>
-			<Link
-				href={getWeekHref(weekStart)}
-				className="mt-4 inline-flex rounded-xl bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 transition hover:bg-sky-400"
-			>
-				Start Weekly Review
-			</Link>
 		</section>
 	);
 }
