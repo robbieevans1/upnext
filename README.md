@@ -8,7 +8,7 @@ The app organizes recurring work into a daily stack. Mandatory tasks stay visibl
 
 - **Task stack:** mandatory tasks, rotating groups, subtasks, task timers, completed-task continuation, playbooks, collapsible Today sections, and the Complete Day early-start flow.
 - **Planning:** one-off action items, scheduled and recurring commitments, monthly calendar, future announcement banners, and responsive navigation.
-- **Review and history:** day and week history views, recent day shortcuts, Daily Review checks, Eastern-time app-day grouping, and soft-delete-aware reporting.
+- **Review and history:** day and week history views, recent day shortcuts, Daily Review checks, Weekly Review reflection prompts, Eastern-time app-day grouping, and soft-delete-aware reporting.
 - **Time and health:** downtime tracking, flexible timer, Pomodoro timer, scratch counter, calorie logging, daily weight, starting-weight baseline, fasting sessions, and weight comparisons.
 - **Notes:** reusable Topics, full-page topic editor, and topic image montages with upload, paste, captions, alt text, and delete support.
 - **Analytics:** dashboard charts for completions, task time, downtime, scheduled load, action items, Daily Review outcomes, playbook coverage, and weekly task totals.
@@ -89,7 +89,7 @@ This does not complete unfinished tasks. It only changes the user's effective ap
 
 ## Completion History
 
-The History page lets users review completed work by day or week. The day view includes:
+The History page lets users review completed work by day, week, or all-time current task totals. The day view includes:
 
 - Previous Day and Next Day navigation
 - A Today shortcut
@@ -99,6 +99,8 @@ The History page lets users review completed work by day or week. The day view i
 - Daily Review results for the selected day
 
 The week view summarizes completed tasks from Sunday through Saturday, matching the weekly task-completion card on Today. Active tasks created after the selected week are not backfilled into old weeks as zero-count rows, while tasks that existed during that week or were completed during that week remain visible.
+
+Weekly Review lives in the History week view. When the previous week has not been completed yet, Today shows a Weekly Review prompt directly after Daily Review. Pressing Start Weekly Review opens a short modal that explains the review and sends the user to the correct History week page. The review asks questions such as what moved forward, what felt busy but not useful, what to do more or less of next week, whether tasks should change, and whether the current routine matches the user's goals.
 
 History uses the same Eastern-time app-day logic as Today, so task completions are grouped by the day the app considers active rather than by the server's raw UTC date.
 
@@ -132,7 +134,7 @@ Call pharmacy
 Submit reimbursement form
 ```
 
-They can include an optional due date, description, and playbook. Open action items appear on Today when they are unscheduled, due today, or overdue.
+They can include an optional due date, description, and playbook. Open action items appear on Today even when their due date is in the future, making it possible to finish them early instead of waiting until the deadline. Completed and canceled action items stay out of the Today action stack.
 
 Commitments are for scheduled or date-based obligations, such as:
 
@@ -267,6 +269,7 @@ The dashboard uses existing database records rather than separate analytics tabl
 - `Challenge` stores fixed-duration streak-style Daily Review goals.
 - `DailyCheckResult` stores Yes, No, Skip, or Not sure answers against the reviewed app day.
 - `DailyReviewDismissal` stores when a user dismisses a day's review prompt.
+- `WeeklyReview` stores Sunday-through-Saturday reflection answers and completion status.
 - `DayStartOverride` stores a temporary per-user effective-day override for starting tomorrow early.
 - `Announcement` stores active future event banners and countdown target times.
 
@@ -397,7 +400,7 @@ The CI workflow runs on pull requests and pushes to `main`. It installs dependen
 
 ## Roadmap
 
-- Weekly and monthly summaries
+- Monthly summaries
 - Streak tracking
 - Most skipped or neglected task insights
 - More detailed available-time estimates
