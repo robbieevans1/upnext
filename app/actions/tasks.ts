@@ -656,6 +656,75 @@ export async function completeTask(taskId: string) {
 	revalidatePath("/downtime");
 }
 
+export async function skipTask(taskId: string) {
+	const userId = await requireUserId();
+	const { today } = await getUserEffectiveTodayDate(userId);
+
+	const task = await prisma.task.findFirst({
+		where: {
+			id: taskId,
+			userId,
+			isActive: true,
+		},
+		select: {
+			id: true,
+		},
+	});
+
+	if (!task) return;
+
+	const completedToday = await prisma.taskCompletion.findUnique({
+		where: {
+			taskId_completedOn: {
+				taskId,
+				completedOn: today,
+			},
+		},
+		select: {
+			id: true,
+		},
+	});
+
+	if (completedToday) return;
+
+	await stopActiveTaskSessionAndStartOther(userId, taskId);
+
+	await prisma.taskSkip.upsert({
+		where: {
+			taskId_skippedOn: {
+				taskId,
+				skippedOn: today,
+			},
+		},
+		update: {},
+		create: {
+			taskId,
+			userId,
+			skippedOn: today,
+		},
+	});
+
+	await setFlashNotification("Task skipped for today.");
+	revalidateTaskViews();
+	revalidatePath("/downtime");
+}
+
+export async function undoTodaySkip(taskId: string) {
+	const userId = await requireUserId();
+	const { today } = await getUserEffectiveTodayDate(userId);
+
+	await prisma.taskSkip.deleteMany({
+		where: {
+			taskId,
+			userId,
+			skippedOn: today,
+		},
+	});
+
+	await setFlashNotification("Task returned to today's stack.");
+	revalidateTaskViews();
+}
+
 export async function undoTodayCompletion(taskId: string) {
 	const userId = await requireUserId();
 	const { today } = await getUserEffectiveTodayDate(userId);

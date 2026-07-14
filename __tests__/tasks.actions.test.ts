@@ -16,6 +16,11 @@ const prisma = {
 	},
 	taskCompletion: {
 		deleteMany: vi.fn(),
+		findUnique: vi.fn(),
+		upsert: vi.fn(),
+	},
+	taskSkip: {
+		deleteMany: vi.fn(),
 		upsert: vi.fn(),
 	},
 	taskSession: {
@@ -66,6 +71,7 @@ describe("task server actions", () => {
 		vi.clearAllMocks();
 		vi.useRealTimers();
 		prisma.dayStartOverride.findUnique.mockResolvedValue(null);
+		prisma.taskCompletion.findUnique.mockResolvedValue(null);
 		prisma.taskSession.findFirst.mockResolvedValue(null);
 		prisma.taskSession.findMany.mockResolvedValue([]);
 		getServerSession.mockResolvedValue({
@@ -925,6 +931,73 @@ describe("task server actions", () => {
 				},
 			},
 		]);
+	});
+
+	it("skips a task for today without completing or rotating it", async () => {
+		vi.useFakeTimers();
+		vi.setSystemTime(new Date("2026-06-15T15:30:00.000Z"));
+		prisma.task.findFirst.mockResolvedValue({
+			id: "task-2",
+		});
+		const { skipTask } = await import("@/app/actions/tasks");
+
+		await skipTask("task-2");
+
+		expect(stopActiveTaskSessionAndStartOther).toHaveBeenCalledWith(
+			"user-1",
+			"task-2",
+		);
+		expect(prisma.taskCompletion.upsert).not.toHaveBeenCalled();
+		expect(prisma.task.findMany).not.toHaveBeenCalled();
+		expect(prisma.$transaction).not.toHaveBeenCalled();
+		expect(prisma.taskSkip.upsert).toHaveBeenCalledWith({
+			where: {
+				taskId_skippedOn: {
+					taskId: "task-2",
+					skippedOn: new Date("2026-06-15T04:00:00.000Z"),
+				},
+			},
+			update: {},
+			create: {
+				taskId: "task-2",
+				userId: "user-1",
+				skippedOn: new Date("2026-06-15T04:00:00.000Z"),
+			},
+		});
+		expect(revalidatePath).toHaveBeenCalledWith("/today");
+		expect(revalidatePath).toHaveBeenCalledWith("/downtime");
+	});
+
+	it("does not skip a task that has already been completed today", async () => {
+		prisma.task.findFirst.mockResolvedValue({
+			id: "task-1",
+		});
+		prisma.taskCompletion.findUnique.mockResolvedValue({
+			id: "completion-1",
+		});
+		const { skipTask } = await import("@/app/actions/tasks");
+
+		await skipTask("task-1");
+
+		expect(stopActiveTaskSessionAndStartOther).not.toHaveBeenCalled();
+		expect(prisma.taskSkip.upsert).not.toHaveBeenCalled();
+	});
+
+	it("undoes only today's skip for the current user", async () => {
+		vi.useFakeTimers();
+		vi.setSystemTime(new Date("2026-06-15T15:30:00.000Z"));
+		const { undoTodaySkip } = await import("@/app/actions/tasks");
+
+		await undoTodaySkip("task-1");
+
+		expect(prisma.taskSkip.deleteMany).toHaveBeenCalledWith({
+			where: {
+				taskId: "task-1",
+				userId: "user-1",
+				skippedOn: new Date("2026-06-15T04:00:00.000Z"),
+			},
+		});
+		expect(revalidatePath).toHaveBeenCalledWith("/today");
 	});
 
 	it("undoes only today's completion for the current user", async () => {

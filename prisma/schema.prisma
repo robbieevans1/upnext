@@ -21,6 +21,7 @@ model User {
   taskGroups            TaskGroup[]
   tasks                 Task[]
   taskCompletions       TaskCompletion[]
+  taskSkips             TaskSkip[]
   taskSessions          TaskSession[]
   taskSubtasks          TaskSubtask[]
   subtaskCompletions    SubtaskCompletion[]
@@ -103,6 +104,7 @@ model Task {
   group   TaskGroup? @relation(fields: [groupId], references: [id], onDelete: SetNull)
 
   completions        TaskCompletion[]
+  skips              TaskSkip[]
   sessions           TaskSession[]
   subtasks           TaskSubtask[]
   subtaskCompletions SubtaskCompletion[]
@@ -125,6 +127,22 @@ model TaskCompletion {
 
   @@unique([taskId, completedOn])
   @@index([userId, completedOn])
+}
+
+model TaskSkip {
+  id String @id @default(cuid())
+
+  taskId String
+  task   Task   @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  skippedOn DateTime
+  createdAt DateTime @default(now())
+
+  @@unique([taskId, skippedOn])
+  @@index([userId, skippedOn])
 }
 
 model TaskSubtask {
