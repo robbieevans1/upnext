@@ -3,6 +3,7 @@ import CollapsibleSection from "@/components/CollapsibleSection";
 import CompleteDayButton from "@/components/CompleteDayButton";
 import DailyReviewPrompt from "@/components/DailyReviewPrompt";
 import TaskPlaybookButton from "@/components/TaskPlaybookButton";
+import TaskSkipButton from "@/components/TaskSkipButton";
 import TaskTimerControls from "@/components/TaskTimerControls";
 import TodaySubtaskChecklist from "@/components/TodaySubtaskChecklist";
 import WeeklyReviewPrompt from "@/components/WeeklyReviewPrompt";
@@ -13,7 +14,6 @@ import {
 } from "@/app/actions/commitments";
 import {
 	adjustCompletedTaskTime,
-	skipTask,
 	undoTodayCompletion,
 	undoTodaySkip,
 } from "@/app/actions/tasks";
@@ -54,6 +54,11 @@ import { isWeeklyReviewEnabledForWeek } from "@/lib/weekly-review";
 type TaskWithLastCompletion = Prisma.TaskGetPayload<{
 	include: {
 		completions: true;
+		skips: {
+			select: {
+				id: true;
+			};
+		};
 		sessions: {
 			select: {
 				startedAt: true;
@@ -266,6 +271,17 @@ export default async function TodayPage() {
 					completedOn: "desc",
 				},
 				take: 1,
+			},
+			skips: {
+				where: {
+					skippedOn: {
+						gte: taskCompletionWeekStart,
+						lte: today,
+					},
+				},
+				select: {
+					id: true,
+				},
 			},
 			sessions: {
 				where: {
@@ -1366,11 +1382,12 @@ function CurrentTaskCard({
 					startButtonClassName="rounded-xl bg-sky-500 px-5 py-3 font-semibold text-slate-950 hover:bg-sky-400 disabled:cursor-not-allowed disabled:opacity-60"
 				/>
 
-				<form action={skipTask.bind(null, task.id)}>
-					<button className="rounded-xl border border-amber-400/40 px-5 py-3 font-semibold text-amber-100 hover:bg-amber-500/10">
-						Skip Today
-					</button>
-				</form>
+				<TaskSkipButton
+					taskId={task.id}
+					taskTitle={task.title}
+					skipCountThisWeek={task.skips.length}
+					className="rounded-xl border border-amber-400/40 px-5 py-3 font-semibold text-amber-100 hover:bg-amber-500/10 disabled:cursor-not-allowed disabled:opacity-60"
+				/>
 			</div>
 
 			<SubtaskChecklist task={task} />
@@ -1484,11 +1501,12 @@ function TaskRow({
 					startButtonClassName="rounded-lg border border-slate-700 px-4 py-2 text-sm font-medium text-slate-200 hover:border-sky-500 hover:text-sky-400 disabled:cursor-not-allowed disabled:opacity-60"
 				/>
 
-				<form action={skipTask.bind(null, task.id)}>
-					<button className="rounded-lg border border-amber-400/40 px-4 py-2 text-sm font-medium text-amber-100 hover:bg-amber-500/10">
-						Skip Today
-					</button>
-				</form>
+				<TaskSkipButton
+					taskId={task.id}
+					taskTitle={task.title}
+					skipCountThisWeek={task.skips.length}
+					className="rounded-lg border border-amber-400/40 px-4 py-2 text-sm font-medium text-amber-100 hover:bg-amber-500/10 disabled:cursor-not-allowed disabled:opacity-60"
+				/>
 			</div>
 
 			<SubtaskChecklist task={task} />
