@@ -22,6 +22,9 @@ const mocks = vi.hoisted(() => ({
 		taskCompletion: {
 			findMany: vi.fn(),
 		},
+		taskSkip: {
+			findMany: vi.fn(),
+		},
 		taskSession: {
 			findMany: vi.fn(),
 			findFirst: vi.fn(),
@@ -77,6 +80,7 @@ describe("TodayPage", () => {
 		mocks.prisma.taskGroup.findMany.mockResolvedValue([]);
 		mocks.prisma.task.findMany.mockResolvedValue([]);
 		mocks.prisma.taskCompletion.findMany.mockResolvedValue([]);
+		mocks.prisma.taskSkip.findMany.mockResolvedValue([]);
 		mocks.prisma.taskSession.findMany.mockResolvedValue([]);
 		mocks.prisma.taskSession.findFirst.mockResolvedValue(null);
 		mocks.prisma.commitment.findMany.mockResolvedValue([]);
@@ -183,5 +187,47 @@ describe("TodayPage", () => {
 				},
 			],
 		});
+	});
+
+	it("shows skipped tasks separately without keeping them in the active stack", async () => {
+		mocks.prisma.task.findMany.mockResolvedValue([
+			{
+				id: "task-1",
+				title: "Go outside",
+				description: "Walk around the block.",
+				playbook: null,
+				isMandatory: true,
+				isActive: true,
+				missedCount: 0,
+				stackOrder: 0,
+				userId: "user-1",
+				groupId: null,
+				createdAt: new Date("2026-07-01T12:00:00.000Z"),
+				updatedAt: new Date("2026-07-01T12:00:00.000Z"),
+				completions: [],
+				sessions: [],
+				subtasks: [],
+			},
+		]);
+		mocks.prisma.taskSkip.findMany.mockResolvedValue([
+			{
+				id: "skip-1",
+				taskId: "task-1",
+				userId: "user-1",
+				skippedOn: new Date("2026-07-13T04:00:00.000Z"),
+				createdAt: new Date("2026-07-13T12:00:00.000Z"),
+			},
+		]);
+
+		render(await TodayPage());
+
+		expect(screen.queryByRole("heading", { name: "Go outside" })).toBeNull();
+		fireEvent.click(
+			screen.getByRole("button", { name: /Skipped Today\s*1 skipped/i }),
+		);
+
+		expect(screen.getAllByText("Go outside").length).toBeGreaterThanOrEqual(1);
+		expect(screen.getByText("Last completed: Never")).toBeInTheDocument();
+		expect(screen.getByRole("button", { name: "Undo Skip" })).toBeInTheDocument();
 	});
 });

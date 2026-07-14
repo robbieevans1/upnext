@@ -13,7 +13,9 @@ import {
 } from "@/app/actions/commitments";
 import {
 	adjustCompletedTaskTime,
+	skipTask,
 	undoTodayCompletion,
+	undoTodaySkip,
 } from "@/app/actions/tasks";
 import {
 	getAppDayOfWeek,
@@ -299,6 +301,12 @@ export default async function TodayPage() {
 			completedOn: today,
 		},
 	});
+	const skipsToday = await prisma.taskSkip.findMany({
+		where: {
+			userId: session.user.id,
+			skippedOn: today,
+		},
+	});
 	const weeklyTaskCompletions = await prisma.taskCompletion.findMany({
 		where: {
 			userId: session.user.id,
@@ -542,13 +550,20 @@ export default async function TodayPage() {
 	const completedTodayIds = completionsToday.map(
 		(completion) => completion.taskId,
 	);
+	const skippedTodayIds = skipsToday.map((skip) => skip.taskId);
 
 	const completedTodayTasks = tasks.filter((task) =>
 		completedTodayIds.includes(task.id),
 	);
 
+	const skippedTodayTasks = tasks.filter(
+		(task) =>
+			skippedTodayIds.includes(task.id) && !completedTodayIds.includes(task.id),
+	);
+
 	const remainingTasks = tasks.filter(
-		(task) => !completedTodayIds.includes(task.id),
+		(task) =>
+			!completedTodayIds.includes(task.id) && !skippedTodayIds.includes(task.id),
 	);
 
 	const mandatoryTasks = sortStack(
@@ -576,7 +591,9 @@ export default async function TodayPage() {
 
 	const totalRemainingTasks = remainingTasks.length;
 	const totalCompletedTasks = completedTodayTasks.length;
-	const totalTasksToday = totalRemainingTasks + totalCompletedTasks;
+	const totalSkippedTasks = skippedTodayTasks.length;
+	const totalTasksToday =
+		totalRemainingTasks + totalCompletedTasks + totalSkippedTasks;
 	const weeklyTaskCompletionTotals = buildWeeklyTaskCompletionTotals({
 		tasks,
 		completions: weeklyTaskCompletions,
@@ -667,7 +684,9 @@ export default async function TodayPage() {
 							<h2 className="mt-3 text-3xl font-bold">Nice work.</h2>
 
 							<p className="mt-2 text-emerald-100/80">
-								You completed everything in today&apos;s stack.
+								{totalSkippedTasks > 0
+									? "No active tasks are left in today's stack."
+									: "You completed everything in today's stack."}
 							</p>
 						</div>
 							)}
@@ -753,6 +772,7 @@ export default async function TodayPage() {
 							<TodayProgressCard
 								completedTasks={totalCompletedTasks}
 								remainingTasks={totalRemainingTasks}
+								skippedTasks={totalSkippedTasks}
 								progressPercent={progressPercent}
 								completedTaskActualSeconds={completedTaskActualSeconds}
 								completedTaskAverageSeconds={completedTaskAverageSeconds}
@@ -908,6 +928,58 @@ export default async function TodayPage() {
 							</div>
 						</CollapsibleSection>
 							)}
+
+							{skippedTodayTasks.length > 0 && (
+						<CollapsibleSection
+							title="Skipped Today"
+							summary={`${skippedTodayTasks.length} skipped`}
+							defaultOpen={false}
+							storageKey="today:skipped"
+									className="border-t border-slate-800 pt-6"
+						>
+							<div className="space-y-3">
+								{skippedTodayTasks.map((task) => {
+									const group = groups.find(
+										(group) => group.id === task.groupId,
+									);
+									const lastCompleted = task.completions[0]?.completedOn;
+
+									return (
+										<div
+											key={task.id}
+											className="overflow-hidden rounded-xl border border-amber-500/20 bg-amber-500/10 p-4"
+										>
+											<div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+												<div className="min-w-0">
+													<h4 className="break-words text-lg font-semibold text-amber-100">
+														{task.title}
+													</h4>
+
+													<p className="mt-1 text-sm text-amber-200/70">
+														Skipped today
+														{group ? ` · ${group.name}` : ""}
+													</p>
+
+													<p className="mt-2 text-sm text-amber-100/70">
+														Last completed:{" "}
+														{lastCompleted
+															? formatAppDate(lastCompleted)
+															: "Never"}
+													</p>
+												</div>
+
+												<form action={undoTodaySkip.bind(null, task.id)}>
+													<button className="rounded-lg border border-amber-400/40 px-3 py-1.5 text-sm font-medium text-amber-100 hover:bg-amber-500/10">
+														Undo Skip
+													</button>
+												</form>
+											</div>
+										</div>
+									);
+								})}
+							</div>
+						</CollapsibleSection>
+							)}
 						</aside>
 					</div>
 				</section>
@@ -1004,6 +1076,7 @@ function ChallengeStreakSummary({
 function TodayProgressCard({
 	completedTasks,
 	remainingTasks,
+	skippedTasks,
 	progressPercent,
 	completedTaskActualSeconds,
 	completedTaskAverageSeconds,
@@ -1011,6 +1084,7 @@ function TodayProgressCard({
 }: {
 	completedTasks: number;
 	remainingTasks: number;
+	skippedTasks: number;
 	progressPercent: number;
 	completedTaskActualSeconds: number;
 	completedTaskAverageSeconds: number;
@@ -1018,8 +1092,9 @@ function TodayProgressCard({
 }) {
 	return (
 		<section className="rounded-2xl border border-slate-800 bg-slate-900 p-5">
-			<div className="mb-2 flex items-center justify-between gap-3 text-sm text-slate-400">
+			<div className="mb-2 flex flex-wrap items-center justify-between gap-3 text-sm text-slate-400">
 				<span>{completedTasks} completed</span>
+				{skippedTasks > 0 && <span>{skippedTasks} skipped</span>}
 				<span>{remainingTasks} remaining</span>
 			</div>
 
@@ -1290,6 +1365,12 @@ function CurrentTaskCard({
 					completeButtonClassName="rounded-xl bg-sky-500 px-5 py-3 font-semibold text-slate-950 hover:bg-sky-400 disabled:cursor-not-allowed disabled:opacity-60"
 					startButtonClassName="rounded-xl bg-sky-500 px-5 py-3 font-semibold text-slate-950 hover:bg-sky-400 disabled:cursor-not-allowed disabled:opacity-60"
 				/>
+
+				<form action={skipTask.bind(null, task.id)}>
+					<button className="rounded-xl border border-amber-400/40 px-5 py-3 font-semibold text-amber-100 hover:bg-amber-500/10">
+						Skip Today
+					</button>
+				</form>
 			</div>
 
 			<SubtaskChecklist task={task} />
@@ -1402,6 +1483,12 @@ function TaskRow({
 					completeButtonClassName="rounded-lg border border-slate-700 px-4 py-2 text-sm font-medium text-slate-200 hover:border-sky-500 hover:text-sky-400 disabled:cursor-not-allowed disabled:opacity-60"
 					startButtonClassName="rounded-lg border border-slate-700 px-4 py-2 text-sm font-medium text-slate-200 hover:border-sky-500 hover:text-sky-400 disabled:cursor-not-allowed disabled:opacity-60"
 				/>
+
+				<form action={skipTask.bind(null, task.id)}>
+					<button className="rounded-lg border border-amber-400/40 px-4 py-2 text-sm font-medium text-amber-100 hover:bg-amber-500/10">
+						Skip Today
+					</button>
+				</form>
 			</div>
 
 			<SubtaskChecklist task={task} />

@@ -6,7 +6,7 @@ The app organizes recurring work into a daily stack. Mandatory tasks stay visibl
 
 ## Features
 
-- **Task stack:** mandatory tasks, rotating groups, subtasks, task timers, completed-task continuation, playbooks, collapsible Today sections, and the Complete Day early-start flow.
+- **Task stack:** mandatory tasks, rotating groups, subtasks, task timers, task skips, completed-task continuation, playbooks, collapsible Today sections, and the Complete Day early-start flow.
 - **Planning:** one-off action items, scheduled and recurring commitments, monthly calendar, future announcement banners, and responsive navigation.
 - **Review and history:** day and week history views, recent day shortcuts, Daily Review checks, Weekly Review reflection prompts, Eastern-time app-day grouping, and soft-delete-aware reporting.
 - **Time and health:** downtime tracking, flexible timer, Pomodoro timer, scratch counter, calorie logging, daily weight, starting-weight baseline, fasting sessions, and weight comparisons.
@@ -59,6 +59,8 @@ Portfolio project
 Subtasks can be checked off one by one and move toward the bottom of the task card. Completing every subtask is not required before completing the parent task, which keeps the workflow flexible for real days.
 
 On Today, task cards with subtasks can collapse their subtask list so large tasks do not take over the whole page. The card still shows subtask progress while collapsed.
+
+Tasks can also be skipped for the current app day. Skipping is useful for days when a task is not realistic, such as being too sore to train or unable to get out of the house. A skip removes the task from the active Today stack and shows it under Skipped Today, but it does not create a completion, does not update the last-completed date, and does not rotate the grouped task to the bottom. Undo Skip returns the task to the active stack for that same day.
 
 ## Task Playbooks
 
@@ -253,6 +255,7 @@ The dashboard uses existing database records rather than separate analytics tabl
 - `TaskGroup` stores related task groups.
 - `Task` stores recurring tasks, mandatory status, group membership, stack order, and optional playbook notes.
 - `TaskCompletion` stores per-day task completion history.
+- `TaskSkip` stores per-day skipped tasks without counting them as completions.
 - `TaskSession` stores focused task timer sessions for task-time analytics.
 - `TaskSubtask` stores active subtasks for recurring tasks.
 - `SubtaskCompletion` stores per-day subtask completion history.

@@ -6,7 +6,7 @@ import Link from "next/link";
 const featureSections = [
 	{
 		title: "Daily stack, timers, and subtasks",
-		body: "UpNext organizes recurring work into a daily stack. Mandatory tasks stay visible, grouped tasks rotate after completion, subtasks can collapse when they get long, and task timers record focused work without forcing every subtask to be finished first.",
+		body: "UpNext organizes recurring work into a daily stack. Mandatory tasks stay visible, grouped tasks rotate after completion, subtasks can collapse when they get long, task skips handle days when work is not realistic, and task timers record focused work without forcing every subtask to be finished first.",
 	},
 	{
 		title: "Playbooks and reusable notes",
