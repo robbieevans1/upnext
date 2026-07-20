@@ -36,6 +36,10 @@ const featureSections = [
 		title: "Flexible app-day handling",
 		body: "UpNext uses Eastern-time app days, supports starting tomorrow's stack early with confirmation, and keeps timers and analytics aligned across daily rollover so unusual schedules still make sense.",
 	},
+	{
+		title: "Account recovery",
+		body: "Email/password accounts include a password reset flow with expiring single-use reset links, generic request messaging, and hashed reset tokens stored in the database.",
+	},
 ];
 
 const capabilityGroups = [
@@ -70,6 +74,7 @@ const capabilityGroups = [
 			"Dashboard charts",
 			"Task-time analytics",
 			"Soft-delete-aware reporting",
+			"Password reset",
 		],
 	},
 	{
