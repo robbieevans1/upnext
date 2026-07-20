@@ -30,13 +30,25 @@ describe("LoginForm", () => {
 	});
 
 	it("shows the account-created message from the query string", () => {
-		mocks.get.mockReturnValue("1");
+		mocks.get.mockImplementation((key: string) => (key === "created" ? "1" : null));
 
 		render(<LoginForm />);
 
 		expect(
 			screen.getByText("Account created. You can log in now."),
 		).toBeInTheDocument();
+	});
+
+	it("links to password reset and shows the reset message from the query string", () => {
+		mocks.get.mockImplementation((key: string) => (key === "reset" ? "1" : null));
+
+		render(<LoginForm />);
+
+		expect(screen.getByText("Password reset. You can log in now.")).toBeInTheDocument();
+		expect(screen.getByRole("link", { name: "Forgot password?" })).toHaveAttribute(
+			"href",
+			"/forgot-password",
+		);
 	});
 
 	it("submits credentials through NextAuth and navigates to today on success", async () => {
