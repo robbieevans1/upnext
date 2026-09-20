@@ -102,6 +102,24 @@ export async function saveWeightEntry(formData: FormData) {
 
 	if (!weightLbs) return;
 
+	// Include today's existing entry before overwriting it, so repeated saves
+	// and same-day corrections are compared with the actual previous low.
+	const [lowestEntry, user] = await Promise.all([
+		prisma.weightEntry.findFirst({
+			where: { userId },
+			orderBy: { weightLbs: "asc" },
+			select: { weightLbs: true },
+		}),
+		prisma.user.findUnique({
+			where: { id: userId },
+			select: { startingWeightLbs: true },
+		}),
+	]);
+	const previousLow = Math.min(
+		lowestEntry?.weightLbs ?? Infinity,
+		user?.startingWeightLbs ?? Infinity,
+	);
+
 	await prisma.weightEntry.upsert({
 		where: {
 			userId_day: {
@@ -120,6 +138,9 @@ export async function saveWeightEntry(formData: FormData) {
 	});
 
 	revalidateNutritionViews();
+	return Number.isFinite(previousLow) && weightLbs < previousLow
+		? { weightLbs, previousLow, achievedAt: effectiveDay.today.toISOString() }
+		: null;
 }
 
 export async function saveStartingWeight(formData: FormData) {

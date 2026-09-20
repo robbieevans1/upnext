@@ -12,9 +12,11 @@ const prisma = {
 		updateMany: vi.fn(),
 	},
 	user: {
+		findUnique: vi.fn(),
 		update: vi.fn(),
 	},
 	weightEntry: {
+		findFirst: vi.fn(),
 		upsert: vi.fn(),
 	},
 };
@@ -36,6 +38,8 @@ describe("nutrition server actions", () => {
 	beforeEach(() => {
 		vi.useRealTimers();
 		vi.clearAllMocks();
+		prisma.weightEntry.findFirst.mockResolvedValue(null);
+		prisma.user.findUnique.mockResolvedValue(null);
 		prisma.$transaction.mockImplementation(async (operations) => operations);
 		prisma.fastingSession.create.mockImplementation((args) => args);
 		prisma.fastingSession.updateMany.mockImplementation((args) => args);
@@ -136,6 +140,45 @@ describe("nutrition server actions", () => {
 			},
 		});
 		expect(revalidatePath).toHaveBeenCalledWith("/nutrition");
+	});
+
+	it("returns a new low with the previous record and effective achievement date", async () => {
+		prisma.weightEntry.findFirst.mockResolvedValue({ weightLbs: 180 });
+		prisma.user.findUnique.mockResolvedValue({ startingWeightLbs: 200 });
+		const { saveWeightEntry } = await import("@/app/actions/nutrition");
+		await expect(saveWeightEntry(formDataFrom({ weightLbs: "179.5" }))).resolves.toEqual({
+			weightLbs: 179.5, previousLow: 180, achievedAt: "2026-06-23T04:00:00.000Z",
+		});
+		expect(prisma.weightEntry.findFirst).toHaveBeenCalledWith({
+			where: { userId: "user-1" }, orderBy: { weightLbs: "asc" }, select: { weightLbs: true },
+		});
+	});
+
+	it.each(["180", "185", "180.04"])("does not notify for tied or higher weight %s", async (weight) => {
+		prisma.weightEntry.findFirst.mockResolvedValue({ weightLbs: 180 });
+		const { saveWeightEntry } = await import("@/app/actions/nutrition");
+		await expect(saveWeightEntry(formDataFrom({ weightLbs: weight }))).resolves.toBeNull();
+	});
+
+	it("uses the first weigh-in as a baseline when there is no previous weight", async () => {
+		const { saveWeightEntry } = await import("@/app/actions/nutrition");
+		await expect(saveWeightEntry(formDataFrom({ weightLbs: "180" }))).resolves.toBeNull();
+		expect(prisma.weightEntry.upsert).toHaveBeenCalled();
+	});
+
+	it("includes the starting weight in the record comparison", async () => {
+		prisma.user.findUnique.mockResolvedValue({ startingWeightLbs: 170 });
+		const { saveWeightEntry } = await import("@/app/actions/nutrition");
+		await expect(saveWeightEntry(formDataFrom({ weightLbs: "169" }))).resolves.toMatchObject({ previousLow: 170 });
+		await expect(saveWeightEntry(formDataFrom({ weightLbs: "175" }))).resolves.toBeNull();
+	});
+
+	it("does not report a record when saving fails", async () => {
+		prisma.weightEntry.findFirst.mockResolvedValue({ weightLbs: 180 });
+		prisma.weightEntry.upsert.mockRejectedValueOnce(new Error("Database unavailable"));
+		const { saveWeightEntry } = await import("@/app/actions/nutrition");
+		await expect(saveWeightEntry(formDataFrom({ weightLbs: "179" }))).rejects.toThrow("Database unavailable");
+		expect(revalidatePath).not.toHaveBeenCalled();
 	});
 
 	it("ignores invalid weight entries", async () => {
