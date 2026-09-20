@@ -3,8 +3,8 @@ import {
 	addCalorieEntry,
 	deleteCalorieEntry,
 	saveStartingWeight,
-	saveWeightEntry,
 } from "@/app/actions/nutrition";
+import DailyWeightForm from "@/app/nutrition/DailyWeightForm";
 import FastingTimer from "@/app/nutrition/FastingTimer";
 import {
 	addAppDays,
@@ -548,35 +548,11 @@ export default async function NutritionPage({ searchParams }: NutritionPageProps
 							</div>
 						</form>
 
-						<form
-							action={saveWeightEntry}
-							className="rounded-2xl border border-slate-800 bg-slate-900 p-6"
-						>
-							<h2 className="text-xl font-bold">Daily Weight</h2>
-
-							<div className="mt-5 space-y-4">
-								<div>
-									<label className="text-sm font-medium text-slate-300">
-										Weight in pounds
-									</label>
-
-									<input
-										type="number"
-										name="weightLbs"
-										min="1"
-										max="1000"
-										step="0.1"
-										defaultValue={todayWeightEntry?.weightLbs ?? ""}
-										placeholder="185.4"
-										className="mt-2 w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-white outline-none focus:border-sky-500"
-									/>
-								</div>
-
-								<button className="rounded-xl bg-sky-500 px-5 py-3 font-semibold text-slate-950 hover:bg-sky-400">
-									Save Weight
-								</button>
-							</div>
-						</form>
+						<DailyWeightForm
+							key={session.user.id}
+							userId={session.user.id}
+							weightLbs={todayWeightEntry?.weightLbs}
+						/>
 
 						<form
 							action={saveStartingWeight}
