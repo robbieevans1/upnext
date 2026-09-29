@@ -31,64 +31,48 @@ export type ChallengeProgress = {
 	needsReview: boolean;
 };
 
-function getInclusiveAppDayDiff(startDay: Date, endDay: Date) {
-	return Math.max(
-		0,
-		Math.floor(
-			(endDay.getTime() - startDay.getTime()) / (1000 * 60 * 60 * 24),
-		) + 1,
-	);
-}
-
-function getEarlierAppDay(a: Date, b: Date) {
-	return a.getTime() <= b.getTime() ? a : b;
-}
-
 export function getChallengeProgress(
 	challenge: ChallengeWithResults,
 	today: Date,
 ): ChallengeProgress {
 	const durationDays = Math.max(1, challenge.durationDays);
-	const endDay = addAppDays(challenge.startDay, durationDays - 1);
 	const yesterday = addAppDays(today, -1);
-	const reviewThrough = getEarlierAppDay(yesterday, endDay);
 	const statusByDay = new Map(
 		challenge.dailyCheck.results.map((result) => [
 			getAppDateKey(result.targetDay),
 			result.status,
 		]),
 	);
-	const successfulDays = Array.from(statusByDay.values()).filter(
-		(status) => status === "YES",
-	).length;
 	let currentStreak = 0;
+	let completedOn: Date | null = null;
 
 	for (
-		let day = reviewThrough;
-		day.getTime() >= challenge.startDay.getTime();
-		day = addAppDays(day, -1)
+		let day = challenge.startDay;
+		day.getTime() <= yesterday.getTime();
+		day = addAppDays(day, 1)
 	) {
 		const status = statusByDay.get(getAppDateKey(day));
 
-		if (!status) {
-			if (currentStreak === 0) {
-				continue;
-			}
+		// Yesterday is still awaiting its review; older missing days break the run.
+		if (!status && getAppDateKey(day) === getAppDateKey(yesterday)) {
 			break;
 		}
 
-		if (status !== "YES") {
+		currentStreak = status === "YES" ? currentStreak + 1 : 0;
+		if (currentStreak === durationDays) {
+			completedOn = day;
 			break;
 		}
-
-		currentStreak += 1;
 	}
 
-	const elapsedThrough = getEarlierAppDay(today, endDay);
-	const daysElapsed =
-		today.getTime() < challenge.startDay.getTime()
-			? 0
-			: getInclusiveAppDayDiff(challenge.startDay, elapsedThrough);
+	const hasStarted = today.getTime() >= challenge.startDay.getTime();
+	const daysElapsed = hasStarted ? Math.min(durationDays, currentStreak + 1) : 0;
+	const endDay =
+		completedOn ??
+		addAppDays(
+			hasStarted ? today : challenge.startDay,
+			durationDays - currentStreak - 1,
+		);
 
 	return {
 		id: challenge.id,
@@ -97,11 +81,11 @@ export function getChallengeProgress(
 		startDay: challenge.startDay,
 		endDay,
 		durationDays,
-		successfulDays,
+		successfulDays: currentStreak,
 		currentStreak,
 		daysElapsed,
 		daysRemaining: Math.max(0, durationDays - daysElapsed),
-		isComplete: today.getTime() > endDay.getTime(),
+		isComplete: completedOn !== null,
 		needsReview:
 			yesterday.getTime() >= challenge.startDay.getTime() &&
 			yesterday.getTime() <= endDay.getTime() &&

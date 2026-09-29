@@ -485,21 +485,6 @@ export default async function TodayPage() {
 			},
 		},
 	});
-	const eligibleDailyChecks = dailyChecks.filter((check) => {
-		if (!check.challenge) {
-			return true;
-		}
-
-		const challengeEndDay = addAppDays(
-			check.challenge.startDay,
-			check.challenge.durationDays - 1,
-		);
-
-		return (
-			yesterday.getTime() >= check.challenge.startDay.getTime() &&
-			yesterday.getTime() <= challengeEndDay.getTime()
-		);
-	});
 
 	const challenges = await prisma.challenge.findMany({
 		where: {
@@ -524,6 +509,19 @@ export default async function TodayPage() {
 	const challengeProgress = challenges.map((challenge) =>
 		getChallengeProgress(challenge, today),
 	);
+
+	const progressByChallengeId = new Map(
+		challengeProgress.map((progress) => [progress.id, progress]),
+	);
+	const eligibleDailyChecks = dailyChecks.filter((check) => {
+		if (!check.challenge) return true;
+		const progress = progressByChallengeId.get(check.challenge.id);
+		return (
+			progress !== undefined &&
+			yesterday.getTime() >= progress.startDay.getTime() &&
+			yesterday.getTime() <= progress.endDay.getTime()
+		);
+	});
 
 	const previousWeeklyReview = isWeeklyReviewEnabledForWeek(previousWeekStart)
 		? await prisma.weeklyReview.findUnique({
