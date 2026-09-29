@@ -14,6 +14,8 @@ const mocks = vi.hoisted(() => ({
 	dailyReviewPrompt: vi.fn(() => null),
 	getUserEffectiveTodayDate: vi.fn(),
 	prisma: {
+		user: { findUnique: vi.fn() },
+		weightEntry: { findFirst: vi.fn() },
 		taskGroup: {
 			findMany: vi.fn(),
 		},
@@ -79,6 +81,8 @@ describe("TodayPage", () => {
 			isStartedEarly: false,
 		});
 		mocks.prisma.taskGroup.findMany.mockResolvedValue([]);
+		mocks.prisma.user.findUnique.mockResolvedValue(null);
+		mocks.prisma.weightEntry.findFirst.mockResolvedValue(null);
 		mocks.prisma.task.findMany.mockResolvedValue([]);
 		mocks.prisma.taskCompletion.findMany.mockResolvedValue([]);
 		mocks.prisma.taskSkip.findMany.mockResolvedValue([]);
@@ -89,6 +93,27 @@ describe("TodayPage", () => {
 		mocks.prisma.dailyCheck.findMany.mockResolvedValue([]);
 		mocks.prisma.challenge.findMany.mockResolvedValue([]);
 		mocks.prisma.weeklyReview.findUnique.mockResolvedValue(null);
+	});
+
+	it("shows total weight lost using the latest weigh-in even when it predates today", async () => {
+		mocks.prisma.user.findUnique.mockResolvedValue({ startingWeightLbs: 220 });
+		mocks.prisma.weightEntry.findFirst.mockResolvedValue({
+			weightLbs: 198.4,
+			day: new Date("2026-07-10T04:00:00.000Z"),
+		});
+
+		render(await TodayPage());
+
+		const card = within(screen.getByRole("region", { name: "Weight Progress" }));
+		expect(card.getByText("21.6 lb")).toBeInTheDocument();
+		expect(card.getByText("198.4 lb")).toBeInTheDocument();
+		expect(card.getByText("7/10/2026")).toBeInTheDocument();
+		expect(card.getByRole("link", { name: "Nutrition" })).toHaveAttribute("href", "/nutrition");
+		expect(mocks.prisma.weightEntry.findFirst).toHaveBeenCalledWith({
+			where: { userId: "user-1", day: { lte: new Date("2026-07-13T04:00:00.000Z") } },
+			orderBy: { day: "desc" },
+			select: { weightLbs: true, day: true },
+		});
 	});
 
 	it("resets challenge progress and keeps reviews available beyond the original end date", async () => {

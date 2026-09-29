@@ -8,6 +8,7 @@ import { requireUserId } from "@/lib/server-auth";
 
 function revalidateNutritionViews() {
 	revalidatePath("/nutrition");
+	revalidatePath("/today");
 	revalidatePath("/dashboard");
 }
 

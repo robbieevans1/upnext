@@ -26,6 +26,7 @@ import { prisma } from "@/lib/prisma";
 import { CommitmentRecurrence, Prisma } from "@prisma/client";
 
 import { getServerSession } from "next-auth";
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { authOptions } from "@/lib/auth";
 import { getChallengeProgress, type ChallengeProgress } from "@/lib/challenges";
@@ -246,6 +247,17 @@ export default async function TodayPage() {
 	const previousWeekStart = addAppDays(taskCompletionWeekStart, -7);
 	const previousWeekEnd = addAppDays(taskCompletionWeekStart, -1);
 	const todayDayOfWeek = getAppDayOfWeek(today);
+	const [weightBaseline, latestWeight] = await Promise.all([
+		prisma.user.findUnique({
+			where: { id: session.user.id },
+			select: { startingWeightLbs: true },
+		}),
+		prisma.weightEntry.findFirst({
+			where: { userId: session.user.id, day: { lte: today } },
+			orderBy: { day: "desc" },
+			select: { weightLbs: true, day: true },
+		}),
+	]);
 
 	const groups = await prisma.taskGroup.findMany({
 		where: {
@@ -795,6 +807,11 @@ export default async function TodayPage() {
 								}
 							/>
 
+							<WeightSummaryCard
+								startingWeightLbs={weightBaseline?.startingWeightLbs ?? null}
+								latestWeight={latestWeight}
+							/>
+
 							<DailyReviewPrompt
 								targetDayKey={getAppDateKey(yesterday)}
 								targetDayLabel={formatAppDate(yesterday)}
@@ -999,6 +1016,57 @@ export default async function TodayPage() {
 				</section>
 			</main>
 		</>
+	);
+}
+
+function WeightSummaryCard({
+	startingWeightLbs,
+	latestWeight,
+}: {
+	startingWeightLbs: number | null;
+	latestWeight: { weightLbs: number; day: Date } | null;
+}) {
+	const poundsLost = startingWeightLbs !== null && latestWeight
+		? Math.round((startingWeightLbs - latestWeight.weightLbs) * 10) / 10
+		: null;
+
+	return (
+		<section aria-labelledby="weight-summary-title" className="rounded-2xl border border-slate-800 bg-slate-900 p-5">
+			<div className="flex items-center justify-between gap-3">
+				<h2 id="weight-summary-title" className="text-lg font-semibold text-slate-100">Weight Progress</h2>
+				<Link href="/nutrition" className="shrink-0 rounded-lg border border-slate-700 px-3 py-1.5 text-xs font-medium text-slate-200 transition hover:border-sky-400 hover:text-sky-300 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-400">
+					Nutrition <span aria-hidden="true">&rarr;</span>
+				</Link>
+			</div>
+			<dl className="mt-4 grid grid-cols-2 gap-4">
+				<div>
+					<dt className="text-xs text-slate-400">Total pounds lost</dt>
+					<dd className="mt-1 text-2xl font-bold text-emerald-300">
+						{poundsLost === null ? "—" : `${Math.max(0, poundsLost).toFixed(1)} lb`}
+					</dd>
+				</div>
+				<div>
+					<dt className="text-xs text-slate-400">Last recorded weight</dt>
+					<dd className="mt-1 text-2xl font-bold text-slate-100">
+						{latestWeight ? `${latestWeight.weightLbs.toFixed(1)} lb` : "—"}
+					</dd>
+					{latestWeight && (
+						<dd className="mt-1 text-xs text-slate-400">
+							<time dateTime={getAppDateKey(latestWeight.day)}>{formatAppDate(latestWeight.day)}</time>
+						</dd>
+					)}
+				</div>
+			</dl>
+			<p className="mt-3 text-xs text-slate-400">
+				{!latestWeight
+					? "Record your weight in Nutrition to see your progress."
+					: startingWeightLbs === null
+						? "Set your starting weight in Nutrition to track pounds lost."
+						: poundsLost !== null && poundsLost < 0
+							? `${Math.abs(poundsLost).toFixed(1)} lb above your starting weight of ${startingWeightLbs.toFixed(1)} lb.`
+							: `Since your starting weight of ${startingWeightLbs.toFixed(1)} lb.`}
+			</p>
+		</section>
 	);
 }
 
