@@ -11,6 +11,7 @@ const mocks = vi.hoisted(() => ({
 		refresh: vi.fn(),
 	})),
 	connection: vi.fn(),
+	dailyReviewPrompt: vi.fn(() => null),
 	getUserEffectiveTodayDate: vi.fn(),
 	prisma: {
 		taskGroup: {
@@ -62,7 +63,7 @@ vi.mock("@/components/AppNav", () => ({ default: () => <nav>App nav</nav> }));
 vi.mock("@/components/CompleteDayButton", () => ({
 	default: () => <button>Complete Day</button>,
 }));
-vi.mock("@/components/DailyReviewPrompt", () => ({ default: () => null }));
+vi.mock("@/components/DailyReviewPrompt", () => ({ default: mocks.dailyReviewPrompt }));
 
 describe("TodayPage", () => {
 	beforeEach(() => {
@@ -88,6 +89,35 @@ describe("TodayPage", () => {
 		mocks.prisma.dailyCheck.findMany.mockResolvedValue([]);
 		mocks.prisma.challenge.findMany.mockResolvedValue([]);
 		mocks.prisma.weeklyReview.findUnique.mockResolvedValue(null);
+	});
+
+	it("resets challenge progress and keeps reviews available beyond the original end date", async () => {
+		const challenge = {
+			id: "challenge-1",
+			title: "Eat healthy",
+			description: null,
+			startDay: new Date("2026-06-01T04:00:00.000Z"),
+			durationDays: 30,
+			dailyCheck: { results: [
+				{ targetDay: new Date("2026-07-11T04:00:00.000Z"), status: "YES" },
+				{ targetDay: new Date("2026-07-12T04:00:00.000Z"), status: "NO" },
+			] },
+		};
+		mocks.prisma.challenge.findMany.mockResolvedValue([challenge]);
+		mocks.prisma.dailyCheck.findMany.mockResolvedValue([{
+			id: "check-1", title: "Kept healthy eating?", description: null,
+			challenge, results: [{ status: "NO" }],
+		}]);
+
+		render(await TodayPage());
+
+		expect(screen.getByText(/Day 1 of 30.*29 days remaining/)).toBeInTheDocument();
+		expect(screen.getByText("0 successful days")).toBeInTheDocument();
+		expect(screen.queryByText("Challenge complete")).toBeNull();
+		expect(mocks.dailyReviewPrompt).toHaveBeenCalledWith(
+			expect.objectContaining({ checks: [expect.objectContaining({ id: "check-1" })] }),
+			undefined,
+		);
 	});
 
 	it("prompts for the previous completed week when its review is incomplete", async () => {
