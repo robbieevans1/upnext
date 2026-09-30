@@ -12,7 +12,7 @@ The app organizes recurring work into a daily stack. Mandatory tasks stay visibl
 - **Time and health:** downtime tracking, flexible timer, Pomodoro timer, scratch counter, calorie logging, daily weight, starting-weight baseline, fasting sessions, and weight comparisons.
 - **Notes:** reusable Topics, full-page topic editor, and topic image montages with upload, paste, captions, alt text, and delete support.
 - **Analytics:** dashboard charts for completions, task time, downtime, scheduled load, action items, Daily Review outcomes, playbook coverage, and weekly task totals.
-- **App basics:** email/password auth, public About page, toast notifications, demo seed data, PostgreSQL persistence, and CI checks for linting, types, tests, unused code, and production build.
+- **App basics:** email/password auth with password reset, public About page, toast notifications, demo seed data, PostgreSQL persistence, and CI checks for linting, types, tests, unused code, and production build.
 
 ## How It Works
 
@@ -218,6 +218,14 @@ This data is intended for future analytics around available free time, routines,
 
 Announcements let a signed-in user set a future event banner for the app. The banner appears globally, shows the event title, and includes a countdown to the event time. The countdown hydrates from the same server-rendered value and then updates in the browser, avoiding server/client time drift during initial render.
 
+## Password Reset
+
+The login page includes a Forgot password flow for email/password accounts. Reset requests always show the same success message whether or not the email exists, so the app does not reveal registered addresses.
+
+Reset links use random single-use tokens. The raw token is sent only in the reset link, while the database stores a SHA-256 token hash, expiration time, and used timestamp. Links expire after 60 minutes. After a successful reset, the token is marked used and the user is sent back to login.
+
+Production email sending uses Resend when `RESEND_API_KEY` and `PASSWORD_RESET_EMAIL_FROM` are configured. Resend has a free tier suitable for low-volume transactional email. In local development, if those env vars are missing, the reset link is logged to the dev server console instead of sending email.
+
 ## Analytics Dashboard
 
 The Dashboard page summarizes recent app activity across the last 14 app days. It includes:
@@ -252,6 +260,7 @@ The dashboard uses existing database records rather than separate analytics tabl
 ## Data Models
 
 - `User` stores account data and optional starting-weight baseline settings.
+- `PasswordResetToken` stores hashed, expiring, single-use password reset tokens.
 - `TaskGroup` stores related task groups.
 - `Task` stores recurring tasks, mandatory status, group membership, stack order, and optional playbook notes.
 - `TaskCompletion` stores per-day task completion history.
@@ -297,6 +306,8 @@ DATABASE_URL="postgresql://..."
 NEXTAUTH_SECRET="replace-me"
 NEXTAUTH_URL="http://localhost:3000"
 BLOB_READ_WRITE_TOKEN="vercel-blob-token-for-topic-images"
+RESEND_API_KEY="resend-api-key-for-password-reset-email"
+PASSWORD_RESET_EMAIL_FROM="UpNext <reset@example.com>"
 ```
 
 Apply database migrations:

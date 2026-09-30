@@ -17,6 +17,7 @@ model User {
 
   accounts Account[]
   sessions Session[]
+  passwordResetTokens PasswordResetToken[]
 
   taskGroups            TaskGroup[]
   tasks                 Task[]
@@ -83,6 +84,21 @@ model VerificationToken {
   expires    DateTime
 
   @@unique([identifier, token])
+}
+
+model PasswordResetToken {
+  id String @id @default(cuid())
+
+  tokenHash String @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@index([userId, expiresAt])
 }
 
 model Task {

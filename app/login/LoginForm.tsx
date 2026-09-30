@@ -9,6 +9,7 @@ export default function LoginForm() {
 	const router = useRouter();
 	const searchParams = useSearchParams();
 	const accountCreated = searchParams.get("created") === "1";
+	const passwordReset = searchParams.get("reset") === "1";
 
 	const [error, setError] = useState("");
 	const [isLoading, setIsLoading] = useState(false);
@@ -56,6 +57,12 @@ export default function LoginForm() {
 				</p>
 			)}
 
+			{passwordReset && (
+				<p className="rounded-md bg-green-500/10 px-4 py-3 text-sm text-green-300">
+					Password reset. You can log in now.
+				</p>
+			)}
+
 			{error && (
 				<p className="rounded-md bg-red-500/10 px-4 py-3 text-sm text-red-300">
 					{error}
@@ -100,6 +107,12 @@ export default function LoginForm() {
 			>
 				{isLoading ? "Logging in..." : "Log in"}
 			</button>
+
+			<p className="text-center text-sm">
+				<Link href="/forgot-password" className="font-medium text-blue-400">
+					Forgot password?
+				</Link>
+			</p>
 
 			<p className="text-center text-sm text-slate-400">
 				Need an account?{" "}
