@@ -111,6 +111,9 @@ async function runBuild() {
 	await ensureNoDevServer();
 	await cleanNextOutput();
 	await run("prisma", ["generate"]);
+	if (process.env.VERCEL_ENV === "production") {
+		await run("prisma", ["migrate", "deploy"]);
+	}
 	await run("next", ["build"], {
 		env: {
 			NEXT_PRIVATE_BUILD_WORKER: "0",
