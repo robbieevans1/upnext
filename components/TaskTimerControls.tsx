@@ -145,6 +145,18 @@ export default function TaskTimerControls({
 							: "Start"}
 				</button>
 			)}
+
+			{!isCompleted && !isThisTaskRunning && !hasTrackedTime && (
+				<button
+					type="button"
+					onClick={handleComplete}
+					disabled={isPending}
+					className={completeButtonClassName}
+					title="Complete without tracking time; excluded from average time"
+				>
+					Quick complete
+				</button>
+			)}
 		</div>
 	);
 }

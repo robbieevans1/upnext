@@ -30,6 +30,29 @@ describe("TaskTimerControls", () => {
 		vi.clearAllMocks();
 	});
 
+	it.each([null, { taskId: "task-2", startedAt: "2026-06-24T12:00:00.000Z" }])(
+		"quick completes an untimed task even with another timer active (%j)",
+		async (activeTaskSession) => {
+			render(
+				<TaskTimerControls
+					taskId="task-1"
+					taskTitle="Read"
+					playbook={null}
+					activeTaskSession={activeTaskSession}
+					completeButtonClassName="complete"
+					startButtonClassName="start"
+				/>,
+			);
+
+			fireEvent.click(screen.getByRole("button", { name: "Quick complete" }));
+
+			await waitFor(() => expect(mocks.completeTask).toHaveBeenCalledWith("task-1"));
+			expect(mocks.refresh).toHaveBeenCalled();
+			expect(mocks.startTaskTimer).not.toHaveBeenCalled();
+			expect(mocks.stopTaskTimer).not.toHaveBeenCalled();
+		},
+	);
+
 	it("starts normal tasks with the Start button", async () => {
 		render(
 			<TaskTimerControls
@@ -64,6 +87,7 @@ describe("TaskTimerControls", () => {
 		);
 
 		fireEvent.click(screen.getByRole("button", { name: "Continue" }));
+		expect(screen.queryByRole("button", { name: "Quick complete" })).not.toBeInTheDocument();
 
 		await waitFor(() => {
 			expect(mocks.startTaskTimer).toHaveBeenCalledWith("task-1");
@@ -86,6 +110,7 @@ describe("TaskTimerControls", () => {
 		);
 
 		fireEvent.click(screen.getByRole("button", { name: "Continue" }));
+		expect(screen.queryByRole("button", { name: "Quick complete" })).not.toBeInTheDocument();
 
 		await waitFor(() => {
 			expect(mocks.startTaskTimer).toHaveBeenCalledWith("task-1");
@@ -143,6 +168,7 @@ describe("TaskTimerControls", () => {
 
 		expect(screen.getByRole("button", { name: "Pause" })).toBeInTheDocument();
 		expect(screen.getByRole("button", { name: "Complete" })).toBeInTheDocument();
+		expect(screen.queryByRole("button", { name: "Quick complete" })).not.toBeInTheDocument();
 
 		fireEvent.click(screen.getByRole("button", { name: "Pause" }));
 
