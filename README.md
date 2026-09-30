@@ -390,6 +390,10 @@ npx prisma migrate deploy
 
 Do not use `prisma migrate dev` in production.
 
+Vercel production builds run `prisma migrate deploy` automatically before
+`next build`. A migration failure stops the deployment. Preview and local builds
+do not apply migrations automatically; preview databases must be migrated separately.
+
 ## GitHub Actions
 
 The CI workflow runs on pull requests and pushes to `main`. It installs dependencies, then runs:
