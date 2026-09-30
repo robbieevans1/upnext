@@ -16,6 +16,10 @@ const navGroups = [
 		label: "Plan",
 		links: [
 			{
+				href: "/todos",
+				label: "To-do list",
+			},
+			{
 				href: "/tasks",
 				label: "Tasks",
 			},

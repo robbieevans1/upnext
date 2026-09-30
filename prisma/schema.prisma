@@ -27,6 +27,7 @@ model User {
   subtaskCompletions    SubtaskCompletion[]
   downtimeSessions      DowntimeSession[]
   actionItems           ActionItem[]
+  todos                 Todo[]
   commitments           Commitment[]
   commitmentOccurrences CommitmentOccurrenceCompletion[]
   topics                Topic[]
@@ -305,6 +306,18 @@ model Announcement {
   updatedAt DateTime @updatedAt
 
   @@index([userId, isActive, targetAt])
+}
+
+model Todo {
+  id          String    @id @default(cuid())
+  title       String
+  completedAt DateTime?
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([userId, createdAt])
 }
 
 model ActionItem {
