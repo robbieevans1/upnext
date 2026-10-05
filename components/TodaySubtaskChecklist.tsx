@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useState } from "react";
+import { useId, useOptimistic, useState, useTransition } from "react";
 import { completeSubtask } from "@/app/actions/tasks";
 
 type TodaySubtask = {
@@ -18,12 +18,38 @@ export default function TodaySubtaskChecklist({
 }: TodaySubtaskChecklistProps) {
 	const contentId = useId();
 	const [isOpen, setIsOpen] = useState(false);
+	const [error, setError] = useState("");
+	const [isPending, startTransition] = useTransition();
+	const [optimisticSubtasks, markSubtaskComplete] = useOptimistic(
+		subtasks,
+		(currentSubtasks, completedSubtaskId: string) =>
+			currentSubtasks.map((subtask) =>
+				subtask.id === completedSubtaskId
+					? { ...subtask, isComplete: true }
+					: subtask,
+			),
+	);
 
-	if (subtasks.length === 0) {
+	if (optimisticSubtasks.length === 0) {
 		return null;
 	}
 
-	const completedCount = subtasks.filter((subtask) => subtask.isComplete).length;
+	const completedCount = optimisticSubtasks.filter(
+		(subtask) => subtask.isComplete,
+	).length;
+
+	function handleComplete(subtaskId: string) {
+		setError("");
+		startTransition(async () => {
+			markSubtaskComplete(subtaskId);
+
+			try {
+				await completeSubtask(subtaskId);
+			} catch {
+				setError("Could not complete the subtask. Please try again.");
+			}
+		});
+	}
 
 	return (
 		<div className="mt-5 border-t border-slate-800 pt-4">
@@ -39,7 +65,7 @@ export default function TodaySubtaskChecklist({
 						Subtasks
 					</span>
 					<span className="mt-1 block text-xs text-slate-500">
-						{completedCount} of {subtasks.length} complete
+						{completedCount} of {optimisticSubtasks.length} complete
 					</span>
 				</span>
 
@@ -49,8 +75,14 @@ export default function TodaySubtaskChecklist({
 			</button>
 
 			{isOpen && (
-				<div id={contentId} className="mt-3 space-y-2">
-					{subtasks.map((subtask) => (
+				<div id={contentId} className="mt-3 space-y-2" aria-busy={isPending}>
+					{error && (
+						<p role="alert" className="text-sm text-red-300">
+							{error}
+						</p>
+					)}
+
+					{optimisticSubtasks.map((subtask) => (
 						<div
 							key={subtask.id}
 							className="flex flex-col gap-2 rounded-lg border border-slate-800 bg-slate-950/70 px-3 py-2 sm:flex-row sm:items-center sm:justify-between"
@@ -78,11 +110,13 @@ export default function TodaySubtaskChecklist({
 									Done
 								</span>
 							) : (
-								<form action={completeSubtask.bind(null, subtask.id)}>
-									<button className="rounded-lg border border-slate-700 px-3 py-1.5 text-sm font-medium text-slate-200 hover:border-sky-500 hover:text-sky-400">
-										Complete
-									</button>
-								</form>
+								<button
+									type="button"
+									onClick={() => handleComplete(subtask.id)}
+									className="rounded-lg border border-slate-700 px-3 py-1.5 text-sm font-medium text-slate-200 hover:border-sky-500 hover:text-sky-400"
+								>
+									Complete
+								</button>
 							)}
 						</div>
 					))}
