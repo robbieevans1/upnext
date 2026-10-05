@@ -25,6 +25,23 @@ function revalidateTaskTimeViews() {
 	revalidatePath("/history");
 }
 
+function findLastActiveSubtask(taskId: string, userId: string) {
+	return prisma.taskSubtask.findFirst({
+		where: {
+			taskId,
+			userId,
+			isActive: true,
+		},
+		orderBy: {
+			stackOrder: "desc",
+		},
+		select: {
+			id: true,
+			stackOrder: true,
+		},
+	});
+}
+
 function getSubtaskTitles(formData: FormData) {
 	return String(formData.get("subtasks") ?? "")
 		.split(/\r?\n/)
@@ -430,20 +447,16 @@ export async function addTaskSubtask(formData: FormData) {
 
 	if (!task) return;
 
-	const existingSubtasks = await prisma.taskSubtask.count({
-		where: {
-			taskId,
-			userId,
-			isActive: true,
-		},
-	});
+	// Completing a subtask moves it past the current maximum, so stack orders
+	// can have gaps; append after the maximum rather than the active count.
+	const lastSubtask = await findLastActiveSubtask(taskId, userId);
 
 	await prisma.taskSubtask.create({
 		data: {
 			title,
 			taskId,
 			userId,
-			stackOrder: existingSubtasks,
+			stackOrder: lastSubtask ? lastSubtask.stackOrder + 1 : 0,
 		},
 	});
 
@@ -509,55 +522,35 @@ export async function completeSubtask(subtaskId: string) {
 
 	if (!subtask) return;
 
-	await prisma.subtaskCompletion.upsert({
-		where: {
-			subtaskId_completedOn: {
-				subtaskId,
-				completedOn: today,
-			},
-		},
-		update: {},
-		create: {
-			subtaskId,
-			taskId: subtask.taskId,
-			userId,
-			completedOn: today,
-		},
-	});
+	const lastSubtask = await findLastActiveSubtask(subtask.taskId, userId);
 
-	const remainingSubtasks = await prisma.taskSubtask.findMany({
-		where: {
-			taskId: subtask.taskId,
-			userId,
-			isActive: true,
-			id: {
-				not: subtask.id,
-			},
-		},
-		orderBy: {
-			stackOrder: "asc",
-		},
-	});
-
+	// Constant-size atomic write: skipDuplicates (ON CONFLICT DO NOTHING) keeps
+	// overlapping completions from failing on the per-day unique key, and only
+	// the completed subtask moves to the bottom instead of renumbering siblings.
 	await prisma.$transaction([
-		...remainingSubtasks.map((remainingSubtask, index) =>
-			prisma.taskSubtask.update({
-				where: {
-					id: remainingSubtask.id,
+		prisma.subtaskCompletion.createMany({
+			data: [
+				{
+					subtaskId,
+					taskId: subtask.taskId,
+					userId,
+					completedOn: today,
 				},
-				data: {
-					stackOrder: index,
-				},
-			}),
-		),
-		prisma.taskSubtask.update({
-			where: {
-				id: subtask.id,
-			},
-			data: {
-				stackOrder: remainingSubtasks.length,
-			},
+			],
+			skipDuplicates: true,
 		}),
+		...(lastSubtask && lastSubtask.id !== subtask.id
+			? [
+					prisma.taskSubtask.update({
+						where: {
+							id: subtask.id,
+						},
+						data: {
+							stackOrder: lastSubtask.stackOrder + 1,
+						},
+					}),
+				]
+			: []),
 	]);
 
 	await setFlashNotification("Subtask completed.");

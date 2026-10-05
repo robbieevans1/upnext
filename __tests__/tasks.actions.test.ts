@@ -39,7 +39,7 @@ const prisma = {
 		updateMany: vi.fn((args) => args),
 	},
 	subtaskCompletion: {
-		upsert: vi.fn(),
+		createMany: vi.fn((args) => args),
 	},
 	taskGroup: {
 		create: vi.fn(),
@@ -564,7 +564,10 @@ describe("task server actions", () => {
 
 	it("adds subtasks only to active tasks owned by the current user", async () => {
 		prisma.task.findFirst.mockResolvedValue({ id: "task-1" });
-		prisma.taskSubtask.count.mockResolvedValue(4);
+		prisma.taskSubtask.findFirst.mockResolvedValue({
+			id: "subtask-4",
+			stackOrder: 3,
+		});
 		const { addTaskSubtask } = await import("@/app/actions/tasks");
 
 		await addTaskSubtask(
@@ -724,26 +727,27 @@ describe("task server actions", () => {
 				completedOn: new Date("2026-06-15T04:00:00.000Z"),
 			},
 		});
-		expect(prisma.subtaskCompletion.upsert).not.toHaveBeenCalled();
+		expect(prisma.subtaskCompletion.createMany).not.toHaveBeenCalled();
 		expect(prisma.$transaction).not.toHaveBeenCalled();
 	});
 
 	it("completes a subtask once per app day and moves it to the bottom", async () => {
 		vi.useFakeTimers();
 		vi.setSystemTime(new Date("2026-06-15T15:30:00.000Z"));
-		prisma.taskSubtask.findFirst.mockResolvedValue({
-			id: "subtask-2",
-			taskId: "task-1",
-		});
-		prisma.taskSubtask.findMany.mockResolvedValue([
-			{ id: "subtask-1" },
-			{ id: "subtask-3" },
-		]);
+		prisma.taskSubtask.findFirst
+			.mockResolvedValueOnce({
+				id: "subtask-2",
+				taskId: "task-1",
+			})
+			.mockResolvedValueOnce({
+				id: "subtask-3",
+				stackOrder: 2,
+			});
 		const { completeSubtask } = await import("@/app/actions/tasks");
 
 		await completeSubtask("subtask-2");
 
-		expect(prisma.taskSubtask.findFirst).toHaveBeenCalledWith({
+		expect(prisma.taskSubtask.findFirst).toHaveBeenNthCalledWith(1, {
 			where: {
 				id: "subtask-2",
 				userId: "user-1",
@@ -753,46 +757,64 @@ describe("task server actions", () => {
 				},
 			},
 		});
-		expect(prisma.subtaskCompletion.upsert).toHaveBeenCalledWith({
+		expect(prisma.taskSubtask.findFirst).toHaveBeenNthCalledWith(2, {
 			where: {
-				subtaskId_completedOn: {
-					subtaskId: "subtask-2",
-					completedOn: new Date("2026-06-15T04:00:00.000Z"),
-				},
-			},
-			update: {},
-			create: {
-				subtaskId: "subtask-2",
 				taskId: "task-1",
 				userId: "user-1",
-				completedOn: new Date("2026-06-15T04:00:00.000Z"),
+				isActive: true,
+			},
+			orderBy: {
+				stackOrder: "desc",
+			},
+			select: {
+				id: true,
+				stackOrder: true,
 			},
 		});
+		expect(prisma.taskSubtask.findMany).not.toHaveBeenCalled();
+		expect(prisma.$transaction).toHaveBeenCalledTimes(1);
 		expect(prisma.$transaction).toHaveBeenCalledWith([
 			{
-				where: {
-					id: "subtask-1",
-				},
-				data: {
-					stackOrder: 0,
-				},
-			},
-			{
-				where: {
-					id: "subtask-3",
-				},
-				data: {
-					stackOrder: 1,
-				},
+				data: [
+					{
+						subtaskId: "subtask-2",
+						taskId: "task-1",
+						userId: "user-1",
+						completedOn: new Date("2026-06-15T04:00:00.000Z"),
+					},
+				],
+				skipDuplicates: true,
 			},
 			{
 				where: {
 					id: "subtask-2",
 				},
 				data: {
-					stackOrder: 2,
+					stackOrder: 3,
 				},
 			},
+		]);
+	});
+
+	it("does not reorder a completed subtask that is already at the bottom", async () => {
+		prisma.taskSubtask.findFirst
+			.mockResolvedValueOnce({
+				id: "subtask-3",
+				taskId: "task-1",
+			})
+			.mockResolvedValueOnce({
+				id: "subtask-3",
+				stackOrder: 2,
+			});
+		const { completeSubtask } = await import("@/app/actions/tasks");
+
+		await completeSubtask("subtask-3");
+
+		expect(prisma.taskSubtask.update).not.toHaveBeenCalled();
+		expect(prisma.$transaction).toHaveBeenCalledWith([
+			expect.objectContaining({
+				skipDuplicates: true,
+			}),
 		]);
 	});
 
@@ -802,8 +824,8 @@ describe("task server actions", () => {
 
 		await completeSubtask("subtask-404");
 
-		expect(prisma.subtaskCompletion.upsert).not.toHaveBeenCalled();
-		expect(prisma.taskSubtask.findMany).not.toHaveBeenCalled();
+		expect(prisma.subtaskCompletion.createMany).not.toHaveBeenCalled();
+		expect(prisma.taskSubtask.findFirst).toHaveBeenCalledTimes(1);
 		expect(prisma.$transaction).not.toHaveBeenCalled();
 	});
 
@@ -813,22 +835,21 @@ describe("task server actions", () => {
 		prisma.taskSubtask.findFirst.mockResolvedValue({
 			id: "subtask-1",
 			taskId: "task-1",
+			stackOrder: 0,
 		});
-		prisma.taskSubtask.findMany.mockResolvedValue([]);
 		const { completeSubtask } = await import("@/app/actions/tasks");
 
 		await completeSubtask("subtask-1");
 
-		expect(prisma.subtaskCompletion.upsert).toHaveBeenCalledWith(
-			expect.objectContaining({
-				where: {
-					subtaskId_completedOn: {
-						subtaskId: "subtask-1",
-						completedOn: new Date("2026-06-16T04:00:00.000Z"),
-					},
-				},
-			}),
-		);
+		expect(prisma.subtaskCompletion.createMany).toHaveBeenCalledWith({
+			data: [
+				expect.objectContaining({
+					subtaskId: "subtask-1",
+					completedOn: new Date("2026-06-16T04:00:00.000Z"),
+				}),
+			],
+			skipDuplicates: true,
+		});
 	});
 
 	it("uses the Eastern calendar day after Eastern midnight", async () => {
